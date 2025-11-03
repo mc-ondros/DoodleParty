@@ -146,21 +146,45 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     else:
         X_train_aug = X_train
     
+    # Create validation split manually
+    val_split = 0.2
+    val_size = int(len(X_train_aug) * val_split)
+    train_size = len(X_train_aug) - val_size
+    
+    X_train_split = X_train_aug[:train_size]
+    y_train_split = y_train[:train_size]
+    X_val_split = X_train_aug[train_size:]
+    y_val_split = y_train[train_size:]
+    
+    # Ensure validation data is in 0-1 range for model evaluation
+    if X_val_split.max() > 1.0:
+        X_val_split_normalized = X_val_split / 255.0
+    else:
+        X_val_split_normalized = X_val_split
+    
+    # Ensure test data is in 0-1 range
+    X_test_normalized = X_test
+    if X_test_normalized.max() > 1.0:
+        X_test_normalized = X_test_normalized / 255.0
+    
+    print(f"  Training samples: {len(X_train_split)}")
+    print(f"  Validation samples: {len(X_val_split)}")
+    
     # Train model with augmentation
     print("\nTraining model with data augmentation...")
     history = model.fit(
-        augmentation.flow(X_train_aug, y_train, batch_size=batch_size),
+        augmentation.flow(X_train_split, y_train_split, batch_size=batch_size),
         batch_size=batch_size,
         epochs=epochs,
-        validation_split=0.2,
+        validation_data=(X_val_split_normalized, y_val_split),
         callbacks=callbacks,
-        steps_per_epoch=len(X_train) // batch_size,
+        steps_per_epoch=len(X_train_split) // batch_size,
         verbose=1
     )
     
     # Evaluate on test set
     print("\nEvaluating on test set...")
-    results = model.evaluate(X_test, y_test, verbose=0)
+    results = model.evaluate(X_test_normalized, y_test, verbose=0)
     if len(results) == 3:
         test_loss, test_accuracy, test_auc = results
         print(f"Test Loss: {test_loss:.4f}")
