@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoodleHunter - ML Testing Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 DoodleHunter</h1>
+            <p class="subtitle">Test the ML Model with Your Drawings</p>
+        </header>
+
+        <main>
+            <div class="canvas-section">
+                <div class="canvas-container">
+                    <canvas id="drawingCanvas" width="400" height="400"></canvas>
+                    <div class="canvas-overlay" id="canvasOverlay"></div>
+                </div>
+
+                <div class="controls">
+                    <button id="clearBtn" class="btn btn-secondary">Clear</button>
+                    <button id="predictBtn" class="btn btn-primary">Get Verdict</button>
+                    <label class="brush-size">
+                        Brush Size: 
+                        <input type="range" id="brushSize" min="2" max="20" value="5">
+                        <span id="sizeDisplay">5</span>px
+                    </label>
+                </div>
+            </div>
+
+            <div class="result-section">
+                <div id="resultBox" class="result-box hidden">
+                    <div class="result-header">
+                        <h2 id="verdict">Verdict</h2>
+                    </div>
+                    <div class="result-content">
+                        <p id="verdictText" class="verdict-text"></p>
+                        <div class="confidence-display">
+                            <p>Confidence: <span id="confidence">0%</span></p>
+                            <div class="confidence-bar">
+                                <div id="confidenceBar" class="confidence-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <p class="raw-probability">Raw Probability: <code id="rawProb">0.0000</code></p>
+                        <p class="threshold-info">Threshold: <code id="thresholdVal">0.5</code></p>
+                    </div>
+                </div>
+
+                <div id="loadingBox" class="loading-box hidden">
+                    <div class="spinner"></div>
+                    <p>Analyzing your drawing...</p>
+                </div>
+
+                <div id="errorBox" class="error-box hidden">
+                    <p id="errorMessage"></p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Draw a doodle and click "Get Verdict" to test the ML model</p>
+            <p class="info">Model: QuickDraw Binary Classifier | Input: 28x28 Grayscale</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
