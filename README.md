@@ -1,12 +1,12 @@
-# QuickDraw ML Classifier - Binary Detector
+# DoodleHunter 🎨
 
-A machine learning project for training a binary classifier that detects whether a doodle belongs to a specific dataset or not.
+A machine learning project for training a CNN-based binary classifier that detects whether a doodle belongs to the QuickDraw dataset or not.
 
 ## Overview
 
-This project uses TensorFlow/Keras to train a convolutional neural network (CNN) as a binary classifier. The model learns to distinguish between:
-- **Positive class**: Doodles that match the dataset (in-distribution)
-- **Negative class**: Random doodles or sketches that don't match (out-of-distribution)
+**DoodleHunter** uses TensorFlow/Keras to train a convolutional neural network (CNN) as a binary classifier. The model learns to distinguish between:
+- **Positive class**: Doodles that match the QuickDraw dataset (in-distribution)
+- **Negative class**: Random doodles, sketches, or out-of-distribution samples
 
 ## Project Structure
 
@@ -35,8 +35,8 @@ This project uses TensorFlow/Keras to train a convolutional neural network (CNN)
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd ML
+git clone https://github.com/mc-ondros/DoodleHunter.git
+cd DoodleHunter
 ```
 
 2. Create a virtual environment:
@@ -52,10 +52,17 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Download and Prepare Data
+### Download QuickDraw Dataset
 
 ```bash
-python src/dataset.py --download --classes airplane apple banana --output-dir data/processed
+# Download 21 categories from Google Cloud Storage (optimized numpy format)
+python src/download_quickdraw_npy.py
+```
+
+### Prepare Data for Training
+
+```bash
+python src/dataset.py --classes airplane apple banana cat dog --output-dir data/processed --max-samples 5000
 ```
 
 ### Train the Model
@@ -72,24 +79,23 @@ python src/predict.py --model models/quickdraw_model.h5 --image path/to/image.pn
 
 ## Model Architecture
 
-The project uses a CNN with:
+**DoodleHunter** uses a CNN with:
 - 3 Convolutional layers with ReLU activation
-- Batch normalization and dropout for regularization
+- Batch normalization and dropout for regularization  
 - Dense layers for feature extraction
-- **Single sigmoid output neuron** for binary classification (0 = out-of-distribution, 1 = in-distribution)
+- **Single sigmoid output neuron** for binary classification
+  - 0 = Out-of-distribution (not a QuickDraw doodle)
+  - 1 = In-distribution (valid QuickDraw doodle)
 
-## Binary Classification Approach
-
-**Positive Class (Label 1)**: Doodles from the QuickDraw dataset (in-distribution)
-**Negative Class (Label 0)**: Random noise/out-of-distribution samples
-
-The model learns to distinguish between valid doodles and random noise by optimizing binary cross-entropy loss.
+The model optimizes binary cross-entropy loss to distinguish between valid QuickDraw doodles and out-of-distribution samples.
 
 ## Dataset
 
-The QuickDraw dataset is sourced from: https://github.com/googlecreativelab/quickdraw-dataset
-
-Each drawing is a 28x28 grayscale image.
+**DoodleHunter** uses the QuickDraw dataset from Google's Creative Lab:
+- Source: https://github.com/googlecreativelab/quickdraw-dataset
+- Format: Pre-processed 28x28 grayscale bitmaps
+- Categories: 21 different object types (~2.6M total doodles)
+- Download: `src/download_quickdraw_npy.py` script handles automated downloads
 
 ## Training Results
 
@@ -100,11 +106,13 @@ Results will be displayed after training completes, including:
 
 ## Future Improvements
 
-- [ ] Add data augmentation
-- [ ] Experiment with different architectures
-- [ ] Add cross-validation
-- [ ] Implement model ensemble methods
-- [ ] Add real-time drawing prediction interface
+- [ ] Add data augmentation (rotation, scaling, distortion)
+- [ ] Experiment with different CNN architectures (ResNet, MobileNet)
+- [ ] Implement multi-class classification for specific object types
+- [ ] Add cross-validation and k-fold evaluation
+- [ ] Real-time drawing prediction web interface
+- [ ] Model quantization for mobile deployment
+- [ ] Ensemble methods for improved accuracy
 
 ## License
 
