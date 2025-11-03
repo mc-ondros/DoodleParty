@@ -13,6 +13,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
 def build_model(num_classes=2):
@@ -54,7 +55,15 @@ def build_model(num_classes=2):
 
 def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5", learning_rate=0.001):
     """
-    Train the QuickDraw classifier.
+    Train the QuickDraw classifier with data augmentation.
+    
+    Data augmentation applies random transformations during training:
+    - Rotations (±15°)
+    - Shifts (±10%)
+    - Zoom (±15%)
+    
+    These variations help the model generalize better without data leakage,
+    as different augmented versions are created for each epoch.
     
     Args:
         data_dir: Directory containing processed data
@@ -120,14 +129,32 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         )
     ]
     
-    # Train model
-    print("\nTraining model...")
+    # Data augmentation for better generalization
+    print("\nSetting up data augmentation...")
+    augmentation = ImageDataGenerator(
+        rotation_range=15,           # ±15 degree rotations
+        width_shift_range=0.1,       # ±10% horizontal shift
+        height_shift_range=0.1,      # ±10% vertical shift
+        zoom_range=0.15,             # ±15% zoom
+        fill_mode='constant',        # Fill with constant value
+        cval=255,                    # White background (for 0-255 range images)
+    )
+    
+    # Scale images to 0-1 range for augmentation
+    if X_train.max() > 1.0:
+        X_train_aug = X_train * 255.0
+    else:
+        X_train_aug = X_train
+    
+    # Train model with augmentation
+    print("\nTraining model with data augmentation...")
     history = model.fit(
-        X_train, y_train,
+        augmentation.flow(X_train_aug, y_train, batch_size=batch_size),
         batch_size=batch_size,
         epochs=epochs,
         validation_split=0.2,
         callbacks=callbacks,
+        steps_per_epoch=len(X_train) // batch_size,
         verbose=1
     )
     
