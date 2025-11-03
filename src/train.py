@@ -15,6 +15,9 @@ from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
+# Import from models.py
+from models import get_model
+
 
 def build_model(num_classes=2):
     """Build CNN model for binary classification (in-distribution vs out-of-distribution)."""
@@ -53,7 +56,7 @@ def build_model(num_classes=2):
     return model
 
 
-def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5", learning_rate=0.001, label_smoothing=0.1):
+def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5", learning_rate=0.001, label_smoothing=0.1, architecture='custom'):
     """
     Train the QuickDraw classifier with data augmentation.
     
@@ -73,6 +76,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         model_output: Path to save the trained model
         learning_rate: Learning rate for optimizer
         label_smoothing: Label smoothing factor (0-1, typical 0.05-0.2)
+        architecture: Model architecture ('custom', 'resnet50', 'mobilenetv3', 'efficientnet')
     """
     data_dir = Path(data_dir)
     
@@ -99,7 +103,11 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     
     # Build model
     print("\nBuilding model...")
-    model = build_model()
+    if architecture == 'custom':
+        model = build_model()
+    else:
+        print(f"Using transfer learning architecture: {architecture}")
+        model, _ = get_model(architecture, freeze_base=True, summary=False)
     
     # Compile model for binary classification
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
@@ -265,6 +273,9 @@ def main():
     parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--label-smoothing", type=float, default=0.1, 
                        help="Label smoothing factor (0-1, default 0.1)")
+    parser.add_argument("--architecture", default="custom", 
+                       choices=["custom", "resnet50", "mobilenetv3", "efficientnet"],
+                       help="Model architecture to use")
     parser.add_argument("--model-output", default="models/quickdraw_model.h5", help="Path to save model")
     
     args = parser.parse_args()
@@ -275,7 +286,8 @@ def main():
         batch_size=args.batch_size,
         model_output=args.model_output,
         learning_rate=args.learning_rate,
-        label_smoothing=args.label_smoothing
+        label_smoothing=args.label_smoothing,
+        architecture=args.architecture
     )
 
 
