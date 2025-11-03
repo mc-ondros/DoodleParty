@@ -14,6 +14,9 @@ from tensorflow import keras
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 
+# Import normalization from data pipeline
+from data_pipeline import normalize_image, normalize_batch
+
 
 def load_model_and_mapping(model_path, data_dir="data/processed"):
     """Load trained model and class mapping."""
@@ -46,6 +49,10 @@ def predict_image(model, idx_to_class, image_path, threshold=0.5):
     img = Image.open(image_path).convert('L')  # Convert to grayscale
     img = img.resize((28, 28))
     img_array = np.array(img, dtype=np.float32) / 255.0
+    
+    # Apply per-image normalization (CRITICAL - must match training!)
+    img_array = normalize_image(img_array)
+    
     img_array = img_array.reshape(1, 28, 28, 1)
     
     # Predict

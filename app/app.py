@@ -1,5 +1,6 @@
 """
-Flask app for testing DoodleHunter ML model with a drawing interface.
+Flask app for binary classification of drawings: penis vs other shapes.
+Uses a model trained on QuickDraw dataset to classify drawings.
 """
 
 import os
@@ -102,12 +103,12 @@ def predict(image_data):
         
         # Determine class based on threshold
         if probability >= THRESHOLD:
-            verdict = 'IN-DISTRIBUTION'
-            verdict_text = "Looks like a QuickDraw doodle! ✓"
+            verdict = 'PENIS'
+            verdict_text = "Drawing looks like a penis! ✓"
             confidence = float(probability)
         else:
-            verdict = 'OUT-OF-DISTRIBUTION'
-            verdict_text = "Doesn't match QuickDraw style. ✗"
+            verdict = 'OTHER_SHAPE'
+            verdict_text = "Drawing looks like a common shape (not penis)."
             confidence = float(1 - probability)
         
         return {
@@ -116,7 +117,8 @@ def predict(image_data):
             'verdict_text': verdict_text,
             'confidence': round(confidence, 4),
             'raw_probability': round(float(probability), 4),
-            'threshold': THRESHOLD
+            'threshold': THRESHOLD,
+            'model_info': 'Binary classifier: penis vs 21 common shapes'
         }
     except Exception as e:
         return {
@@ -162,6 +164,7 @@ if __name__ == '__main__':
     load_model_and_mapping()
     
     # Run Flask app
-    print("Starting DoodleHunter Interface...")
+    print("Starting Penis Classifier Interface...")
     print("Visit http://localhost:5000 to use the drawing board")
+    print("Model: Binary classification (penis vs other shapes)")
     app.run(debug=True, host='0.0.0.0', port=5000)

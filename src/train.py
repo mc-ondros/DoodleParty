@@ -15,55 +15,108 @@ from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-# Import from models.py
+# Import from models.py and data_pipeline.py
 from models import get_model
+from data_pipeline import prepare_test_data
 
 
-def build_model(num_classes=2):
-    """Build CNN model for binary classification (in-distribution vs out-of-distribution)."""
-    model = models.Sequential([
-        # First Conv Block
-        layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
-        layers.BatchNormalization(),
-        layers.MaxPooling2D((2, 2)),
-        layers.Dropout(0.25),
-        
-        # Second Conv Block
-        layers.Conv2D(64, (3, 3), activation='relu'),
-        layers.BatchNormalization(),
-        layers.MaxPooling2D((2, 2)),
-        layers.Dropout(0.25),
-        
-        # Third Conv Block
-        layers.Conv2D(128, (3, 3), activation='relu'),
-        layers.BatchNormalization(),
-        layers.Dropout(0.25),
-        
-        # Flatten and Dense layers
-        layers.Flatten(),
-        layers.Dense(256, activation='relu'),
-        layers.BatchNormalization(),
-        layers.Dropout(0.5),
-        
-        layers.Dense(128, activation='relu'),
-        layers.BatchNormalization(),
-        layers.Dropout(0.5),
-        
-        # Output layer - binary classification
-        layers.Dense(1, activation='sigmoid')
-    ])
+def build_model(num_classes=2, enhanced=False):
+    """
+    Build CNN model for binary classification.
+    
+    Args:
+        num_classes: Number of classes (default 2 for binary)
+        enhanced: If True, use larger model with more capacity (slower but more accurate)
+    """
+    if enhanced:
+        # ENHANCED MODEL - More capacity for better real-world accuracy
+        model = models.Sequential([
+            # First Conv Block - 64 filters
+            layers.Conv2D(64, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            layers.BatchNormalization(),
+            layers.Conv2D(64, (3, 3), activation='relu'),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Dropout(0.25),
+            
+            # Second Conv Block - 128 filters
+            layers.Conv2D(128, (3, 3), activation='relu'),
+            layers.BatchNormalization(),
+            layers.Conv2D(128, (3, 3), activation='relu'),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Dropout(0.3),
+            
+            # Third Conv Block - 256 filters
+            layers.Conv2D(256, (3, 3), activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.3),
+            
+            # Dense layers with more neurons
+            layers.Flatten(),
+            layers.Dense(512, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.5),
+            
+            layers.Dense(256, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.5),
+            
+            layers.Dense(128, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.5),
+            
+            # Output layer
+            layers.Dense(1, activation='sigmoid')
+        ])
+        print("✓ Using ENHANCED model (larger capacity, ~2.5M params)")
+    else:
+        # STANDARD MODEL - Original architecture
+        model = models.Sequential([
+            # First Conv Block
+            layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Dropout(0.25),
+            
+            # Second Conv Block
+            layers.Conv2D(64, (3, 3), activation='relu'),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Dropout(0.25),
+            
+            # Third Conv Block
+            layers.Conv2D(128, (3, 3), activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.25),
+            
+            # Flatten and Dense layers
+            layers.Flatten(),
+            layers.Dense(256, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.5),
+            
+            layers.Dense(128, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.5),
+            
+            # Output layer - binary classification
+            layers.Dense(1, activation='sigmoid')
+        ])
+        print("✓ Using STANDARD model (~423K params)")
     
     return model
 
 
-def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5", learning_rate=0.001, label_smoothing=0.1, architecture='custom'):
+def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5", 
+                learning_rate=0.001, label_smoothing=0.1, architecture='custom', 
+                enhanced=False, aggressive_aug=False):
     """
     Train the QuickDraw classifier with data augmentation.
     
     Data augmentation applies random transformations during training:
-    - Rotations (±15°)
-    - Shifts (±10%)
-    - Zoom (±15%)
+    - Standard: Rotations (±15°), Shifts (±10%), Zoom (±15%)
+    - Aggressive: Rotations (±30°), Shifts (±20%), Zoom (±25%), Brightness, Contrast
     
     Label smoothing helps prevent overconfidence:
     - Converts hard labels (0/1) to soft labels (e.g., 0.05/0.95)
@@ -77,6 +130,8 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         learning_rate: Learning rate for optimizer
         label_smoothing: Label smoothing factor (0-1, typical 0.05-0.2)
         architecture: Model architecture ('custom', 'resnet50', 'mobilenetv3', 'efficientnet')
+        enhanced: Use larger model with more capacity (slower, more accurate)
+        aggressive_aug: Use more aggressive data augmentation
     """
     data_dir = Path(data_dir)
     
@@ -104,7 +159,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     # Build model
     print("\nBuilding model...")
     if architecture == 'custom':
-        model = build_model()
+        model = build_model(enhanced=enhanced)
     else:
         print(f"Using transfer learning architecture: {architecture}")
         model, _ = get_model(architecture, freeze_base=True, summary=False)
@@ -154,35 +209,21 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         )
     ]
     
-    # Data augmentation for better generalization
-    print("\nSetting up data augmentation...")
-    augmentation = ImageDataGenerator(
-        rotation_range=15,           # ±15 degree rotations
-        width_shift_range=0.1,       # ±10% horizontal shift
-        height_shift_range=0.1,      # ±10% vertical shift
-        zoom_range=0.15,             # ±15% zoom
-        fill_mode='constant',        # Fill with constant value
-        cval=255,                    # White background (for 0-255 range images)
-    )
-    
-    # Scale images to 0-1 range for augmentation
-    if X_train.max() > 1.0:
-        X_train_aug = X_train * 255.0
-    else:
-        X_train_aug = X_train
-    
-    # Create validation split manually
+    # Create validation split FIRST (before any augmentation)
+    print("\nCreating train/validation split...")
     val_split = 0.2
-    val_size = int(len(X_train_aug) * val_split)
-    train_size = len(X_train_aug) - val_size
+    val_size = int(len(X_train) * val_split)
+    train_size = len(X_train) - val_size
     
-    X_train_split = X_train_aug[:train_size]
+    X_train_split = X_train[:train_size]
     y_train_split = y_train[:train_size]
-    X_val_split = X_train_aug[train_size:]
+    X_val_split = X_train[train_size:]
     y_val_split = y_train[train_size:]
     
-    # Apply label smoothing to reduce overconfidence
-    # Convert hard labels (0/1) to soft labels
+    print(f"  Training samples: {len(X_train_split)}")
+    print(f"  Validation samples: {len(X_val_split)}")
+    
+    # Apply label smoothing BEFORE generator creation
     if label_smoothing > 0:
         print(f"\nApplying label smoothing (factor={label_smoothing})...")
         y_train_split = y_train_split.astype(float)
@@ -190,40 +231,65 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         y_train_split = y_train_split.astype(np.float32)
         print(f"  Label range: [{y_train_split.min():.3f}, {y_train_split.max():.3f}]")
     
-    # Ensure validation data is in 0-1 range for model evaluation
-    if X_val_split.max() > 1.0:
-        X_val_split_normalized = X_val_split / 255.0
+    # Check if data is already normalized (from preprocessing)
+    if X_train.max() <= 1.0:
+        print("\n✓ Data already normalized - skipping double normalization")
+        X_train_norm = X_train_split
+        X_val_norm = X_val_split
+        X_test_norm = X_test
     else:
-        X_val_split_normalized = X_val_split
+        print("\nNormalizing data with per-image normalization...")
+        X_train_norm = prepare_test_data(X_train_split)
+        X_val_norm = prepare_test_data(X_val_split)
+        X_test_norm = prepare_test_data(X_test)
     
-    # Ensure test data is in 0-1 range
-    X_test_normalized = X_test
-    if X_test_normalized.max() > 1.0:
-        X_test_normalized = X_test_normalized / 255.0
+    # Create augmentation generator with CORRECT data
+    if aggressive_aug:
+        print("\nSetting up AGGRESSIVE data augmentation...")
+        augmentation = ImageDataGenerator(
+            rotation_range=25,          # ±25 degrees (vs 15)
+            width_shift_range=0.15,     # ±15% (vs 10%)
+            height_shift_range=0.15,    # ±15% (vs 10%)
+            zoom_range=0.2,             # ±20% (vs 15%)
+            # NOTE: NO brightness_range! Data is already normalized to remove brightness bias
+            fill_mode='constant',
+            cval=0.5,
+        )
+        print("  ✓ Using aggressive augmentation (geometric only, no brightness)")
+    else:
+        print("\nSetting up standard data augmentation...")
+        augmentation = ImageDataGenerator(
+            rotation_range=15,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            zoom_range=0.15,
+            fill_mode='constant',
+            cval=0.5,
+        )
     
-    print(f"  Training samples: {len(X_train_split)}")
-    print(f"  Validation samples: {len(X_val_split)}")
-    
-    # Train model with augmentation
-    print("\nTraining model with data augmentation...")
-    
-    # Create a training data generator that repeats indefinitely
-    # The generator will automatically cycle through data
+    # Create generator from the SPLIT training data (not all data)
     train_generator = augmentation.flow(
-        X_train_split, 
-        y_train_split, 
+        X_train_norm, y_train_split,
         batch_size=batch_size,
         shuffle=True,
         seed=42
     )
     
-    # Calculate steps per epoch with proper rounding
-    steps_per_epoch = int(np.ceil(len(X_train_split) / batch_size))
+    # Calculate steps per epoch
+    steps_per_epoch = int(np.ceil(len(X_train_norm) / batch_size))
+    
+    print(f"\n✓ Training configuration:")
+    print(f"  Samples per epoch: {len(X_train_norm)}")
+    print(f"  Steps per epoch: {steps_per_epoch}")
+    print(f"  Batch size: {batch_size}")
+    
+    # Train model
+    print("\nStarting training...")
     
     history = model.fit(
         train_generator,
         epochs=epochs,
-        validation_data=(X_val_split_normalized, y_val_split),
+        validation_data=(X_val_norm, y_val_split),
         callbacks=callbacks,
         steps_per_epoch=steps_per_epoch,
         verbose=1
@@ -231,7 +297,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     
     # Evaluate on test set
     print("\nEvaluating on test set...")
-    results = model.evaluate(X_test_normalized, y_test, verbose=0)
+    results = model.evaluate(X_test_norm, y_test, verbose=0)
     if len(results) == 3:
         test_loss, test_accuracy, test_auc = results
         print(f"Test Loss: {test_loss:.4f}")
@@ -292,6 +358,10 @@ def main():
                        choices=["custom", "resnet50", "mobilenetv3", "efficientnet"],
                        help="Model architecture to use")
     parser.add_argument("--model-output", default="models/quickdraw_model.h5", help="Path to save model")
+    parser.add_argument("--enhanced", action="store_true", 
+                       help="Use enhanced model with more capacity (slower, more accurate)")
+    parser.add_argument("--aggressive-aug", action="store_true",
+                       help="Use aggressive data augmentation (rotation ±30°, shift ±20%, zoom ±25%)")
     
     args = parser.parse_args()
     
@@ -302,7 +372,9 @@ def main():
         model_output=args.model_output,
         learning_rate=args.learning_rate,
         label_smoothing=args.label_smoothing,
-        architecture=args.architecture
+        architecture=args.architecture,
+        enhanced=args.enhanced,
+        aggressive_aug=args.aggressive_aug
     )
 
 

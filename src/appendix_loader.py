@@ -127,17 +127,17 @@ def raw_strokes_to_bitmap(drawing, size=28):
     - drawing is a list of strokes
     - each stroke is [x_coords_array, y_coords_array, timestamps_array]
     
-    This function zips x and y arrays to produce (x, y) coordinates and draws them.
+    This function normalizes, centers, and scales the drawing properly.
     """
     try:
         if not drawing:
             return None
 
-        # Create image canvas
-        img = Image.new('L', (256, 256), color=255)  # White background
-        draw = ImageDraw.Draw(img)
-
-        # Process each stroke
+        # First pass: collect all coordinates to find bounding box
+        all_xs = []
+        all_ys = []
+        stroke_points = []  # Store processed strokes
+        
         for stroke in drawing:
             if not stroke or len(stroke) < 2:
                 continue
@@ -149,15 +149,61 @@ def raw_strokes_to_bitmap(drawing, size=28):
             if not xs or not ys or len(xs) == 0 or len(ys) == 0:
                 continue
             
-            # Zip coordinates, truncating to shorter length
-            n = min(len(xs), len(ys))
-            points = [(int(xs[i]), int(ys[i])) for i in range(n)]
+            # Collect all coordinates
+            all_xs.extend(xs)
+            all_ys.extend(ys)
             
-            # Draw line for this stroke
-            if len(points) > 1:
-                draw.line(points, fill=0, width=2)  # Black lines
+            # Store stroke for later
+            n = min(len(xs), len(ys))
+            points = [(xs[i], ys[i]) for i in range(n)]
+            stroke_points.append(points)
+        
+        if not all_xs or not all_ys:
+            return None
+        
+        # Calculate bounding box
+        min_x, max_x = min(all_xs), max(all_xs)
+        min_y, max_y = min(all_ys), max(all_ys)
+        
+        # Calculate dimensions and scaling
+        width = max_x - min_x
+        height = max_y - min_y
+        
+        if width == 0 or height == 0:
+            return None
+        
+        # Create canvas with padding
+        canvas_size = 256
+        padding = 20  # Add padding to avoid edge clipping
+        scale = (canvas_size - 2 * padding) / max(width, height)
+        
+        # Create image canvas
+        img = Image.new('L', (canvas_size, canvas_size), color=255)  # White background
+        draw = ImageDraw.Draw(img)
+        
+        # Draw each stroke with normalization
+        for points in stroke_points:
+            if len(points) < 2:
+                continue
+            
+            # Normalize and center coordinates
+            normalized_points = []
+            for x, y in points:
+                # Translate to origin
+                nx = (x - min_x) * scale
+                ny = (y - min_y) * scale
+                
+                # Center on canvas
+                nx += padding + (canvas_size - 2 * padding - width * scale) / 2
+                ny += padding + (canvas_size - 2 * padding - height * scale) / 2
+                
+                normalized_points.append((int(nx), int(ny)))
+            
+            # Draw the stroke
+            if len(normalized_points) > 1:
+                draw.line(normalized_points, fill=0, width=3)  # Black lines
 
-        # Resize to 28x28
+        # Resize to target size
         img = img.resize((size, size), Image.Resampling.LANCZOS)
         
         # Convert to numpy array
@@ -165,7 +211,7 @@ def raw_strokes_to_bitmap(drawing, size=28):
         
         return bitmap
 
-    except Exception:
+    except Exception as e:
         return None
 
 
@@ -175,38 +221,10 @@ def simplified_strokes_to_bitmap(drawing, size=28):
     
     Same as raw format in this codebase since QuickDraw official format
     is already in the simplified form [x_array, y_array, timestamps].
+    Uses the same normalization and centering as raw format.
     """
-    try:
-        if not drawing:
-            return None
-
-        # Same logic as raw format
-        img = Image.new('L', (256, 256), color=255)
-        draw = ImageDraw.Draw(img)
-
-        for stroke in drawing:
-            if not stroke or len(stroke) < 2:
-                continue
-            
-            xs = stroke[0]
-            ys = stroke[1]
-            
-            if not xs or not ys or len(xs) == 0 or len(ys) == 0:
-                continue
-            
-            n = min(len(xs), len(ys))
-            points = [(int(xs[i]), int(ys[i])) for i in range(n)]
-            
-            if len(points) > 1:
-                draw.line(points, fill=0, width=2)
-
-        img = img.resize((size, size), Image.Resampling.LANCZOS)
-        bitmap = np.array(img)
-        
-        return bitmap
-
-    except Exception:
-        return None
+    # Use the same logic as raw format with proper normalization
+    return raw_strokes_to_bitmap(drawing, size)
 
 
 # NOTE: The format-aware `parse_ndjson_file(filepath, max_samples=None, format_type='raw')`

@@ -17,7 +17,7 @@ source .venv/bin/activate
 echo "Checking dependencies..."
 
 # Install Flask if not already installed
-if ! python3 -c "import flask" 2>/dev/null; then
+    if ! python3 -c "import flask" 2>/dev/null; then
     echo "Installing Flask and dependencies..."
     pip install -r app/requirements.txt
 fi
