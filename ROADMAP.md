@@ -148,18 +148,18 @@
 ## 📝 Implementation Status
 
 ### Phase 1: Data & Evaluation
-- [ ] 1.1 Hard negatives - NOT STARTED
+- [x] 1.1 Hard negatives - ✓ COMPLETED (src/generate_hard_negatives.py)
 - [ ] 1.2 Cross-validation - NOT STARTED
-- [ ] 1.3 Evaluation metrics - NOT STARTED
+- [x] 1.3 Evaluation metrics - ✓ COMPLETED (src/evaluate.py)
 
 ### Phase 2: Training
-- [ ] 2.1 Enhanced augmentation - NOT STARTED
-- [ ] 2.2 Transfer learning - NOT STARTED
+- [x] 2.1 Enhanced augmentation - ✓ COMPLETED (label smoothing in train.py)
+- [x] 2.2 Transfer learning - ✓ COMPLETED (src/models.py with ResNet50, MobileNetV3, EfficientNet)
 - [ ] 2.3 Advanced training - NOT STARTED
 - [ ] 2.4 Regularization - NOT STARTED
 
 ### Phase 3: Inference
-- [ ] 3.1 Threshold optimization - NOT STARTED
+- [x] 3.1 Threshold optimization - ✓ COMPLETED (src/optimize_threshold.py)
 - [ ] 3.2 Test-time augmentation - NOT STARTED
 - [ ] 3.3 Model ensemble - NOT STARTED
 - [ ] 3.4 Optimization & deployment - NOT STARTED

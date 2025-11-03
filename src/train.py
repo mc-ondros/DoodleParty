@@ -111,9 +111,17 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     
     # Compile model for binary classification
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+    
+    # Use BinaryCrossentropy with label smoothing for better calibration
+    if label_smoothing > 0:
+        loss_fn = keras.losses.BinaryCrossentropy(label_smoothing=label_smoothing)
+        print(f"\n✓ Using label smoothing: {label_smoothing}")
+    else:
+        loss_fn = 'binary_crossentropy'
+    
     model.compile(
         optimizer=optimizer,
-        loss='binary_crossentropy',
+        loss=loss_fn,
         metrics=['accuracy', keras.metrics.AUC()]
     )
     
@@ -135,6 +143,13 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
             str(model_output),
             monitor='val_accuracy',
             save_best_only=True,
+            verbose=1
+        ),
+        keras.callbacks.ReduceLROnPlateau(
+            monitor='val_loss',
+            factor=0.5,              # Reduce LR by 50%
+            patience=5,              # Wait 5 epochs
+            min_lr=1e-6,
             verbose=1
         )
     ]
