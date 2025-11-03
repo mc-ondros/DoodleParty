@@ -53,7 +53,7 @@ def build_model(num_classes=2):
     return model
 
 
-def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5", learning_rate=0.001):
+def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5", learning_rate=0.001, label_smoothing=0.1):
     """
     Train the QuickDraw classifier with data augmentation.
     
@@ -62,8 +62,9 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     - Shifts (±10%)
     - Zoom (±15%)
     
-    These variations help the model generalize better without data leakage,
-    as different augmented versions are created for each epoch.
+    Label smoothing helps prevent overconfidence:
+    - Converts hard labels (0/1) to soft labels (e.g., 0.05/0.95)
+    - Reduces overfitting and improves generalization
     
     Args:
         data_dir: Directory containing processed data
@@ -71,6 +72,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         batch_size: Training batch size
         model_output: Path to save the trained model
         learning_rate: Learning rate for optimizer
+        label_smoothing: Label smoothing factor (0-1, typical 0.05-0.2)
     """
     data_dir = Path(data_dir)
     
@@ -156,6 +158,15 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     X_val_split = X_train_aug[train_size:]
     y_val_split = y_train[train_size:]
     
+    # Apply label smoothing to reduce overconfidence
+    # Convert hard labels (0/1) to soft labels
+    if label_smoothing > 0:
+        print(f"\nApplying label smoothing (factor={label_smoothing})...")
+        y_train_split = y_train_split.astype(float)
+        y_train_split = y_train_split * (1 - label_smoothing) + label_smoothing / 2
+        y_train_split = y_train_split.astype(np.float32)
+        print(f"  Label range: [{y_train_split.min():.3f}, {y_train_split.max():.3f}]")
+    
     # Ensure validation data is in 0-1 range for model evaluation
     if X_val_split.max() > 1.0:
         X_val_split_normalized = X_val_split / 255.0
@@ -174,19 +185,24 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     print("\nTraining model with data augmentation...")
     
     # Create a training data generator that repeats indefinitely
+    # The generator will automatically cycle through data
     train_generator = augmentation.flow(
         X_train_split, 
         y_train_split, 
         batch_size=batch_size,
-        shuffle=True
+        shuffle=True,
+        seed=42
     )
+    
+    # Calculate steps per epoch with proper rounding
+    steps_per_epoch = int(np.ceil(len(X_train_split) / batch_size))
     
     history = model.fit(
         train_generator,
         epochs=epochs,
         validation_data=(X_val_split_normalized, y_val_split),
         callbacks=callbacks,
-        steps_per_epoch=len(X_train_split) // batch_size,
+        steps_per_epoch=steps_per_epoch,
         verbose=1
     )
     
@@ -247,6 +263,8 @@ def main():
     parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
     parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate")
+    parser.add_argument("--label-smoothing", type=float, default=0.1, 
+                       help="Label smoothing factor (0-1, default 0.1)")
     parser.add_argument("--model-output", default="models/quickdraw_model.h5", help="Path to save model")
     
     args = parser.parse_args()
@@ -256,7 +274,8 @@ def main():
         epochs=args.epochs,
         batch_size=args.batch_size,
         model_output=args.model_output,
-        learning_rate=args.learning_rate
+        learning_rate=args.learning_rate,
+        label_smoothing=args.label_smoothing
     )
 
 
