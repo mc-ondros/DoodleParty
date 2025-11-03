@@ -172,9 +172,17 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     
     # Train model with augmentation
     print("\nTraining model with data augmentation...")
-    history = model.fit(
-        augmentation.flow(X_train_split, y_train_split, batch_size=batch_size),
+    
+    # Create a training data generator that repeats indefinitely
+    train_generator = augmentation.flow(
+        X_train_split, 
+        y_train_split, 
         batch_size=batch_size,
+        shuffle=True
+    )
+    
+    history = model.fit(
+        train_generator,
         epochs=epochs,
         validation_data=(X_val_split_normalized, y_val_split),
         callbacks=callbacks,
