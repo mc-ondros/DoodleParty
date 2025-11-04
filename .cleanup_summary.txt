@@ -1,0 +1,75 @@
+CLEANUP SUMMARY - November 4, 2025
+==================================
+
+Removed Files:
+--------------
+
+Test/Debug Scripts (11 files):
+  - analyze_task_difficulty.py
+  - check_model_accuracy.py
+  - check_training_data.py
+  - debug_raw_data.py
+  - debug_validation.py
+  - investigate_accuracy.py
+  - test_validation_split.py
+  - show_fixed_samples.py
+  - visualize_penis_data.py
+  - reprocess_penis_data.py
+  - create_comprehensive_visualization.py
+
+Test Shell Scripts (2 files):
+  - test_extended_training.sh
+  - test_training_fix.sh
+
+Log Files (4 files):
+  - training.log
+  - training_corrected.log
+  - training_run.log
+  - training_run_enhanced.log
+
+Visualization Images (8 files):
+  - class_comparison.png
+  - distribution_comparison.png
+  - penis_data_fixed_visualization.png
+  - penis_data_histogram.png
+  - penis_data_samples_fixed.png
+  - penis_data_visualization.png
+  - resolution_comparison.png
+  - resolution_tradeoff_analysis.png
+
+Test Model Files (5 files):
+  - quickdraw_test.h5
+  - quickdraw_test_extended.h5
+  - quickdraw_test_fixed.h5
+  - quickdraw_test_standard.h5
+  - quickdraw_simple_norm.h5
+
+Documentation Files (12 files):
+  - GITHUB_CHECKLIST.md
+  - GITHUB_SETUP.md
+  - IMPLEMENTATION_SUMMARY.md
+  - INTERFACE_QUICKSTART.md
+  - INTERFACE_SETUP_SUMMARY.txt
+  - INTERFACE_VISUAL_GUIDE.md
+  - LOADER_ENHANCEMENT_SUMMARY.md
+  - LOADER_IMPROVEMENTS.md
+  - PENIS_DATA_FIX_SUMMARY.md
+  - RETRAINING_SUMMARY.md
+  - TRAINING_REPORT.md
+  - TRAINING_SESSION_NOTES.md
+
+Python Cache:
+  - All __pycache__ directories in src/ and app/
+  - All *.pyc files
+
+Total: 42 files removed + cache directories
+
+Kept Files:
+-----------
+- Core source code (src/)
+- Web interface (app/)
+- Training data (data/)
+- Production models (models/)
+- Essential documentation (6 .md files)
+- Essential scripts (5 files)
+- README.md and requirements.txt

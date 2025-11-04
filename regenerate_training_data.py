@@ -23,6 +23,12 @@ penis_data = np.load(processed_dir / 'penis_raw_X.npy')
 print(f"   ✓ Loaded {len(penis_data):,} penis samples")
 print(f"   Shape: {penis_data.shape}")
 
+# IMPORTANT: Invert penis data to match QuickDraw's black-on-white format
+# Penis data currently has white background (high values), QuickDraw has black background
+print("   ✓ Inverting penis data to match QuickDraw format (black background)")
+penis_data = 255 - penis_data
+print(f"   New range: {penis_data.min()} - {penis_data.max()}, mean: {penis_data.mean():.2f}")
+
 # Load negative classes (QuickDraw standard classes)
 print("\n2. Loading QuickDraw negative classes...")
 negative_classes = [
@@ -82,7 +88,7 @@ elif n_positive > n_negative:
 y_positive = np.ones(len(penis_data), dtype=np.float32)
 y_negative = np.zeros(len(negative_data), dtype=np.float32)
 
-# Combine data
+# Combine data and IMMEDIATELY SHUFFLE to prevent clustering
 X = np.concatenate([penis_data, negative_data], axis=0)
 y = np.concatenate([y_positive, y_negative], axis=0)
 
@@ -90,16 +96,42 @@ print(f"\n   Combined dataset: {len(X):,} samples")
 print(f"   - Positive (penis): {(y == 1).sum():,} ({100*(y==1).sum()/len(y):.1f}%)")
 print(f"   - Negative (QuickDraw): {(y == 0).sum():,} ({100*(y==0).sum()/len(y):.1f}%)")
 
+# CRITICAL: Shuffle immediately to prevent class clustering
+print("\n   ✓ Shuffling to prevent class clustering...")
+np.random.seed(42)
+shuffle_idx = np.random.permutation(len(X))
+X = X[shuffle_idx]
+y = y[shuffle_idx]
+print(f"   First 10 labels after shuffle: {y[:10]}")
+
 # Normalize to 0-1 range and add channel dimension
 print("\n4. Normalizing and reshaping...")
 X = X.reshape(-1, 28, 28, 1).astype(np.float32) / 255.0
 print(f"   ✓ Shape: {X.shape}, dtype: {X.dtype}")
 print(f"   Value range: {X.min():.3f} - {X.max():.3f}")
 
+# CRITICAL: Apply per-image normalization to remove brightness bias
+print("\n4b. Applying per-image normalization to remove brightness shortcuts...")
+for i in range(len(X)):
+    img = X[i]
+    img_flat = img.flatten()
+    # Normalize each image to have mean ~0.5, preventing brightness-based classification
+    if img_flat.std() > 0.01:  # Only normalize if there's variation
+        img = (img - img_flat.mean()) / (img_flat.std() + 1e-7)
+        img = (img + 3) / 6  # Rescale to approximately 0-1 range
+        X[i] = np.clip(img, 0, 1)
+
+print(f"   ✓ Applied per-image normalization to {len(X):,} samples")
+print(f"   New value range: {X.min():.3f} - {X.max():.3f}")
+print(f"   Mean pixel value: {X.mean():.3f}")
+
 # Split into train and test
 print("\n5. Splitting into train/test...")
+# CRITICAL: Use random_state with stratification and SHUFFLE
+# This ensures balanced class distribution in both train/test
+# Without shuffle, we'd have all positives at start, all negatives at end!
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
+    X, y, test_size=0.2, random_state=123, stratify=y, shuffle=True
 )
 
 print(f"   ✓ Training set: {len(X_train):,} samples")

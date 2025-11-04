@@ -30,7 +30,7 @@ cd /home/mcvaj/ML
     --epochs 200 \
     --batch-size 32 \
     --model-output models/quickdraw_model_enhanced.h5 \
-    --learning-rate 0.001 \
+    --learning-rate 0.0005 \
     --label-smoothing 0.1 \
     --architecture custom \
     --enhanced \

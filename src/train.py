@@ -165,14 +165,20 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         model, _ = get_model(architecture, freeze_base=True, summary=False)
     
     # Compile model for binary classification
-    optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+    # Add gradient clipping to prevent exploding gradients that cause val_acc crashes
+    optimizer = keras.optimizers.Adam(
+        learning_rate=learning_rate,
+        clipnorm=1.0  # Clip gradients to max norm of 1.0
+    )
     
     # Use BinaryCrossentropy with label smoothing for better calibration
     if label_smoothing > 0:
         loss_fn = keras.losses.BinaryCrossentropy(label_smoothing=label_smoothing)
         print(f"\n✓ Using label smoothing: {label_smoothing}")
+        print(f"✓ Using gradient clipping (clipnorm=1.0)")
     else:
         loss_fn = 'binary_crossentropy'
+        print(f"✓ Using gradient clipping (clipnorm=1.0)")
     
     model.compile(
         optimizer=optimizer,
@@ -210,26 +216,31 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     ]
     
     # Create validation split FIRST (before any augmentation)
-    print("\nCreating train/validation split...")
-    val_split = 0.2
-    val_size = int(len(X_train) * val_split)
-    train_size = len(X_train) - val_size
+    # CRITICAL: Use random split with shuffle to avoid class clustering
+    from sklearn.model_selection import train_test_split as split
     
-    X_train_split = X_train[:train_size]
-    y_train_split = y_train[:train_size]
-    X_val_split = X_train[train_size:]
-    y_val_split = y_train[train_size:]
+    print("\nCreating train/validation split (stratified and shuffled)...")
+    val_split = 0.2
+    X_train_split, X_val_split, y_train_split, y_val_split = split(
+        X_train, y_train,
+        test_size=val_split,
+        random_state=456,  # Different seed than test split
+        stratify=y_train,  # Maintain class balance
+        shuffle=True
+    )
     
     print(f"  Training samples: {len(X_train_split)}")
+    print(f"    - Positive: {(y_train_split == 1).sum()} ({100*(y_train_split==1).sum()/len(y_train_split):.1f}%)")
+    print(f"    - Negative: {(y_train_split == 0).sum()} ({100*(y_train_split==0).sum()/len(y_train_split):.1f}%)")
     print(f"  Validation samples: {len(X_val_split)}")
+    print(f"    - Positive: {(y_val_split == 1).sum()} ({100*(y_val_split==1).sum()/len(y_val_split):.1f}%)")
+    print(f"    - Negative: {(y_val_split == 0).sum()} ({100*(y_val_split==0).sum()/len(y_val_split):.1f}%)")
     
-    # Apply label smoothing BEFORE generator creation
+    # DO NOT manually apply label smoothing - it's already in the loss function!
+    # Double smoothing causes training/validation mismatch
     if label_smoothing > 0:
-        print(f"\nApplying label smoothing (factor={label_smoothing})...")
-        y_train_split = y_train_split.astype(float)
-        y_train_split = y_train_split * (1 - label_smoothing) + label_smoothing / 2
-        y_train_split = y_train_split.astype(np.float32)
-        print(f"  Label range: [{y_train_split.min():.3f}, {y_train_split.max():.3f}]")
+        print(f"\n✓ Label smoothing {label_smoothing} applied via loss function")
+        print(f"  (No manual label modification needed)")
     
     # Check if data is already normalized (from preprocessing)
     if X_train.max() <= 1.0:
