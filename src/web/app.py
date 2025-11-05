@@ -1,6 +1,16 @@
 """
-Flask app for binary classification of drawings: penis vs other shapes.
-Uses a model trained on QuickDraw dataset to classify drawings.
+Flask web application for binary classification of drawings.
+
+Provides a web interface for real-time drawing classification using
+a trained CNN model. Handles canvas input, preprocessing, and prediction.
+
+Related:
+- src/core/models.py (model architectures)
+- src/core/inference.py (inference logic)
+- src/web/templates/index.html (frontend interface)
+
+Exports:
+- load_model_and_mapping, preprocess_image, predict
 """
 
 import os

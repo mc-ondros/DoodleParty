@@ -1,14 +1,19 @@
 #!/usr/bin/env python
 """
-DoodleHunter Training Orchestrator with All Improvements
+DoodleHunter Training Orchestrator
 
-This script coordinates all Quick Wins:
-1. Better negative samples (hard negatives)
-2. Label smoothing
-3. Cross-validation setup
-4. Transfer learning options
-5. Learning rate scheduling
-6. Threshold optimization
+Coordinates training with all improvements including hard negatives,
+label smoothing, cross-validation, transfer learning, learning rate
+scheduling, and threshold optimization.
+
+Related:
+- src/data/ (data loading and preprocessing)
+- src/models/ (model architectures)
+- scripts/ (training and visualization scripts)
+- src/core/ (training orchestration)
+
+Exports:
+- main, training orchestration functionality
 """
 
 import argparse

@@ -1,7 +1,18 @@
 """
 Load and process QuickDraw Appendix dataset (NDJSON format).
-Converts stroke data to 28x28 bitmap images.
-Supports both raw and simplified formats.
+
+Converts stroke data to 28x28 bitmap images with proper normalization
+and centering. Supports both raw and simplified QuickDraw formats.
+
+Related:
+- scripts/data_processing/download_quickdraw_ndjson.py (data download)
+- scripts/data_processing/process_all_data_128x128.py (128x128 processing)
+- src/data/loaders.py (general data loading)
+
+Exports:
+- parse_ndjson_file, strokes_to_bitmap, raw_strokes_to_bitmap
+- simplified_strokes_to_bitmap, discover_appendix_files
+- load_appendix_category, prepare_multi_class_dataset, prepare_appendix_dataset
 """
 
 import json
@@ -338,7 +349,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     idx = 0
     
     # Load all positive examples (actual drawings)
-    print("\n=== Loading Positive Examples (Appendix Drawings) ===")
+    print("\nLoading Positive Examples (Appendix Drawings)")
     total_positive = 0
     
     for category, files in sorted(categories.items()):
@@ -377,7 +388,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     print(f"\nTotal positive samples: {total_positive}")
     
     # Generate negative examples
-    print("\n=== Generating Negative Examples ===")
+    print("\nGenerating Negative Examples")
     if negative_class_type == "noise":
         print(f"Generating {total_positive} random noise samples...")
         negative_images = np.random.randint(0, 256, (total_positive, 28, 28), dtype=np.uint8)
@@ -388,7 +399,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     print(f"✓ Generated {total_positive} negative samples")
     
     # Combine and prepare
-    print("\n=== Preparing Dataset ===")
+    print("\nPreparing Dataset")
     X = np.concatenate(all_images, axis=0)
     y = np.concatenate(all_labels, axis=0)
     

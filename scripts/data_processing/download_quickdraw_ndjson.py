@@ -1,6 +1,15 @@
 """
-Download QuickDraw data in raw NDJSON format (stroke data) instead of pre-rendered 28x28 bitmaps.
-This allows us to render at 128x128 directly from strokes for crisp, high-quality images.
+Download QuickDraw data in raw NDJSON format.
+
+Downloads stroke data instead of pre-rendered bitmaps, allowing
+rendering at 128x128 for crisp, high-quality images.
+
+Related:
+- scripts/data_processing/process_all_data_128x128.py (bitmap rendering)
+- src/data/appendix_loader.py (NDJSON parsing)
+
+Exports:
+- download_quickdraw_ndjson
 """
 
 import requests
@@ -79,9 +88,7 @@ def download_quickdraw_ndjson(category, output_dir, max_samples=5000):
 
 def main():
     """Download all QuickDraw negative classes in raw NDJSON format."""
-    print("="*70)
-    print("DOWNLOADING QUICKDRAW DATA (RAW NDJSON FORMAT)")
-    print("="*70)
+    print("\nDOWNLOADING QUICKDRAW DATA (RAW NDJSON FORMAT)\n")
     
     project_root = Path(__file__).parent.parent.parent
     ndjson_dir = project_root / 'data' / 'raw_ndjson'
@@ -106,9 +113,7 @@ def main():
         else:
             failed.append(cls)
     
-    print("\n" + "="*70)
-    print("SUMMARY")
-    print("="*70)
+    print("\nSUMMARY\n")
     print(f"✓ Successfully downloaded: {success_count}/{len(negative_classes)} classes")
     
     if failed:

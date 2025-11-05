@@ -1,5 +1,16 @@
 """
 Prediction and evaluation script for QuickDraw classifier.
+
+Handles model inference, batch predictions, and evaluation metrics
+for binary classification tasks.
+
+Related:
+- src/core/models.py (model architectures)
+- scripts/train.py (model training)
+- src/data/augmentation.py (data normalization)
+
+Exports:
+- load_model_and_mapping, predict_image, evaluate_model, predict_batch
 """
 
 import argparse

@@ -1,6 +1,16 @@
 """
 Consistent data pipeline for preprocessing and normalization.
-Ensures training and inference use the same preprocessing.
+
+Ensures training and inference use the same preprocessing with
+per-image z-score normalization to remove brightness bias.
+
+Related:
+- scripts/train.py (training pipeline)
+- src/core/inference.py (inference preprocessing)
+- src/data/loaders.py (data loading)
+
+Exports:
+- normalize_image, normalize_batch, get_augmentation_generator, prepare_test_data
 """
 
 import numpy as np

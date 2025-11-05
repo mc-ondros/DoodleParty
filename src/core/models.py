@@ -1,11 +1,20 @@
 """
 Advanced model architectures for DoodleHunter.
 
-Includes:
-1. Custom CNN (current baseline)
-2. Transfer Learning with ResNet50
-3. MobileNetV3 (lightweight for mobile)
-4. EfficientNet (best accuracy/efficiency trade-off)
+Provides multiple CNN architectures for binary classification:
+- Custom CNN (baseline, 423K params)
+- Transfer Learning with ResNet50 (high accuracy, 23.5M params)
+- MobileNetV3 (mobile-friendly, 5.4M params)
+- EfficientNet (best accuracy/efficiency trade-off, 5.3M params)
+
+Related:
+- scripts/train.py (model training)
+- src/core/inference.py (model inference and evaluation)
+
+Exports:
+- build_custom_cnn, build_transfer_learning_resnet50
+- build_transfer_learning_mobilenetv3, build_transfer_learning_efficientnet
+- get_model, print_architecture_comparison
 """
 
 import tensorflow as tf
@@ -278,19 +287,17 @@ ARCHITECTURES = {
 def print_architecture_comparison():
     """Print architecture comparison table."""
     print("\nArchitecture Comparison:")
-    print("=" * 100)
     print(f"{'Architecture':<15} {'Params':<12} {'Size':<12} {'Speed':<12} {'Accuracy':<12}")
-    print("=" * 100)
+    print()
     
     for name, info in ARCHITECTURES.items():
         print(f"{name:<15} {info['params']:<12} {info['size']:<12} {info['speed']:<12} {info['accuracy']:<12}")
     
-    print("=" * 100)
+    print()
 
 
 if __name__ == "__main__":
-    print("DoodleHunter Model Architectures")
-    print("=" * 50)
+    print("DoodleHunter Model Architectures\n")
     print_architecture_comparison()
     
     # Test building each architecture

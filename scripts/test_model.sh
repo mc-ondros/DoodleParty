@@ -5,9 +5,7 @@ MODEL_PATH="/home/mcvaj/ML/models/quickdraw_appendix_detector.h5"
 DATA_DIR="/home/mcvaj/ML/data/processed"
 VENV="/home/mcvaj/ML/.venv/bin/python"
 
-echo "=========================================="
 echo "QuickDraw Appendix Detector - Testing"
-echo "=========================================="
 echo ""
 
 # Test 1: Evaluate on test set
@@ -18,9 +16,7 @@ $VENV /home/mcvaj/ML/src/predict.py \
     evaluate
 
 echo ""
-echo "=========================================="
 echo "Testing complete!"
-echo "=========================================="
 echo ""
 echo "To test on your own images:"
 echo "  $VENV /home/mcvaj/ML/src/predict.py --model $MODEL_PATH single --image /path/to/image.png"

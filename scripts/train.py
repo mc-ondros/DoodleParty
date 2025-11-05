@@ -1,5 +1,16 @@
 """
 Model training script for QuickDraw classification.
+
+Handles data loading, augmentation, model compilation, and training
+with support for multiple architectures and hyperparameters.
+
+Related:
+- src/core/models.py (model architectures)
+- src/data/augmentation.py (data preprocessing)
+- scripts/evaluate.py (model evaluation)
+
+Exports:
+- build_model, train_model, plot_training_history
 """
 
 import os

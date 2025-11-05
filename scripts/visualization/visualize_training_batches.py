@@ -183,9 +183,7 @@ plt.savefig('viz_07_batch_statistics.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_07_batch_statistics.png")
 plt.close()
 
-# ============================================================================
 # VISUALIZATION 8: Augmentation Effect on Separability
-# ============================================================================
 print("\n  Analyzing how augmentation affects class separability...")
 
 # Get samples before and after augmentation
@@ -286,9 +284,7 @@ plt.savefig('viz_08_augmentation_separability.png', dpi=150, bbox_inches='tight'
 print("   ✓ Saved: viz_08_augmentation_separability.png")
 plt.close()
 
-# ============================================================================
 # FINAL SUMMARY
-# ============================================================================
 print("\n" + "="*70)
 print("✅ BATCH VISUALIZATION COMPLETE")
 print("="*70)

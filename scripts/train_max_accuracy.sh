@@ -5,7 +5,6 @@
 # WARNING: This will take 3-5x longer than standard training!
 
 echo "🚀 Starting MAXIMUM ACCURACY training"
-echo "======================================"
 echo ""
 echo "Improvements enabled:"
 echo "  ✓ Enhanced model (2.5M params vs 423K)"

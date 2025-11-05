@@ -22,9 +22,7 @@ print(f"  Mean: {X_train_new.mean():.3f}")
 pos_idx = np.where(y_train_new == 1)[0]
 neg_idx = np.where(y_train_new == 0)[0]
 
-# ============================================================================
 # VISUALIZATION: Show Fixed Samples
-# ============================================================================
 print("\n1. Creating visualization of fixed samples...")
 
 fig = plt.figure(figsize=(20, 12))
@@ -152,9 +150,7 @@ plt.savefig('viz_10_fixed_data.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_10_fixed_data.png")
 plt.close()
 
-# ============================================================================
 # SUMMARY
-# ============================================================================
 print("\n" + "="*70)
 print("✅ VISUALIZATION COMPLETE")
 print("="*70)
