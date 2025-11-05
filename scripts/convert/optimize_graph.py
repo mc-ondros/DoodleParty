@@ -93,7 +93,7 @@ def optimize_keras_model(model, optimization_level='aggressive'):
     # Convert to frozen graph (constants instead of variables)
     frozen_func = convert_to_constants.convert_variables_to_constants_v2(full_model)
     
-    print("  ✓ Converted to frozen graph")
+    print('  ✓ Converted to frozen graph')
     print(f"  - Operations before: {len(frozen_func.graph.get_operations())}")
     
     # Get graph def
@@ -101,23 +101,23 @@ def optimize_keras_model(model, optimization_level='aggressive'):
     
     # Apply graph optimizations
     if optimization_level == 'aggressive':
-        print("  Applying aggressive optimizations:")
-        print("    - Constant folding")
-        print("    - Arithmetic optimization")
-        print("    - Layout optimization")
-        print("    - Common subexpression elimination")
-        print("    - Dead code elimination")
+        print('  Applying aggressive optimizations:')
+        print('    - Constant folding')
+        print('    - Arithmetic optimization')
+        print('    - Layout optimization')
+        print('    - Common subexpression elimination')
+        print('    - Dead code elimination')
         
         # Note: TF2 doesn't have the old graph_util.optimize_for_inference
         # Most optimizations are now done automatically during TFLite conversion
         # or via grappler during graph execution
         
-    print("  ✓ Graph optimizations applied")
+    print('  ✓ Graph optimizations applied')
     
     # For Keras, the main optimization happens during TFLite conversion
     # Here we return the original model with a note
-    print("\n  Note: Full graph optimizations are applied during TFLite conversion.")
-    print("  For best results, use convert_to_tflite.py after this step.")
+    print('\n  Note: Full graph optimizations are applied during TFLite conversion.')
+    print('  For best results, use convert_to_tflite.py after this step.')
     
     return model
 
@@ -167,7 +167,7 @@ def compare_benchmarks(original_stats, optimized_stats):
     speedup = original_stats['mean'] / optimized_stats['mean']
     
     print("\n" + "=" * 70)
-    print("Performance Comparison")
+    print('Performance Comparison')
     print("=" * 70)
     print(f"{'Metric':<20} {'Original':<15} {'Optimized':<15} {'Speedup':<15}")
     print("-" * 70)
@@ -181,7 +181,7 @@ def compare_benchmarks(original_stats, optimized_stats):
         print(f"\n✓ Speedup achieved: {speedup:.2f}x faster")
     else:
         print(f"\n⚠ Limited speedup: {speedup:.2f}x")
-        print("  Note: Graph optimization benefits are most visible in TFLite")
+        print('  Note: Graph optimization benefits are most visible in TFLite')
 
 
 def create_optimized_inference_model(model):
@@ -190,7 +190,7 @@ def create_optimized_inference_model(model):
     
     This removes training-specific operations like dropout, batch norm training mode, etc.
     """
-    print("\nCreating inference-only model...")
+    print('\nCreating inference-only model...')
     
     # Clone model architecture
     config = model.get_config()
@@ -217,7 +217,7 @@ def create_optimized_inference_model(model):
         metrics=['accuracy']
     )
     
-    print("✓ Inference model created")
+    print('✓ Inference model created')
     return optimized_model
 
 
@@ -237,7 +237,7 @@ def main():
         output_path = model_path.parent / f"{model_path.stem}_optimized.keras"
     
     print("=" * 70)
-    print("TensorFlow Graph Optimization")
+    print('TensorFlow Graph Optimization')
     print("=" * 70)
     print(f"Input model:     {model_path}")
     print(f"Output model:    {output_path}")
@@ -245,9 +245,9 @@ def main():
     print("=" * 70)
     
     # Load model
-    print("\nLoading model...")
+    print('\nLoading model...')
     model = tf.keras.models.load_model(model_path)
-    print("✓ Model loaded")
+    print('✓ Model loaded')
     
     # Benchmark original if requested
     original_stats = None
@@ -274,26 +274,26 @@ def main():
     original_size = model_path.stat().st_size / (1024 * 1024)
     optimized_size = output_path.stat().st_size / (1024 * 1024)
     
-    print("✓ Model saved")
+    print('✓ Model saved')
     print(f"\nModel sizes:")
     print(f"  Original:  {original_size:.2f} MB")
     print(f"  Optimized: {optimized_size:.2f} MB")
     
     print("\n" + "=" * 70)
-    print("Optimization Complete")
+    print('Optimization Complete')
     print("=" * 70)
-    print("\nNotes:")
-    print("  1. Keras model optimizations are limited")
-    print("  2. Major optimizations happen during TFLite conversion")
-    print("  3. Use convert_to_tflite.py for best inference performance")
-    print("\nRecommended workflow:")
-    print("  1. optimize_graph.py (optional, minimal gains)")
-    print("  2. convert_to_tflite.py (major optimizations)")
-    print("  3. quantize_int8.py (size + speed improvements)")
-    print("  4. benchmark_tflite.py (measure final performance)")
+    print('\nNotes:')
+    print('  1. Keras model optimizations are limited')
+    print('  2. Major optimizations happen during TFLite conversion')
+    print('  3. Use convert_to_tflite.py for best inference performance')
+    print('\nRecommended workflow:')
+    print('  1. optimize_graph.py (optional, minimal gains)')
+    print('  2. convert_to_tflite.py (major optimizations)')
+    print('  3. quantize_int8.py (size + speed improvements)')
+    print('  4. benchmark_tflite.py (measure final performance)')
     print("=" * 70)
     
-    print("\n✓ Graph optimization complete")
+    print('\n✓ Graph optimization complete')
 
 
 if __name__ == '__main__':

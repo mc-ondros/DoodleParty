@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw
 import socket
 
 # GCS public bucket URL - raw ndjson files
-GCS_BUCKET = "https://storage.googleapis.com/quickdraw_dataset/full/raw/"
+GCS_BUCKET = 'https://storage.googleapis.com/quickdraw_dataset/full/raw/'
 
 # List of QuickDraw categories to download
 CATEGORIES = [
@@ -178,7 +178,7 @@ def download_category(category, max_samples=5000):
 
 def main():
     print("=" * 70)
-    print("DOWNLOADING QUICKDRAW DATASET FROM GOOGLE CLOUD STORAGE")
+    print('DOWNLOADING QUICKDRAW DATASET FROM GOOGLE CLOUD STORAGE')
     print("=" * 70)
     print()
     
@@ -209,7 +209,7 @@ def main():
             print(f"  ✗ Failed to download {category}\n")
     
     print("\n" + "=" * 70)
-    print("DOWNLOAD SUMMARY")
+    print('DOWNLOAD SUMMARY')
     print("=" * 70)
     print(f"Downloaded {len(all_images)} categories")
     print(f"Total samples: {total_samples}")
@@ -222,5 +222,5 @@ def main():
     return all_images
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     all_images = main()

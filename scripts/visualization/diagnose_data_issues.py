@@ -18,7 +18,7 @@ pos_idx = np.where(y_train == 1)[0]
 neg_idx = np.where(y_train == 0)[0]
 
 # Check for problematic images that could cause model shortcuts: all-white images indicate failed inversion, all-black images indicate data corruption
-print("\n1. CHECKING FOR PROBLEMATIC IMAGES:")
+print('\n1. CHECKING FOR PROBLEMATIC IMAGES:')
 print("-" * 70)
 
 def is_mostly_white(img, threshold=0.9):
@@ -46,7 +46,7 @@ print(f"  All-white images: {len(neg_white)} ({100*len(neg_white)/len(neg_idx):.
 print(f"  All-black images: {len(neg_black)} ({100*len(neg_black)/len(neg_idx):.2f}%)")
 
 # Analyze stroke width differences between classes that could create model shortcuts based on drawing thickness rather than content
-print("\n2. ANALYZING STROKE WIDTH:")
+print('\n2. ANALYZING STROKE WIDTH:')
 print("-" * 70)
 
 from scipy.ndimage import binary_erosion, binary_dilation
@@ -77,7 +77,7 @@ print(f"Negative class stroke width: {np.mean(neg_strokes):.2f} ± {np.std(neg_s
 print(f"Difference: {abs(np.mean(pos_strokes) - np.mean(neg_strokes)):.2f}")
 
 # Check background value consistency between classes to prevent model from using background brightness as a shortcut feature
-print("\n3. CHECKING BACKGROUND VALUES:")
+print('\n3. CHECKING BACKGROUND VALUES:')
 print("-" * 70)
 
 # Estimate background value by sampling corner pixels since drawings typically don't extend to image corners
@@ -98,7 +98,7 @@ print(f"Positive class background: {np.mean(pos_bg):.3f} ± {np.std(pos_bg):.3f}
 print(f"Negative class background: {np.mean(neg_bg):.3f} ± {np.std(neg_bg):.3f}")
 
 # VISUALIZATION
-print("\n4. CREATING DIAGNOSTIC VISUALIZATION...")
+print('\n4. CREATING DIAGNOSTIC VISUALIZATION...')
 
 fig = plt.figure(figsize=(20, 14))
 fig.suptitle('Data Quality Issues Diagnosis', fontsize=16, fontweight='bold')
@@ -188,12 +188,12 @@ ax.grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig('viz_09_data_quality_issues.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_09_data_quality_issues.png")
+print('   ✓ Saved: viz_09_data_quality_issues.png')
 plt.close()
 
 # SUMMARY
 print("\n" + "="*70)
-print("SUMMARY OF ISSUES")
+print('SUMMARY OF ISSUES')
 print("="*70)
 
 issues_found = []
@@ -208,15 +208,15 @@ if abs(np.mean(pos_bg) - np.mean(neg_bg)) > 0.1:
     issues_found.append(f"⚠️  Background value difference: {abs(np.mean(pos_bg) - np.mean(neg_bg)):.3f}")
 
 if issues_found:
-    print("\nISSUES FOUND:")
+    print('\nISSUES FOUND:')
     for issue in issues_found:
         print(f"  {issue}")
-    print("\nRECOMMENDED FIXES:")
-    print("  1. Re-process penis data with proper inversion")
-    print("  2. Normalize stroke widths (dilate thinner strokes)")
-    print("  3. Ensure consistent background values")
-    print("  4. Remove all-white/all-black images")
+    print('\nRECOMMENDED FIXES:')
+    print('  1. Re-process penis data with proper inversion')
+    print('  2. Normalize stroke widths (dilate thinner strokes)')
+    print('  3. Ensure consistent background values')
+    print('  4. Remove all-white/all-black images')
 else:
-    print("\n✓ No major issues detected!")
+    print('\n✓ No major issues detected!')
 
-print("\nVisualization saved: viz_09_data_quality_issues.png")
+print('\nVisualization saved: viz_09_data_quality_issues.png')

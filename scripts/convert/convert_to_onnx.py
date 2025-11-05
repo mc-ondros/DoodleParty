@@ -41,8 +41,8 @@ def main():
         import tf2onnx
         from tf2onnx import convert
     except Exception as e:
-        print("Missing required package: tf2onnx (or tensorflow).")
-        print("Install with: pip install tf2onnx")
+        print('Missing required package: tf2onnx (or tensorflow).')
+        print('Install with: pip install tf2onnx')
         print("Error details:", e)
         sys.exit(3)
 
@@ -88,10 +88,10 @@ def main():
     except Exception as e:
         print("Conversion failed:", e)
         # Provide troubleshooting tips
-        print("Tips:")
-        print(" - Try a different opset (13,14,15)")
-        print(" - Install a matching tf2onnx version: pip install tf2onnx")
-        print(" - If model uses custom layers, import them before loading the model")
+        print('Tips:')
+        print(' - Try a different opset (13,14,15)')
+        print(' - Install a matching tf2onnx version: pip install tf2onnx')
+        print(' - If model uses custom layers, import them before loading the model')
         sys.exit(5)
 
 if __name__ == '__main__':

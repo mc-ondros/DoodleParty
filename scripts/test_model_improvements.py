@@ -33,45 +33,45 @@ from sklearn.metrics import classification_report, confusion_matrix
 def test_class_weighting():
     """Test class weighting implementation."""
     print("\n" + "="*70)
-    print("TEST 1: CLASS WEIGHTING")
+    print('TEST 1: CLASS WEIGHTING')
     print("="*70)
     
     # Train model without class weighting
-    print("\n1.1 Training model WITHOUT class weighting...")
-    model1_path = "models/test_no_weighting.h5"
+    print('\n1.1 Training model WITHOUT class weighting...')
+    model1_path = 'models/test_no_weighting.h5'
     
     try:
         train_model(
-            data_dir="data/processed",
+            data_dir = 'data/processed',
             epochs=5,  # Quick test
             batch_size=32,
             model_output=model1_path,
             use_class_weighting=False
         )
-        print("✓ Model without class weighting trained")
+        print('✓ Model without class weighting trained')
     except Exception as e:
         print(f"✗ Error: {e}")
         return False
     
     # Train model with class weighting
-    print("\n1.2 Training model WITH class weighting...")
-    model2_path = "models/test_with_weighting.h5"
+    print('\n1.2 Training model WITH class weighting...')
+    model2_path = 'models/test_with_weighting.h5'
     
     try:
         train_model(
-            data_dir="data/processed",
+            data_dir = 'data/processed',
             epochs=5,  # Quick test
             batch_size=32,
             model_output=model2_path,
             use_class_weighting=True
         )
-        print("✓ Model with class weighting trained")
+        print('✓ Model with class weighting trained')
     except Exception as e:
         print(f"✗ Error: {e}")
         return False
     
     # Compare performance
-    print("\n1.3 Comparing performance...")
+    print('\n1.3 Comparing performance...')
     
     X_test = np.load(Path("data/processed") / "X_test.npy")
     y_test = np.load(Path("data/processed") / "y_test.npy")
@@ -107,9 +107,9 @@ def test_class_weighting():
     
     # Verify class weighting is working
     if rec2 >= rec1:
-        print("✓ Class weighting appears to be working (recall improved or equal)")
+        print('✓ Class weighting appears to be working (recall improved or equal)')
     else:
-        print("⚠ Class weighting may not be working as expected")
+        print('⚠ Class weighting may not be working as expected')
     
     return True
 
@@ -117,7 +117,7 @@ def test_class_weighting():
 def test_ensemble():
     """Test ensemble system."""
     print("\n" + "="*70)
-    print("TEST 2: ENSEMBLE SYSTEM")
+    print('TEST 2: ENSEMBLE SYSTEM')
     print("="*70)
     
     # Check if we have models to ensemble
@@ -125,7 +125,7 @@ def test_ensemble():
     model_files = list(models_dir.glob("*.h5"))
     
     if len(model_files) < 2:
-        print("✗ Need at least 2 models for ensemble test")
+        print('✗ Need at least 2 models for ensemble test')
         print(f"  Found only {len(model_files)} model(s)")
         return False
     
@@ -134,25 +134,25 @@ def test_ensemble():
         print(f"  - {model_file.name}")
     
     # Create ensemble
-    print("\n2.2 Creating ensemble...")
+    print('\n2.2 Creating ensemble...')
     model_paths = [str(p) for p in model_files[:3]]  # Use first 3 models
     
     try:
         ensemble = create_ensemble(model_paths, method='weighted')
-        print("✓ Ensemble created successfully")
+        print('✓ Ensemble created successfully')
     except Exception as e:
         print(f"✗ Error creating ensemble: {e}")
         return False
     
     # Evaluate ensemble
-    print("\n2.3 Evaluating ensemble...")
+    print('\n2.3 Evaluating ensemble...')
     
     X_test = np.load(Path("data/processed") / "X_test.npy")
     y_test = np.load(Path("data/processed") / "y_test.npy")
     
     try:
         ensemble_results = evaluate_ensemble(ensemble, X_test, y_test)
-        print("✓ Ensemble evaluation complete")
+        print('✓ Ensemble evaluation complete')
     except Exception as e:
         print(f"✗ Error evaluating ensemble: {e}")
         return False
@@ -163,12 +163,12 @@ def test_ensemble():
 def test_integration():
     """Test that both improvements work together."""
     print("\n" + "="*70)
-    print("TEST 3: INTEGRATION TEST")
+    print('TEST 3: INTEGRATION TEST')
     print("="*70)
     
-    print("\n3.1 Training ensemble with class-weighted models...")
-    print("  This demonstrates that class weighting and ensembles")
-    print("  can be used together for maximum improvement")
+    print('\n3.1 Training ensemble with class-weighted models...')
+    print('  This demonstrates that class weighting and ensembles')
+    print('  can be used together for maximum improvement')
     
     # Train a few models with class weighting
     models_to_train = [
@@ -192,7 +192,7 @@ def test_integration():
         try:
             print(f"\n  Training {model_config['name']}...")
             train_model(
-                data_dir="data/processed",
+                data_dir = 'data/processed',
                 epochs=5,
                 batch_size=32,
                 model_output=model_config['output'],
@@ -206,7 +206,7 @@ def test_integration():
             return False
     
     # Create ensemble
-    print("\n3.2 Creating ensemble from class-weighted models...")
+    print('\n3.2 Creating ensemble from class-weighted models...')
     
     try:
         model_paths = [m['output'] for m in models_to_train]
@@ -217,8 +217,8 @@ def test_integration():
         y_test = np.load(Path("data/processed") / "y_test.npy")
         
         ensemble_results = evaluate_ensemble(ensemble, X_test, y_test)
-        print("✓ Integration test successful")
-        print("  Both class weighting and ensemble work together!")
+        print('✓ Integration test successful')
+        print('  Both class weighting and ensemble work together!')
         
     except Exception as e:
         print(f"✗ Error in integration test: {e}")
@@ -228,11 +228,11 @@ def test_integration():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Test model improvements")
-    parser.add_argument("--skip-train", action="store_true",
-                       help="Skip training tests (use existing models)")
-    parser.add_argument("--output-dir", default="results/improvement_tests",
-                       help="Directory for test results")
+    parser = argparse.ArgumentParser(description = 'Test model improvements')
+    parser.add_argument("--skip-train", action = 'store_true',
+                       help = 'Skip training tests (use existing models)')
+    parser.add_argument("--output-dir", default = 'results/improvement_tests',
+                       help = 'Directory for test results')
     
     args = parser.parse_args()
     
@@ -240,15 +240,15 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print("\n" + "="*70)
-    print("DOODLEHUNTER MODEL IMPROVEMENTS - TEST SUITE")
+    print('DOODLEHUNTER MODEL IMPROVEMENTS - TEST SUITE')
     print("="*70)
     
     # Check data availability
     data_dir = Path("data/processed")
     if not data_dir.exists():
-        print("\n✗ Data directory not found: data/processed")
-        print("  Please run data processing first:")
-        print("    python scripts/process_all_data_128x128.py")
+        print('\n✗ Data directory not found: data/processed')
+        print('  Please run data processing first:')
+        print('    python scripts/process_all_data_128x128.py')
         return False
     
     required_files = ["X_test.npy", "y_test.npy"]
@@ -267,7 +267,7 @@ def main():
         if test_class_weighting():
             tests_passed += 1
     else:
-        print("\n⚪ Skipping training tests")
+        print('\n⚪ Skipping training tests')
         tests_passed += 1  # Assume passed
     
     if test_ensemble():
@@ -278,28 +278,28 @@ def main():
     
     # Summary
     print("\n" + "="*70)
-    print("TEST SUMMARY")
+    print('TEST SUMMARY')
     print("="*70)
     
     print(f"\nTests passed: {tests_passed}/{tests_total}")
     
     if tests_passed == tests_total:
-        print("\n✓ All tests passed!")
-        print("\nImprovements successfully implemented:")
-        print("  1. ✓ Class weighting for imbalanced data")
-        print("  2. ✓ Model ensemble system")
-        print("  3. ✓ Integration of both improvements")
+        print('\n✓ All tests passed!')
+        print('\nImprovements successfully implemented:')
+        print('  1. ✓ Class weighting for imbalanced data')
+        print('  2. ✓ Model ensemble system')
+        print('  3. ✓ Integration of both improvements')
     else:
         print(f"\n✗ {tests_total - tests_passed} test(s) failed")
         return False
     
     print("\n" + "="*70)
-    print("✓ MODEL IMPROVEMENTS VALIDATION COMPLETE")
+    print('✓ MODEL IMPROVEMENTS VALIDATION COMPLETE')
     print("="*70)
     
     return True
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     success = main()
     sys.exit(0 if success else 1)

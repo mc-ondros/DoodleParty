@@ -45,6 +45,7 @@ ipython_config.py
 venv/
 ENV/
 env/
+.venv/
 
 # IDE
 .vscode/

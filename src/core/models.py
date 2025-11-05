@@ -219,20 +219,20 @@ def get_model(architecture='custom', freeze_base=True, summary=True):
         Compiled model (and base_model for transfer learning)
     """
     if architecture.lower() == 'custom':
-        print("Building custom CNN architecture...")
+        print('Building custom CNN architecture...')
         model = build_custom_cnn()
         base_model = None
     
     elif architecture.lower() == 'resnet50':
-        print("Building ResNet50 with transfer learning...")
+        print('Building ResNet50 with transfer learning...')
         model, base_model = build_transfer_learning_resnet50(freeze_base=freeze_base)
     
     elif architecture.lower() == 'mobilenetv3':
-        print("Building MobileNetV3 with transfer learning...")
+        print('Building MobileNetV3 with transfer learning...')
         model, base_model = build_transfer_learning_mobilenetv3(freeze_base=freeze_base)
     
     elif architecture.lower() == 'efficientnet':
-        print("Building EfficientNet with transfer learning...")
+        print('Building EfficientNet with transfer learning...')
         model, base_model = build_transfer_learning_efficientnet(freeze_base=freeze_base)
     
     else:
@@ -240,7 +240,7 @@ def get_model(architecture='custom', freeze_base=True, summary=True):
     
     # Print summary
     if summary:
-        print("\nModel Summary:")
+        print('\nModel Summary:')
         model.summary()
     
     return model, base_model
@@ -285,7 +285,7 @@ ARCHITECTURES = {
 
 def print_architecture_comparison():
     """Print architecture comparison table."""
-    print("\nArchitecture Comparison:")
+    print('\nArchitecture Comparison:')
     print(f"{'Architecture':<15} {'Params':<12} {'Size':<12} {'Speed':<12} {'Accuracy':<12}")
     print()
     
@@ -295,12 +295,12 @@ def print_architecture_comparison():
     print()
 
 
-if __name__ == "__main__":
-    print("DoodleHunter Model Architectures\n")
+if __name__ == '__main__':
+    print('DoodleHunter Model Architectures\n')
     print_architecture_comparison()
     
     # Test building each architecture
-    print("\nTesting architecture loading...")
+    print('\nTesting architecture loading...')
     
     for arch in ['custom', 'resnet50', 'mobilenetv3', 'efficientnet']:
         print(f"\n{arch.upper()}")

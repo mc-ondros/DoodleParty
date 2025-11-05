@@ -77,35 +77,41 @@ def find_optimal_thresholds(y_true, y_prob):
 def print_threshold_recommendations(optimal, y_true, y_prob):
     """Print recommendations for different use cases."""
     print("\n" + "=" * 80)
-    print("THRESHOLD RECOMMENDATIONS FOR DIFFERENT USE CASES")
+    print('THRESHOLD RECOMMENDATIONS FOR DIFFERENT USE CASES')
     print("=" * 80)
     
-    print("\n1. MAXIMIZE F1-SCORE (Default - balanced performance)")
+    print('\n1. MAXIMIZE F1-SCORE (Default - balanced performance)')
     t = optimal['max_f1']
     print(f"   Threshold: {t['threshold']:.4f}")
-    print(f"   Accuracy: {t['accuracy']:.4f} | Precision: {t['precision']:.4f} | Recall: {t['recall']:.4f}")
+    print(
+        f"   Accuracy: {t['accuracy']:.4f} | Precision: {t['precision']:.4f} | "
+        f"Recall: {t['recall']:.4f}"
+    )
     print(f"   F1-Score: {t['f1']:.4f}")
     print(f"   Confusion Matrix: TP={t['tp']}, FP={t['fp']}, TN={t['tn']}, FN={t['fn']}")
-    
-    print("\n2. MAXIMIZE ACCURACY")
+
+    print('\n2. MAXIMIZE ACCURACY')
     t = optimal['max_accuracy']
     print(f"   Threshold: {t['threshold']:.4f}")
-    print(f"   Accuracy: {t['accuracy']:.4f} | Precision: {t['precision']:.4f} | Recall: {t['recall']:.4f}")
+    print(
+        f"   Accuracy: {t['accuracy']:.4f} | Precision: {t['precision']:.4f} | "
+        f"Recall: {t['recall']:.4f}"
+    )
     print(f"   F1-Score: {t['f1']:.4f}")
     
-    print("\n3. BALANCED PRECISION-RECALL (Equal False Positives and False Negatives)")
+    print('\n3. BALANCED PRECISION-RECALL (Equal False Positives and False Negatives)')
     t = optimal['balanced']
     print(f"   Threshold: {t['threshold']:.4f}")
     print(f"   Precision: {t['precision']:.4f} | Recall: {t['recall']:.4f}")
     print(f"   F1-Score: {t['f1']:.4f}")
     
     print("\n" + "=" * 80)
-    print("USE CASE SPECIFIC RECOMMENDATIONS")
+    print('USE CASE SPECIFIC RECOMMENDATIONS')
     print("=" * 80)
     
-    print("\n• HIGH PRECISION (minimize false positives):")
-    print("  When cost of false positive > cost of false negative")
-    print("  Examples: Spam detection, Medical screening")
+    print('\n• HIGH PRECISION (minimize false positives):')
+    print('  When cost of false positive > cost of false negative')
+    print('  Examples: Spam detection, Medical screening')
     high_precision = max(
         [m for m in analyze_thresholds(y_true, y_prob) if m['precision'] > 0.95],
         key=lambda x: x['f1'],
@@ -113,11 +119,14 @@ def print_threshold_recommendations(optimal, y_true, y_prob):
     )
     if high_precision:
         print(f"  → Threshold: {high_precision['threshold']:.4f}")
-        print(f"    Precision: {high_precision['precision']:.4f}, Recall: {high_precision['recall']:.4f}")
+        print(
+            f"    Precision: {high_precision['precision']:.4f}, "
+            f"Recall: {high_precision['recall']:.4f}"
+        )
     
-    print("\n• HIGH RECALL (minimize false negatives):")
-    print("  When cost of false negative > cost of false positive")
-    print("  Examples: Fraud detection, Disease diagnosis")
+    print('\n• HIGH RECALL (minimize false negatives):')
+    print('  When cost of false negative > cost of false positive')
+    print('  Examples: Fraud detection, Disease diagnosis')
     high_recall = max(
         [m for m in analyze_thresholds(y_true, y_prob) if m['recall'] > 0.95],
         key=lambda x: x['f1'],
@@ -202,13 +211,13 @@ def plot_threshold_comparison(metrics, optimal, output_file):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Optimize decision threshold")
-    parser.add_argument("--model", default="models/quickdraw_model.h5",
-                       help="Path to trained model")
-    parser.add_argument("--data-dir", default="data/processed",
-                       help="Directory with test data")
-    parser.add_argument("--output-dir", default="models",
-                       help="Output directory for results")
+    parser = argparse.ArgumentParser(description = 'Optimize decision threshold')
+    parser.add_argument("--model", default = 'models/quickdraw_model.h5',
+                       help = 'Path to trained model')
+    parser.add_argument("--data-dir", default = 'data/processed',
+                       help = 'Directory with test data')
+    parser.add_argument("--output-dir", default = 'models',
+                       help = 'Output directory for results')
     
     args = parser.parse_args()
     
@@ -216,11 +225,11 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print("=" * 80)
-    print("THRESHOLD OPTIMIZATION")
+    print('THRESHOLD OPTIMIZATION')
     print("=" * 80)
     
     # Load model and data
-    print("\nLoading model and data...")
+    print('\nLoading model and data...')
     model = tf.keras.models.load_model(args.model)
     X_test = np.load(Path(args.data_dir) / "X_test.npy")
     y_test = np.load(Path(args.data_dir) / "y_test.npy")
@@ -230,18 +239,18 @@ def main():
         X_test = X_test / 255.0
     
     # Get predictions
-    print("Generating predictions...")
+    print('Generating predictions...')
     y_prob = model.predict(X_test, verbose=0).flatten()
     
     # Analyze thresholds
-    print("Analyzing thresholds...")
+    print('Analyzing thresholds...')
     metrics, optimal, roc_info = find_optimal_thresholds(y_test, y_prob)
     
     # Print recommendations
     print_threshold_recommendations(optimal, y_test, y_prob)
     
     # Generate plots
-    print("\nGenerating plots...")
+    print('\nGenerating plots...')
     plot_threshold_comparison(metrics, optimal, output_dir / "threshold_analysis.png")
     
     # Save results
@@ -258,11 +267,11 @@ def main():
     print(f"\n✓ Results saved to {output_dir / 'threshold_optimization.pkl'}")
     
     print("\n" + "=" * 80)
-    print("✓ Optimization complete!")
+    print('✓ Optimization complete!')
     print("=" * 80)
     print(f"\nRecommended threshold: {optimal['max_f1']['threshold']:.4f}")
     print(f"Use this in production: model.predict(x) >= {optimal['max_f1']['threshold']:.4f}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

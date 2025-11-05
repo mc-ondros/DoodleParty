@@ -74,17 +74,17 @@ class ModelEnsemble:
             self._train_meta_learner(X_val, y_val)
         elif self.method == 'voting':
             # No fitting needed for simple voting
-            print("  Using simple majority voting (no fitting required)")
+            print('  Using simple majority voting (no fitting required)')
         else:
             # Averaging doesn't need fitting
-            print("  Using simple averaging (no fitting required)")
+            print('  Using simple averaging (no fitting required)')
 
     def _calculate_weights(self, X_val: np.ndarray, y_val: np.ndarray):
         """Calculate ensemble weights based on validation accuracy."""
         weights = []
         total_accuracy = 0
 
-        print("  Calculating weights based on validation performance:")
+        print('  Calculating weights based on validation performance:')
 
         for i, model in enumerate(self.models):
             # Get predictions
@@ -109,7 +109,7 @@ class ModelEnsemble:
         else:
             # Fall back to equal weights
             self.weights = np.ones(len(self.models)) / len(self.models)
-            print("    Warning: Equal weights used (all models performed poorly)")
+            print('    Warning: Equal weights used (all models performed poorly)')
 
         print(f"  Final weights: {self.weights}")
 
@@ -117,7 +117,7 @@ class ModelEnsemble:
         """Train simple meta-learner (logistic regression) to combine predictions."""
         from sklearn.linear_model import LogisticRegression
 
-        print("  Training meta-learner (logistic regression)...")
+        print('  Training meta-learner (logistic regression)...')
 
         # Get predictions from all models
         features = []
@@ -177,7 +177,7 @@ class ModelEnsemble:
         elif self.method == 'weighted':
             # Weighted average of probabilities
             if self.weights is None:
-                raise ValueError("Must call fit() before predict() for weighted ensemble")
+                raise ValueError('Must call fit() before predict() for weighted ensemble')
 
             weighted_prob = np.average(probabilities, axis=0, weights=self.weights)
             ensemble_pred = (weighted_prob >= 0.5).astype(int)
@@ -186,7 +186,7 @@ class ModelEnsemble:
         elif self.method == 'stacking':
             # Use meta-learner
             if self.meta_model is None:
-                raise ValueError("Must call fit() before predict() for stacking ensemble")
+                raise ValueError('Must call fit() before predict() for stacking ensemble')
 
             # Features for meta-learner
             features = probabilities.T  # Shape: (n_samples, n_models)
@@ -228,12 +228,12 @@ class ModelEnsemble:
 
         elif self.method == 'weighted':
             if self.weights is None:
-                raise ValueError("Must call fit() before predict_proba() for weighted ensemble")
+                raise ValueError('Must call fit() before predict_proba() for weighted ensemble')
             return np.average(probabilities, axis=0, weights=self.weights)
 
         elif self.method == 'stacking':
             if self.meta_model is None:
-                raise ValueError("Must call fit() before predict_proba() for stacking ensemble")
+                raise ValueError('Must call fit() before predict_proba() for stacking ensemble')
 
             # Use meta-learner probability estimation
             features = probabilities.T
@@ -289,7 +289,7 @@ def evaluate_ensemble(ensemble: ModelEnsemble, X_test: np.ndarray,
     Returns:
         Dictionary with evaluation metrics
     """
-    print("\nEvaluating ensemble...")
+    print('\nEvaluating ensemble...')
 
     # Get predictions
     y_prob = ensemble.predict_proba(X_test)
@@ -417,10 +417,10 @@ def compare_individual_vs_ensemble(model_paths: List[str], X_test: np.ndarray,
         method: Ensemble method
     """
     print(f"\n{'='*70}")
-    print("INDIVIDUAL MODEL vs ENSEMBLE COMPARISON")
+    print('INDIVIDUAL MODEL vs ENSEMBLE COMPARISON')
     print(f"{'='*70}")
 
-    print("\nIndividual Model Performance:")
+    print('\nIndividual Model Performance:')
     for i, path in enumerate(model_paths):
         model = tf.keras.models.load_model(path)
         y_prob = model.predict(X_test, verbose=0).flatten()
@@ -442,25 +442,25 @@ def compare_individual_vs_ensemble(model_paths: List[str], X_test: np.ndarray,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Create and evaluate model ensemble")
+    parser = argparse.ArgumentParser(description = 'Create and evaluate model ensemble')
     parser.add_argument("--models", nargs='+', required=True,
-                       help="Paths to trained model files")
-    parser.add_argument("--data-dir", default="data/processed",
-                       help="Directory with test data")
+                       help = 'Paths to trained model files')
+    parser.add_argument("--data-dir", default = 'data/processed',
+                       help = 'Directory with test data')
     parser.add_argument("--method", default='weighted',
                        choices=['voting', 'averaging', 'weighted', 'stacking'],
-                       help="Ensemble method")
+                       help = 'Ensemble method')
     parser.add_argument("--cross-validate", action='store_true',
-                       help="Perform cross-validation")
+                       help = 'Perform cross-validation')
     parser.add_argument("--cv-folds", type=int, default=5,
-                       help="Number of CV folds")
-    parser.add_argument("--output", default="models/ensemble_config.pkl",
-                       help="Path to save ensemble configuration")
+                       help = 'Number of CV folds')
+    parser.add_argument("--output", default = 'models/ensemble_config.pkl',
+                       help = 'Path to save ensemble configuration')
 
     args = parser.parse_args()
 
     # Load test data
-    print("Loading test data...")
+    print('Loading test data...')
     X_test = np.load(Path(args.data_dir) / "X_test.npy")
     y_test = np.load(Path(args.data_dir) / "y_test.npy")
 
@@ -501,9 +501,9 @@ def main():
         save_ensemble(ensemble, args.output)
 
     print(f"\n{'='*70}")
-    print("✓ Ensemble evaluation complete!")
+    print('✓ Ensemble evaluation complete!')
     print(f"{'='*70}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

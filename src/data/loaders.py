@@ -19,9 +19,9 @@ class QuickDrawDataset:
     """Handles QuickDraw dataset loading and preprocessing."""
     
     # GCS public bucket with numpy bitmap format (smaller, pre-processed)
-    BASE_URL = "https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap"
+    BASE_URL = 'https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap'
     
-    def __init__(self, data_dir="data/raw"):
+    def __init__(self, data_dir = 'data/raw'):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
@@ -80,7 +80,7 @@ class QuickDrawDataset:
         
         return data
     
-    def prepare_dataset(self, classes, output_dir="data/processed", 
+    def prepare_dataset(self, classes, output_dir = 'data/processed', 
                        max_samples_per_class=None, test_split=0.2):
         """
         Prepare binary classification dataset.
@@ -102,7 +102,7 @@ class QuickDrawDataset:
         print(f"\nPreparing binary dataset with {len(classes)} positive classes...")
         
         # Load positive examples (in-distribution)
-        print("\nLoading positive examples (in-distribution)...")
+        print('\nLoading positive examples (in-distribution)...')
         for class_name in classes:
             try:
                 images = self.load_class_data(class_name, max_samples_per_class)
@@ -115,7 +115,7 @@ class QuickDrawDataset:
                 print(f"  ✗ Error loading {class_name}: {e}")
         
         # Generate negative examples (out-of-distribution random noise)
-        print("\nGenerating negative examples (out-of-distribution)...")
+        print('\nGenerating negative examples (out-of-distribution)...')
         num_positive = sum(len(img) for img in all_images)
         negative_images = np.random.randint(0, 256, (num_positive, 28, 28), dtype=np.uint8)
         negative_labels = np.zeros(num_positive, dtype=np.int32)  # Label 0 for out-of-distribution
@@ -169,14 +169,14 @@ class QuickDrawDataset:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Download and prepare QuickDraw dataset")
-    parser.add_argument("--download", action="store_true", help="Download raw data")
-    parser.add_argument("--classes", nargs="+", default=["airplane", "apple", "banana", "cat", "dog"],
-                       help="Classes to download")
-    parser.add_argument("--raw-dir", default="data/raw", help="Directory for raw data")
-    parser.add_argument("--output-dir", default="data/processed", help="Directory for processed data")
-    parser.add_argument("--max-samples", type=int, default=5000, help="Max samples per class")
-    parser.add_argument("--test-split", type=float, default=0.2, help="Test set fraction")
+    parser = argparse.ArgumentParser(description = 'Download and prepare QuickDraw dataset')
+    parser.add_argument("--download", action = 'store_true', help = 'Download raw data')
+    parser.add_argument("--classes", nargs = '+', default=["airplane", "apple", "banana", "cat", "dog"],
+                       help = 'Classes to download')
+    parser.add_argument("--raw-dir", default = 'data/raw', help = 'Directory for raw data')
+    parser.add_argument("--output-dir", default = 'data/processed', help = 'Directory for processed data')
+    parser.add_argument("--max-samples", type=int, default=5000, help = 'Max samples per class')
+    parser.add_argument("--test-split", type=float, default=0.2, help = 'Test set fraction')
     
     args = parser.parse_args()
     

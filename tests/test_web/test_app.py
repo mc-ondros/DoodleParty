@@ -264,7 +264,7 @@ class TestLoadModelAndMapping:
         mock_models_dir.glob = Mock(return_value=[])
         mock_path.return_value.parent.parent.parent.__truediv__ = Mock(return_value=mock_models_dir)
         
-        with pytest.raises(FileNotFoundError, match="No model files found"):
+        with pytest.raises(FileNotFoundError, match = 'No model files found'):
             load_model_and_mapping()
 
 

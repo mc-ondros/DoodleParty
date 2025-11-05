@@ -102,7 +102,7 @@ def visualize_comparison(results, save_path=None):
             ax.imshow(image, cmap='gray')
         
         # Add detection info
-        verdict = "POSITIVE" if result['detection_result'].is_positive else "NEGATIVE"
+        verdict = 'POSITIVE' if result['detection_result'].is_positive else "NEGATIVE"
         confidence = result['detection_result'].confidence
         num_patches = result['detection_result'].num_patches_analyzed
         
@@ -190,7 +190,7 @@ def demo_aggregation_strategies(model, idx_to_class, image, image_name):
         
         detection_result = detector.detect_batch(image_3d)
         
-        verdict = "POSITIVE" if detection_result.is_positive else "NEGATIVE"
+        verdict = 'POSITIVE' if detection_result.is_positive else "NEGATIVE"
         print(f"  Result: {verdict}")
         print(f"  Confidence: {detection_result.confidence:.2%}")
         print(f"  Patches analyzed: {detection_result.num_patches_analyzed}")
@@ -207,7 +207,7 @@ def demo_aggregation_strategies(model, idx_to_class, image, image_name):
 def demo_early_stopping(model, idx_to_class):
     """Demonstrate early stopping feature."""
     print(f"\n{'='*70}")
-    print("Demonstrating Early Stopping")
+    print('Demonstrating Early Stopping')
     print(f"{'='*70}")
     
     # Create image with suspicious content in first patch
@@ -222,7 +222,7 @@ def demo_early_stopping(model, idx_to_class):
         image_3d = image
     
     # Without early stopping
-    print("\n--- Without Early Stopping ---")
+    print('\n--- Without Early Stopping ---')
     detector_no_early = SlidingWindowDetector(
         model=model,
         patch_size=(128, 128),
@@ -233,7 +233,7 @@ def demo_early_stopping(model, idx_to_class):
     print(f"  Patches analyzed: {result_no_early.num_patches_analyzed}")
     
     # With early stopping
-    print("\n--- With Early Stopping ---")
+    print('\n--- With Early Stopping ---')
     detector_early = SlidingWindowDetector(
         model=model,
         patch_size=(128, 128),
@@ -249,7 +249,7 @@ def demo_early_stopping(model, idx_to_class):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Demonstrate region-based detection capabilities"
+        description = 'Demonstrate region-based detection capabilities'
     )
     parser.add_argument(
         '--model',
@@ -275,17 +275,17 @@ def main():
     args = parser.parse_args()
     
     print("="*70)
-    print("Region-Based Detection Demonstration")
+    print('Region-Based Detection Demonstration')
     print("="*70)
     print(f"\nModel: {args.model}")
     
     # Load model
-    print("\nLoading model...")
+    print('\nLoading model...')
     model, idx_to_class = load_model_and_mapping(args.model, args.data_dir)
-    print("✓ Model loaded successfully")
+    print('✓ Model loaded successfully')
     
     # Create demo images
-    print("\nCreating demo images...")
+    print('\nCreating demo images...')
     demo_images = create_demo_images()
     print(f"✓ Created {len(demo_images)} demo images")
     
@@ -312,18 +312,18 @@ def main():
     demo_early_stopping(model, idx_to_class)
     
     print(f"\n{'='*70}")
-    print("Demonstration Complete!")
+    print('Demonstration Complete!')
     print(f"{'='*70}")
-    print("\nKey Findings:")
-    print("  • MAX strategy is most aggressive (best for security)")
-    print("  • MEAN strategy is most balanced")
-    print("  • Early stopping reduces computation by stopping on first detection")
-    print("  • Region-based detection prevents content dilution attacks")
-    print("\nUsage in production:")
-    print("  • Use MAX strategy for high-security applications")
-    print("  • Enable early stopping for performance")
-    print("  • Adjust patch_size and stride based on expected content size")
+    print('\nKey Findings:')
+    print('  • MAX strategy is most aggressive (best for security)')
+    print('  • MEAN strategy is most balanced')
+    print('  • Early stopping reduces computation by stopping on first detection')
+    print('  • Region-based detection prevents content dilution attacks')
+    print('\nUsage in production:')
+    print('  • Use MAX strategy for high-security applications')
+    print('  • Enable early stopping for performance')
+    print('  • Adjust patch_size and stride based on expected content size')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

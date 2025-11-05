@@ -190,7 +190,7 @@ def parse_ndjson_file_consistent(filepath, max_samples=None, size=128):
 def main():
     """Main processing function."""
     print("="*70)
-    print("REPROCESSING PENIS NDJSON DATA (128x128)")
+    print('REPROCESSING PENIS NDJSON DATA (128x128)')
     print("="*70)
     
     # Paths
@@ -210,12 +210,12 @@ def main():
     
     # Process the data
     print("\n" + "="*70)
-    print("STEP 1: Converting NDJSON to 128x128 bitmaps")
+    print('STEP 1: Converting NDJSON to 128x128 bitmaps')
     print("="*70)
     images = parse_ndjson_file_consistent(ndjson_file, max_samples=None, size=128)
     
     if len(images) == 0:
-        print("ERROR: No images processed successfully!")
+        print('ERROR: No images processed successfully!')
         return
     
     print(f"\n✓ Processed {len(images):,} images")
@@ -226,7 +226,7 @@ def main():
     
     # Verify consistency with negative samples
     print("\n" + "="*70)
-    print("STEP 2: Verifying consistency with negative samples")
+    print('STEP 2: Verifying consistency with negative samples')
     print("="*70)
     
     # Load a sample negative class for comparison
@@ -247,18 +247,18 @@ def main():
         
         # Check if formats match
         if images.shape[1:] == neg_samples.shape[1:]:
-            print("\n✓ Dimensions match!")
+            print('\n✓ Dimensions match!')
         else:
             print(f"\n⚠️  Dimension mismatch: {images.shape[1:]} vs {neg_samples.shape[1:]}")
         
         if images.dtype == neg_samples.dtype:
-            print("✓ Data types match!")
+            print('✓ Data types match!')
         else:
             print(f"⚠️  Data type mismatch: {images.dtype} vs {neg_samples.dtype}")
     
     # Save the processed data
     print("\n" + "="*70)
-    print("STEP 3: Saving processed data")
+    print('STEP 3: Saving processed data')
     print("="*70)
     
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -269,15 +269,15 @@ def main():
     
     # Summary
     print("\n" + "="*70)
-    print("SUMMARY")
+    print('SUMMARY')
     print("="*70)
     print(f"✓ Successfully processed {len(images):,} penis drawings")
     print(f"✓ Output format: {images.shape} ({images.dtype})")
     print(f"✓ Value range: {images.min()}-{images.max()} (mean: {images.mean():.2f})")
     print(f"✓ Saved to: {output_file}")
-    print("\nThe data is now ready for training!")
-    print("Run: python scripts/data_processing/regenerate_training_data.py")
+    print('\nThe data is now ready for training!')
+    print('Run: python scripts/data_processing/regenerate_training_data.py')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

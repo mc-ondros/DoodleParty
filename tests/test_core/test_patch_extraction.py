@@ -473,5 +473,5 @@ class TestIntegration:
         assert result.num_patches_analyzed > 1
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     pytest.main([__file__, "-v"])

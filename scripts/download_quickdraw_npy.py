@@ -12,7 +12,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 # GCS bucket with numpy bitmap format (pre-processed, ~100-200MB per category)
-GCS_BUCKET = "https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap"
+GCS_BUCKET = 'https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap'
 
 # List of QuickDraw categories to download
 CATEGORIES = [
@@ -110,10 +110,10 @@ def download_category(category, output_dir):
 
 def main():
     print("=" * 75)
-    print("QUICKDRAW NUMPY BITMAP DOWNLOADER")
+    print('QUICKDRAW NUMPY BITMAP DOWNLOADER')
     print("=" * 75)
-    print("Format: 28x28 grayscale images (pre-processed)")
-    print("Source: https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap")
+    print('Format: 28x28 grayscale images (pre-processed)')
+    print('Source: https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap')
     print()
     
     output_dir = Path('/home/mcvaj/ML/data/raw')
@@ -136,13 +136,13 @@ def main():
     
     # Summary
     print("=" * 75)
-    print("DOWNLOAD SUMMARY")
+    print('DOWNLOAD SUMMARY')
     print("=" * 75)
     print(f"Successfully downloaded: {len(downloaded)}/{len(CATEGORIES)}")
     print(f"Failed: {len(failed)}/{len(CATEGORIES)}")
     
     if downloaded:
-        print("\n✓ Downloaded categories:")
+        print('\n✓ Downloaded categories:')
         for cat in downloaded:
             filepath = output_dir / f"{cat}.npy"
             if filepath.exists():
@@ -151,17 +151,17 @@ def main():
                 print(f"  • {cat}: {data.shape[0]:,} images ({size:.1f}MB)")
     
     if failed:
-        print("\n✗ Failed categories:")
+        print('\n✗ Failed categories:')
         for cat in failed:
             print(f"  • {cat}")
     
     print(f"\n✓ All files saved to: {output_dir}")
-    print("\nNext step: Run dataset preparation")
+    print('\nNext step: Run dataset preparation')
     print("  python src/dataset.py --classes " + " ".join(downloaded[:5]))
     
     return len(downloaded) > 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     success = main()
     exit(0 if success else 1)

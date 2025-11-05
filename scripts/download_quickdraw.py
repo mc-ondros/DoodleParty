@@ -157,7 +157,7 @@ def download_category(category, max_samples=2000):
 
 def main():
     print("=" * 60)
-    print("DOWNLOADING QUICKDRAW CATEGORIES FOR NEGATIVE SAMPLES")
+    print('DOWNLOADING QUICKDRAW CATEGORIES FOR NEGATIVE SAMPLES')
     print("=" * 60)
     
     output_dir = Path('/home/mcvaj/ML/data/processed')
@@ -172,7 +172,7 @@ def main():
             print(f"  Total so far: {sum(len(img_array) for img_array in all_negatives)} samples\n")
     
     if not all_negatives:
-        print("✗ Failed to download any categories!")
+        print('✗ Failed to download any categories!')
         return
     
     # Combine all negatives
@@ -186,5 +186,5 @@ def main():
     return X_negative_real
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     X_negative_real = main()

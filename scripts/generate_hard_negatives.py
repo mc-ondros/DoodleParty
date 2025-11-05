@@ -150,14 +150,14 @@ def create_scaled_doodles(images, num_samples=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate hard negative samples")
-    parser.add_argument("--similar-categories", nargs="+", 
+    parser = argparse.ArgumentParser(description = 'Generate hard negative samples')
+    parser.add_argument("--similar-categories", nargs = '+', 
                        default=["flower", "tree", "house", "bird"],
-                       help="Similar categories to use as hard negatives")
+                       help = 'Similar categories to use as hard negatives')
     parser.add_argument("--samples-per-type", type=int, default=2000,
-                       help="Samples per hard negative type")
-    parser.add_argument("--output-dir", default="data/processed",
-                       help="Output directory")
+                       help = 'Samples per hard negative type')
+    parser.add_argument("--output-dir", default = 'data/processed',
+                       help = 'Output directory')
     
     args = parser.parse_args()
     
@@ -165,24 +165,24 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print("=" * 70)
-    print("HARD NEGATIVE SAMPLES GENERATOR")
+    print('HARD NEGATIVE SAMPLES GENERATOR')
     print("=" * 70)
     
     all_hard_negatives = []
     
     # 1. Similar category doodles
-    print("\n1. Loading similar category doodles...")
+    print('\n1. Loading similar category doodles...')
     for category in args.similar_categories:
-        print(f"   Loading {category}...", end=" ", flush=True)
+        print(f"   Loading {category}...", end = ' ', flush=True)
         data = load_quickdraw_category(category, max_samples=args.samples_per_type)
         if data is not None:
             all_hard_negatives.append(data)
             print(f"✓ ({len(data)} samples)")
         else:
-            print("✗")
+            print('✗')
     
     # 2. Partial doodles (challenging - incomplete drawings)
-    print("\n2. Generating partial doodles...")
+    print('\n2. Generating partial doodles...')
     if all_hard_negatives:
         source_data = all_hard_negatives[0]
         partial = create_partial_doodles(source_data, num_samples=args.samples_per_type)
@@ -190,23 +190,27 @@ def main():
         print(f"   ✓ Generated {len(partial)} partial doodles")
     
     # 3. Rotated doodles
-    print("\n3. Generating rotated doodles...")
+    print('\n3. Generating rotated doodles...')
     if all_hard_negatives:
         source_data = all_hard_negatives[0]
-        rotated = create_rotated_doodles(source_data, num_samples=args.samples_per_type, max_rotation=30)
+        rotated = create_rotated_doodles(
+            source_data, num_samples=args.samples_per_type, max_rotation=30
+        )
         all_hard_negatives.append(rotated)
         print(f"   ✓ Generated {len(rotated)} rotated doodles")
     
     # 4. Noisy doodles (degraded quality)
-    print("\n4. Generating noisy doodles...")
+    print('\n4. Generating noisy doodles...')
     if all_hard_negatives:
         source_data = all_hard_negatives[0]
-        noisy = create_noisy_doodles(source_data, num_samples=args.samples_per_type, noise_level=0.15)
+        noisy = create_noisy_doodles(
+            source_data, num_samples=args.samples_per_type, noise_level=0.15
+        )
         all_hard_negatives.append(noisy)
         print(f"   ✓ Generated {len(noisy)} noisy doodles")
     
     # 5. Faded doodles
-    print("\n5. Generating faded doodles...")
+    print('\n5. Generating faded doodles...')
     if all_hard_negatives:
         source_data = all_hard_negatives[0]
         faded = create_faded_doodles(source_data, num_samples=args.samples_per_type)
@@ -214,7 +218,7 @@ def main():
         print(f"   ✓ Generated {len(faded)} faded doodles")
     
     # 6. Scaled doodles
-    print("\n6. Generating scaled doodles...")
+    print('\n6. Generating scaled doodles...')
     if all_hard_negatives:
         source_data = all_hard_negatives[0]
         scaled = create_scaled_doodles(source_data, num_samples=args.samples_per_type)
@@ -230,7 +234,7 @@ def main():
         np.save(output_file, X_hard_negatives)
         
         print("\n" + "=" * 70)
-        print("SUMMARY")
+        print('SUMMARY')
         print("=" * 70)
         print(f"Total hard negative samples: {len(X_hard_negatives)}")
         print(f"Breakdown:")
@@ -243,8 +247,8 @@ def main():
         print(f"\nSaved to: {output_file}")
         print(f"File size: {output_file.stat().st_size / 1024 / 1024:.2f}MB")
     else:
-        print("No data loaded!")
+        print('No data loaded!')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

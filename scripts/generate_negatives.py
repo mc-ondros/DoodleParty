@@ -242,7 +242,11 @@ def generate_diverse_negatives(num_samples, positive_images=None):
     ]
     
     if positive_images is not None:
-        strategies.append(lambda: inverted_positive(positive_images[np.random.randint(0, len(positive_images))]))
+        strategies.append(
+            lambda: inverted_positive(
+                positive_images[np.random.randint(0, len(positive_images))]
+            )
+        )
     
     negatives = []
     strategy_counts = {s.__name__: 0 for s in strategies}
@@ -272,9 +276,9 @@ def generate_diverse_negatives(num_samples, positive_images=None):
     return np.array(negatives, dtype=np.uint8)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Example: generate 100 samples and visualize
-    print("Generating example negative samples...")
+    print('Generating example negative samples...')
     negatives = generate_diverse_negatives(100)
     
     # Visualize a sample of each type
@@ -296,4 +300,4 @@ if __name__ == "__main__":
     
     plt.tight_layout()
     plt.savefig('data/processed/negative_samples_preview.png', dpi=100)
-    print("✓ Saved preview to data/processed/negative_samples_preview.png")
+    print('✓ Saved preview to data/processed/negative_samples_preview.png')

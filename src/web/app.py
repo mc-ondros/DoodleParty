@@ -50,7 +50,7 @@ CORS(app)
 model = None
 tflite_interpreter = None
 is_tflite = False
-model_name = "Unknown"
+model_name = 'Unknown'
 idx_to_class = None
 THRESHOLD = 0.5
 
@@ -73,19 +73,19 @@ def load_model_and_mapping():
     if tflite_int8_files:
         model_path = max(tflite_int8_files, key=lambda p: p.stat().st_mtime)
         is_tflite = True
-        model_name = "TFLite INT8 (Optimized)"
+        model_name = 'TFLite INT8 (Optimized)'
         print(f"Loading optimized INT8 TFLite model: {model_path}")
     # Then try regular TFLite
     elif tflite_files:
         model_path = max(tflite_files, key=lambda p: p.stat().st_mtime)
         is_tflite = True
-        model_name = "TFLite Float32"
+        model_name = 'TFLite Float32'
         print(f"Loading TFLite model: {model_path}")
     # Fall back to Keras/H5
     elif model_files:
         model_path = max(model_files, key=lambda p: p.stat().st_mtime)
         is_tflite = False
-        model_name = "Keras/TensorFlow"
+        model_name = 'Keras/TensorFlow'
         print(f"Loading Keras model: {model_path}")
     else:
         raise FileNotFoundError(f"No model files found in {models_dir}")
@@ -128,16 +128,16 @@ def load_model_and_mapping():
 
         # Provide sensible defaults if extraction fails
         if not idx_to_class:
-            print("Warning: Could not extract class mappings from file, using defaults")
+            print('Warning: Could not extract class mappings from file, using defaults')
             idx_to_class = {0: 'negative', 1: 'positive'}
     except FileNotFoundError:
-        print("Warning: class_mapping.pkl not found")
+        print('Warning: class_mapping.pkl not found')
         idx_to_class = {0: 'negative', 1: 'positive'}
     except Exception as e:
         print(f"Warning: Error loading class mapping: {e}")
         idx_to_class = {0: 'negative', 1: 'positive'}
 
-    print("Model loaded successfully!")
+    print('Model loaded successfully!')
 
 
 def preprocess_image(image_data):
@@ -252,11 +252,11 @@ def predict(image_data):
         # Why threshold: Model outputs probability, but interface needs discrete class
         if probability >= THRESHOLD:
             verdict = 'PENIS'
-            verdict_text = "Drawing looks like a penis! ✓"
+            verdict_text = 'Drawing looks like a penis! ✓'
             confidence = float(probability)
         else:
             verdict = 'OTHER_SHAPE'
-            verdict_text = "Drawing looks like a common shape (not penis)."
+            verdict_text = 'Drawing looks like a common shape (not penis).'
             confidence = float(1 - probability)
 
         return {
@@ -372,11 +372,11 @@ def predict_region_based(image_data, use_region_detection=True):
         # Format result
         if detection_result.is_positive:
             verdict = 'PENIS'
-            verdict_text = "Drawing looks like a penis! ✓ (Detected via region analysis)"
+            verdict_text = 'Drawing looks like a penis! ✓ (Detected via region analysis)'
             confidence = float(detection_result.confidence)
         else:
             verdict = 'OTHER_SHAPE'
-            verdict_text = "Drawing looks like a common shape (not penis). (Verified via region analysis)"
+            verdict_text = 'Drawing looks like a common shape (not penis). (Verified via region analysis)'
             confidence = float(1 - detection_result.confidence)
         
         return {
@@ -479,14 +479,14 @@ except Exception as e:
     # Log warning but don't crash - allows app to run without model for testing
     # Why continue: Enables UI development even when model is not available
     print(f"Warning: Failed to load model on startup: {e}")
-    print("Model will need to be loaded manually")
+    print('Model will need to be loaded manually')
 
 
 if __name__ == '__main__':
     # Start Flask development server
     # Why debug=True: Enables auto-reload and detailed error pages during development
     # Why 0.0.0.0: Allows external access (not just localhost)
-    print("Starting Penis Classifier Interface...")
-    print("Visit http://localhost:5000 to use the drawing board")
-    print("Model: Binary classification (penis vs other shapes)")
+    print('Starting Penis Classifier Interface...')
+    print('Visit http://localhost:5000 to use the drawing board')
+    print('Model: Binary classification (penis vs other shapes)')
     app.run(debug=True, host='0.0.0.0', port=5000)

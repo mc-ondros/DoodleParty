@@ -35,6 +35,7 @@ Access at `http://localhost:5000`
 - [API Reference](.documentation/api.md)
 - [Development Roadmap](.documentation/roadmap.md)
 - [Project Structure](.documentation/structure.md)
+- [Region-Based Detection](.documentation/region_detection.md)
 - [Code Style Guide](STYLE_GUIDE.md)
 
 ## Features

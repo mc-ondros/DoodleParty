@@ -30,11 +30,11 @@ from enum import Enum
 
 class AggregationStrategy(Enum):
     """Strategies for aggregating patch predictions."""
-    MAX = "max"  # Maximum confidence (most aggressive)
-    MEAN = "mean"  # Average confidence (balanced)
-    WEIGHTED_MEAN = "weighted_mean"  # Weighted by patch content
-    VOTING = "voting"  # Binary voting with threshold
-    ANY_POSITIVE = "any_positive"  # Flag if any patch is positive
+    MAX = 'max'  # Maximum confidence (most aggressive)
+    MEAN = 'mean'  # Average confidence (balanced)
+    WEIGHTED_MEAN = 'weighted_mean'  # Weighted by patch content
+    VOTING = 'voting'  # Binary voting with threshold
+    ANY_POSITIVE = 'any_positive'  # Flag if any patch is positive
 
 
 @dataclass

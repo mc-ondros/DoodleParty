@@ -80,7 +80,7 @@ def build_model(num_classes=2, enhanced=False):
             # Output layer
             layers.Dense(1, activation='sigmoid')
         ])
-        print("✓ Using ENHANCED model (larger capacity, ~2.5M params)")
+        print('✓ Using ENHANCED model (larger capacity, ~2.5M params)')
     else:
         # STANDARD MODEL - Original architecture (128x128 input)
         model = models.Sequential([
@@ -114,12 +114,12 @@ def build_model(num_classes=2, enhanced=False):
             # Output layer - binary classification
             layers.Dense(1, activation='sigmoid')
         ])
-        print("✓ Using STANDARD model (~423K params)")
+        print('✓ Using STANDARD model (~423K params)')
     
     return model
 
 
-def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5",
+def train_model(data_dir, epochs=50, batch_size=32, model_output = 'models/quickdraw_model.h5',
                 learning_rate=0.001, label_smoothing=0.1, architecture='custom',
                 enhanced=False, aggressive_aug=False, use_class_weighting=False):
     """
@@ -153,7 +153,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     data_dir = Path(data_dir)
     
     # Load data
-    print("Loading training data...")
+    print('Loading training data...')
     X_train = np.load(data_dir / "X_train.npy")
     y_train = np.load(data_dir / "y_train.npy")
     X_test = np.load(data_dir / "X_test.npy")
@@ -212,7 +212,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         print(f"\n⚪ Class weighting disabled (using equal weights)")
 
     # Build model
-    print("\nBuilding model...")
+    print('\nBuilding model...')
     if architecture == 'custom':
         model = build_model(enhanced=enhanced)
     else:
@@ -241,7 +241,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         metrics=['accuracy', keras.metrics.AUC()]
     )
     
-    print("\nModel summary:")
+    print('\nModel summary:')
     model.summary()
     
     # Create callbacks
@@ -274,7 +274,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     # CRITICAL: Use random split with shuffle to avoid class clustering
     from sklearn.model_selection import train_test_split as split
     
-    print("\nCreating train/validation split (stratified and shuffled)...")
+    print('\nCreating train/validation split (stratified and shuffled)...')
     val_split = 0.2
     X_train_split, X_val_split, y_train_split, y_val_split = split(
         X_train, y_train,
@@ -299,12 +299,12 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     
     # Check if data is already normalized (from preprocessing)
     if X_train.max() <= 1.0:
-        print("\n✓ Data already normalized - skipping double normalization")
+        print('\n✓ Data already normalized - skipping double normalization')
         X_train_norm = X_train_split
         X_val_norm = X_val_split
         X_test_norm = X_test
     else:
-        print("\nNormalizing data with per-image normalization...")
+        print('\nNormalizing data with per-image normalization...')
         X_train_norm = prepare_test_data(X_train_split)
         X_val_norm = prepare_test_data(X_val_split)
         X_test_norm = prepare_test_data(X_test)
@@ -326,7 +326,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     
     # Create augmentation generator with CORRECT background fill
     if aggressive_aug:
-        print("Setting up AGGRESSIVE data augmentation...")
+        print('Setting up AGGRESSIVE data augmentation...')
         augmentation = ImageDataGenerator(
             rotation_range=25,          # ±25 degrees (vs 15)
             width_shift_range=0.15,     # ±15% (vs 10%)
@@ -338,7 +338,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         )
         print(f"  ✓ Using aggressive augmentation with background fill={background_value:.3f}")
     else:
-        print("Setting up standard data augmentation...")
+        print('Setting up standard data augmentation...')
         augmentation = ImageDataGenerator(
             rotation_range=15,
             width_shift_range=0.1,
@@ -366,7 +366,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     print(f"  Batch size: {batch_size}")
     
     # Train model
-    print("\nStarting training...")
+    print('\nStarting training...')
 
     # Prepare fit arguments
     fit_kwargs = {
@@ -388,7 +388,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     )
     
     # Evaluate on test set
-    print("\nEvaluating on test set...")
+    print('\nEvaluating on test set...')
     results = model.evaluate(X_test_norm, y_test, verbose=0)
     if len(results) == 3:
         test_loss, test_accuracy, test_auc = results
@@ -439,23 +439,23 @@ def plot_training_history(history, output_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train QuickDraw classifier")
-    parser.add_argument("--data-dir", default="data/processed", help="Directory with processed data")
-    parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
-    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate")
+    parser = argparse.ArgumentParser(description = 'Train QuickDraw classifier')
+    parser.add_argument("--data-dir", default = 'data/processed', help = 'Directory with processed data')
+    parser.add_argument("--epochs", type=int, default=50, help = 'Number of epochs')
+    parser.add_argument("--batch-size", type=int, default=32, help = 'Batch size')
+    parser.add_argument("--learning-rate", type=float, default=0.001, help = 'Learning rate')
     parser.add_argument("--label-smoothing", type=float, default=0.1, 
-                       help="Label smoothing factor (0-1, default 0.1)")
-    parser.add_argument("--architecture", default="custom", 
+                       help = 'Label smoothing factor (0-1, default 0.1)')
+    parser.add_argument("--architecture", default = 'custom', 
                        choices=["custom", "resnet50", "mobilenetv3", "efficientnet"],
-                       help="Model architecture to use")
-    parser.add_argument("--model-output", default="models/quickdraw_model.h5", help="Path to save model")
-    parser.add_argument("--enhanced", action="store_true", 
-                       help="Use enhanced model with more capacity (slower, more accurate)")
-    parser.add_argument("--aggressive-aug", action="store_true",
-                       help="Use aggressive data augmentation (rotation ±30°, shift ±20%, zoom ±25%)")
-    parser.add_argument("--use-class-weighting", action="store_true",
-                       help="Apply class weighting to handle imbalanced data")
+                       help = 'Model architecture to use')
+    parser.add_argument("--model-output", default = 'models/quickdraw_model.h5', help = 'Path to save model')
+    parser.add_argument("--enhanced", action = 'store_true', 
+                       help = 'Use enhanced model with more capacity (slower, more accurate)')
+    parser.add_argument("--aggressive-aug", action = 'store_true',
+                       help = 'Use aggressive data augmentation (rotation ±30°, shift ±20%, zoom ±25%)')
+    parser.add_argument("--use-class-weighting", action = 'store_true',
+                       help = 'Apply class weighting to handle imbalanced data')
 
     args = parser.parse_args()
     
@@ -473,5 +473,5 @@ def main():
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

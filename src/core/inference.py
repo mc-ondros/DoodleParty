@@ -37,7 +37,7 @@ from src.core.patch_extraction import (
 )
 
 
-def load_model_and_mapping(model_path, data_dir="data/processed"):
+def load_model_and_mapping(model_path, data_dir = 'data/processed'):
     """Load trained model and class mapping."""
     model = keras.models.load_model(model_path)
     
@@ -88,12 +88,12 @@ def predict_image(model, idx_to_class, image_path, threshold=0.5):
     return class_name, confidence, probability
 
 
-def evaluate_model(model_path, data_dir="data/processed"):
+def evaluate_model(model_path, data_dir = 'data/processed'):
     """
     Evaluate binary classification model on test set.
     Generate confusion matrix and classification metrics.
     """
-    print("Loading model and data...")
+    print('Loading model and data...')
     model, idx_to_class = load_model_and_mapping(model_path, data_dir)
     
     # Load test data
@@ -104,19 +104,19 @@ def evaluate_model(model_path, data_dir="data/processed"):
     print(f"Positive samples: {(y_test==1).sum()}, Negative samples: {(y_test==0).sum()}")
     
     # Evaluate
-    print("\nEvaluating model...")
+    print('\nEvaluating model...')
     loss, accuracy, auc = model.evaluate(X_test, y_test, verbose=0)
     print(f"Test Loss: {loss:.4f}")
     print(f"Test Accuracy: {accuracy:.4f}")
     print(f"Test AUC: {auc:.4f}")
     
     # Get predictions
-    print("Getting predictions...")
+    print('Getting predictions...')
     y_pred_proba = model.predict(X_test, verbose=0).flatten()
     y_pred = (y_pred_proba >= 0.5).astype(int)
     
     # Classification report
-    print("\nClassification Report:")
+    print('\nClassification Report:')
     print(classification_report(
         y_test, y_pred,
         target_names=['negative (OOD)', 'positive (ID)']
@@ -145,7 +145,7 @@ def evaluate_model(model_path, data_dir="data/processed"):
     print(f"✓ Confusion matrix saved to {output_path}")
 
 
-def predict_batch(model_path, image_dir, data_dir="data/processed"):
+def predict_batch(model_path, image_dir, data_dir = 'data/processed'):
     """Make predictions for all images in a directory."""
     model, idx_to_class = load_model_and_mapping(model_path, data_dir)
     
@@ -258,7 +258,7 @@ def predict_image_region_based(
 def predict_batch_region_based(
     model_path,
     image_dir,
-    data_dir="data/processed",
+    data_dir = 'data/processed',
     patch_size=(128, 128),
     stride=None,
     aggregation_strategy=AggregationStrategy.MAX,
@@ -325,41 +325,41 @@ def predict_batch_region_based(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Binary classifier for doodle detection")
-    parser.add_argument("--model", required=True, help="Path to trained model")
-    parser.add_argument("--data-dir", default="data/processed", help="Directory with processed data")
-    parser.add_argument("--threshold", type=float, default=0.5, help="Classification threshold")
+    parser = argparse.ArgumentParser(description = 'Binary classifier for doodle detection')
+    parser.add_argument("--model", required=True, help = 'Path to trained model')
+    parser.add_argument("--data-dir", default = 'data/processed', help = 'Directory with processed data')
+    parser.add_argument("--threshold", type=float, default=0.5, help = 'Classification threshold')
     
     # Prediction modes
     subparsers = parser.add_subparsers(dest='mode', help='Prediction mode')
     
     # Single image prediction
     single_parser = subparsers.add_parser('single', help='Predict single image')
-    single_parser.add_argument("--image", required=True, help="Path to image file")
+    single_parser.add_argument("--image", required=True, help = 'Path to image file')
     
     # Region-based single image prediction
     region_parser = subparsers.add_parser('region', help='Predict with region-based detection (robust)')
-    region_parser.add_argument("--image", required=True, help="Path to image file")
-    region_parser.add_argument("--patch-size", type=int, nargs=2, default=[128, 128], help="Patch size (height width)")
-    region_parser.add_argument("--stride", type=int, nargs=2, default=None, help="Stride for sliding window")
-    region_parser.add_argument("--max-patches", type=int, default=16, help="Maximum patches to analyze")
-    region_parser.add_argument("--aggregation", type=str, default="max", 
+    region_parser.add_argument("--image", required=True, help = 'Path to image file')
+    region_parser.add_argument("--patch-size", type=int, nargs=2, default=[128, 128], help = 'Patch size (height width)')
+    region_parser.add_argument("--stride", type=int, nargs=2, default=None, help = 'Stride for sliding window')
+    region_parser.add_argument("--max-patches", type=int, default=16, help = 'Maximum patches to analyze')
+    region_parser.add_argument("--aggregation", type=str, default = 'max', 
                                 choices=['max', 'mean', 'weighted_mean', 'voting', 'any_positive'],
-                                help="Aggregation strategy")
-    region_parser.add_argument("--visualize", action='store_true', help="Save visualization")
+                                help = 'Aggregation strategy')
+    region_parser.add_argument("--visualize", action='store_true', help = 'Save visualization')
     
     # Evaluate
     eval_parser = subparsers.add_parser('evaluate', help='Evaluate on test set')
     
     # Batch prediction
     batch_parser = subparsers.add_parser('batch', help='Predict batch of images')
-    batch_parser.add_argument("--image-dir", required=True, help="Directory with images")
+    batch_parser.add_argument("--image-dir", required=True, help = 'Directory with images')
     
     # Region-based batch prediction
     region_batch_parser = subparsers.add_parser('region-batch', help='Predict batch with region-based detection')
-    region_batch_parser.add_argument("--image-dir", required=True, help="Directory with images")
-    region_batch_parser.add_argument("--patch-size", type=int, nargs=2, default=[128, 128], help="Patch size")
-    region_batch_parser.add_argument("--visualize", action='store_true', help="Save visualizations")
+    region_batch_parser.add_argument("--image-dir", required=True, help = 'Directory with images')
+    region_batch_parser.add_argument("--patch-size", type=int, nargs=2, default=[128, 128], help = 'Patch size')
+    region_batch_parser.add_argument("--visualize", action='store_true', help = 'Save visualizations')
     
     args = parser.parse_args()
     
@@ -401,8 +401,8 @@ def main():
             save_visualization_path=vis_path
         )
         
-        print(f"\n=== Region-Based Detection Results ===")
-        print(f"Predicted: {class_name}")
+        print(f"\n=== Region-Based Detection Results === ')
+        print(f'Predicted: {class_name}")
         print(f"Confidence: {confidence:.2%}")
         print(f"Patches analyzed: {detection_result.num_patches_analyzed}")
         print(f"Early stopped: {detection_result.early_stopped}")
@@ -430,5 +430,5 @@ def main():
         parser.print_help()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

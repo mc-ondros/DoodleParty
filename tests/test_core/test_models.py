@@ -206,7 +206,7 @@ class TestGetModel:
     
     def test_get_model_invalid_architecture(self):
         """Test error handling for invalid architecture."""
-        with pytest.raises(ValueError, match="Unknown architecture"):
+        with pytest.raises(ValueError, match = 'Unknown architecture'):
             get_model('invalid_arch', summary=False)
     
     def test_get_model_freeze_base_parameter(self):

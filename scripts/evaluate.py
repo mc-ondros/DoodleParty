@@ -23,7 +23,7 @@ import tensorflow as tf
 
 def load_model_and_data(model_path, data_dir):
     """Load trained model and test data."""
-    print("Loading model and data...")
+    print('Loading model and data...')
     model = tf.keras.models.load_model(model_path)
     
     X_test = np.load(Path(data_dir) / "X_test.npy")
@@ -38,7 +38,7 @@ def load_model_and_data(model_path, data_dir):
 
 def evaluate_model(model, X_test, y_test):
     """Get predictions and probabilities."""
-    print("Generating predictions...")
+    print('Generating predictions...')
     y_prob = model.predict(X_test, verbose=0)
     y_prob = y_prob.flatten()
     
@@ -109,7 +109,7 @@ def plot_roc_curve(fpr, tpr, roc_auc, optimal_threshold, output_path):
     plt.xlabel('False Positive Rate', fontsize=12)
     plt.ylabel('True Positive Rate', fontsize=12)
     plt.title('ROC Curve - DoodleHunter Model', fontsize=14, fontweight='bold')
-    plt.legend(loc="lower right", fontsize=11)
+    plt.legend(loc = 'lower right', fontsize=11)
     plt.grid(alpha=0.3)
     
     plt.tight_layout()
@@ -141,9 +141,15 @@ def plot_confusion_matrix(y_true, y_pred, output_path):
     # Add text annotations
     for i in range(2):
         for j in range(2):
-            plt.text(j, i, f'{cm[i, j]}\n({cm_normalized[i, j]:.1%})',
-                    ha="center", va="center", color="black" if cm_normalized[i, j] < 0.5 else "white",
-                    fontsize=12)
+            plt.text(
+                j,
+                i,
+                f'{cm[i, j]}\n({cm_normalized[i, j]:.1%})',
+                ha='center',
+                va='center',
+                color='black' if cm_normalized[i, j] < 0.5 else 'white',
+                fontsize=12
+            )
     
     plt.colorbar(im)
     plt.tight_layout()
@@ -189,15 +195,15 @@ def plot_threshold_analysis(y_true, y_prob, output_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate DoodleHunter model")
-    parser.add_argument("--model", default="models/quickdraw_model.h5",
-                       help="Path to trained model")
-    parser.add_argument("--data-dir", default="data/processed",
-                       help="Directory with test data")
-    parser.add_argument("--output-dir", default="models",
-                       help="Output directory for plots")
+    parser = argparse.ArgumentParser(description = 'Evaluate DoodleHunter model')
+    parser.add_argument("--model", default = 'models/quickdraw_model.h5',
+                       help = 'Path to trained model')
+    parser.add_argument("--data-dir", default = 'data/processed',
+                       help = 'Directory with test data')
+    parser.add_argument("--output-dir", default = 'models',
+                       help = 'Output directory for plots')
     parser.add_argument("--threshold", type=float, default=None,
-                       help="Use specific threshold (if None, finds optimal)")
+                       help = 'Use specific threshold (if None, finds optimal)')
     
     args = parser.parse_args()
     
@@ -205,7 +211,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print("=" * 70)
-    print("DOODLEHUNTER MODEL EVALUATION")
+    print('DOODLEHUNTER MODEL EVALUATION')
     print("=" * 70)
     
     # Load model and data
@@ -215,7 +221,7 @@ def main():
     y_prob = evaluate_model(model, X_test, y_test)
     
     # Find optimal threshold
-    print("\nAnalyzing ROC curve...")
+    print('\nAnalyzing ROC curve...')
     roc_info = find_optimal_threshold(y_test, y_prob)
     optimal_threshold = roc_info['optimal_threshold']
     
@@ -223,7 +229,7 @@ def main():
     threshold = args.threshold if args.threshold is not None else optimal_threshold
     
     print("\n" + "=" * 70)
-    print("EVALUATION RESULTS")
+    print('EVALUATION RESULTS')
     print("=" * 70)
     
     # Calculate metrics
@@ -251,7 +257,7 @@ def main():
     
     # Generate plots
     print("\n" + "=" * 70)
-    print("GENERATING PLOTS")
+    print('GENERATING PLOTS')
     print("=" * 70)
     
     plot_roc_curve(roc_info['fpr'], roc_info['tpr'], roc_info['roc_auc'], 
@@ -274,9 +280,9 @@ def main():
     print(f"✓ Metrics saved to {metrics_file}")
     
     print("\n" + "=" * 70)
-    print("✓ Evaluation complete!")
+    print('✓ Evaluation complete!')
     print("=" * 70)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

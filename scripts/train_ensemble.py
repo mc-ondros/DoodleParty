@@ -32,17 +32,17 @@ def run_command(cmd, description):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train ensemble of models")
-    parser.add_argument("--data-dir", default="data/processed",
-                       help="Directory with processed data")
-    parser.add_argument("--output-dir", default="models/ensemble_models",
-                       help="Directory to save ensemble models")
+    parser = argparse.ArgumentParser(description = 'Train ensemble of models')
+    parser.add_argument("--data-dir", default = 'data/processed',
+                       help = 'Directory with processed data')
+    parser.add_argument("--output-dir", default = 'models/ensemble_models',
+                       help = 'Directory to save ensemble models')
     parser.add_argument("--epochs", type=int, default=30,
-                       help="Number of epochs per model")
+                       help = 'Number of epochs per model')
     parser.add_argument("--batch-size", type=int, default=32,
-                       help="Batch size")
-    parser.add_argument("--use-class-weighting", action="store_true",
-                       help="Use class weighting")
+                       help = 'Batch size')
+    parser.add_argument("--use-class-weighting", action = 'store_true',
+                       help = 'Use class weighting')
     
     args = parser.parse_args()
     
@@ -50,7 +50,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print("\n" + "="*70)
-    print("ENSEMBLE TRAINING PIPELINE")
+    print('ENSEMBLE TRAINING PIPELINE')
     print("="*70)
     print(f"\nOutput directory: {output_dir}")
     print(f"Training {args.epochs} epochs per model")
@@ -111,11 +111,11 @@ def main():
     
     # Create ensemble from trained models
     print(f"\n\n{'='*70}")
-    print("CREATING ENSEMBLE")
+    print('CREATING ENSEMBLE')
     print(f"{'='*70}")
     
     model_paths = [str(m['output']) for m in models]
-    model_paths_str = " ".join(model_paths)
+    model_paths_str = ' '.join(model_paths)
     
     cmd = f"python scripts/ensemble_model.py"
     cmd += f" --models {model_paths_str}"
@@ -126,17 +126,17 @@ def main():
     success = run_command(cmd, "Create ensemble")
     
     if not success:
-        print("✗ Failed to create ensemble")
+        print('✗ Failed to create ensemble')
         sys.exit(1)
     
     print("\n" + "="*70)
-    print("✓ ENSEMBLE TRAINING COMPLETE!")
+    print('✓ ENSEMBLE TRAINING COMPLETE!')
     print("="*70)
     print(f"\nModels trained: {len(models)}")
     print(f"Ensemble configuration: {output_dir}/ensemble_config.pkl")
-    print("\nTo use the ensemble:")
+    print('\nTo use the ensemble:')
     print(f"  python scripts/ensemble_model.py --models {model_paths_str}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

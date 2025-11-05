@@ -30,7 +30,7 @@ def download_quickdraw_ndjson(category, output_dir, max_samples=5000):
     
     # QuickDraw raw data is available at:
     # https://storage.googleapis.com/quickdraw_dataset/full/raw/{category}.ndjson
-    base_url = "https://storage.googleapis.com/quickdraw_dataset/full/raw"
+    base_url = 'https://storage.googleapis.com/quickdraw_dataset/full/raw'
     url = f"{base_url}/{category}.ndjson"
     
     output_file = output_dir / f"{category}-raw.ndjson"
@@ -88,7 +88,7 @@ def download_quickdraw_ndjson(category, output_dir, max_samples=5000):
 
 def main():
     """Download all QuickDraw negative classes in raw NDJSON format."""
-    print("\nDOWNLOADING QUICKDRAW DATA (RAW NDJSON FORMAT)\n")
+    print('\nDOWNLOADING QUICKDRAW DATA (RAW NDJSON FORMAT)\n')
     
     project_root = Path(__file__).parent.parent.parent
     ndjson_dir = project_root / 'data' / 'raw_ndjson'
@@ -113,15 +113,15 @@ def main():
         else:
             failed.append(cls)
     
-    print("\nSUMMARY\n")
+    print('\nSUMMARY\n')
     print(f"✓ Successfully downloaded: {success_count}/{len(negative_classes)} classes")
     
     if failed:
         print(f"✗ Failed: {', '.join(failed)}")
     
     print(f"\nNext step: Process NDJSON to 128x128 bitmaps")
-    print("  python scripts/data_processing/process_all_data_128x128.py")
+    print('  python scripts/data_processing/process_all_data_128x128.py')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

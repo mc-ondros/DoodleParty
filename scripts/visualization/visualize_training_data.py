@@ -11,7 +11,7 @@ from keras.preprocessing.image import ImageDataGenerator
 import seaborn as sns
 
 print("="*70)
-print("COMPREHENSIVE TRAINING DATA VISUALIZATION")
+print('COMPREHENSIVE TRAINING DATA VISUALIZATION')
 print("="*70)
 
 # Load processed training data to visualize the actual samples the model will see during training
@@ -35,7 +35,7 @@ print(f"  Validation: {len(X_val_split):,}")
 print(f"  Test: {len(X_test):,}")
 
 # VISUALIZATION 1: Original Samples Grid
-print("\n1. Creating original samples grid...")
+print('\n1. Creating original samples grid...')
 
 fig = plt.figure(figsize=(20, 12))
 fig.suptitle('Training Data: Original Samples (Positive=Penis, Negative=QuickDraw)', 
@@ -69,11 +69,11 @@ for i in range(40):
 
 plt.tight_layout()
 plt.savefig('viz_01_original_samples.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_01_original_samples.png")
+print('   ✓ Saved: viz_01_original_samples.png')
 plt.close()
 
 # VISUALIZATION 2: Augmented Samples (Aggressive)
-print("\n2. Creating augmented samples visualization...")
+print('\n2. Creating augmented samples visualization...')
 
 # Configure augmentation generators that match the exact parameters used during model training to visualize realistic augmented samples
 augmentation_aggressive = ImageDataGenerator(
@@ -143,11 +143,11 @@ for sample_num in range(2):
 
 plt.tight_layout()
 plt.savefig('viz_02_augmented_samples.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_02_augmented_samples.png")
+print('   ✓ Saved: viz_02_augmented_samples.png')
 plt.close()
 
 # VISUALIZATION 3: Statistical Analysis
-print("\n3. Creating statistical analysis...")
+print('\n3. Creating statistical analysis...')
 
 fig = plt.figure(figsize=(20, 12))
 fig.suptitle('Statistical Analysis of Training Data', fontsize=16, fontweight='bold')
@@ -298,11 +298,11 @@ ax12.text(0.1, 0.5, summary_text, fontsize=10, family='monospace',
 
 plt.tight_layout()
 plt.savefig('viz_03_statistical_analysis.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_03_statistical_analysis.png")
+print('   ✓ Saved: viz_03_statistical_analysis.png')
 plt.close()
 
 # VISUALIZATION 4: Augmentation Comparison
-print("\n4. Creating augmentation strength comparison...")
+print('\n4. Creating augmentation strength comparison...')
 
 fig = plt.figure(figsize=(20, 8))
 fig.suptitle('Augmentation Strength Comparison: Standard vs Aggressive', 
@@ -349,11 +349,11 @@ fig.text(0.02, 0.33, 'AGGRESSIVE\nAugmentation', fontsize=12, fontweight='bold',
 
 plt.tight_layout()
 plt.savefig('viz_04_augmentation_comparison.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_04_augmentation_comparison.png")
+print('   ✓ Saved: viz_04_augmentation_comparison.png')
 plt.close()
 
 # VISUALIZATION 5: Difficult Cases
-print("\n5. Creating difficult cases visualization...")
+print('\n5. Creating difficult cases visualization...')
 
 fig = plt.figure(figsize=(20, 10))
 fig.suptitle('Potentially Difficult Cases for the Model', fontsize=16, fontweight='bold')
@@ -391,24 +391,24 @@ for i in range(20):
 
 plt.tight_layout()
 plt.savefig('viz_05_difficult_cases.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_05_difficult_cases.png")
+print('   ✓ Saved: viz_05_difficult_cases.png')
 plt.close()
 
 # FINAL REPORT
 print("\n" + "="*70)
-print("✅ VISUALIZATION COMPLETE")
+print('✅ VISUALIZATION COMPLETE')
 print("="*70)
-print("\nGenerated 5 visualizations:")
-print("  1. viz_01_original_samples.png - Grid of original training samples")
-print("  2. viz_02_augmented_samples.png - Augmentation examples")
-print("  3. viz_03_statistical_analysis.png - Detailed statistics")
-print("  4. viz_04_augmentation_comparison.png - Standard vs Aggressive aug")
-print("  5. viz_05_difficult_cases.png - Edge cases and difficult samples")
-print("\nKey findings:")
+print('\nGenerated 5 visualizations:')
+print('  1. viz_01_original_samples.png - Grid of original training samples')
+print('  2. viz_02_augmented_samples.png - Augmentation examples')
+print('  3. viz_03_statistical_analysis.png - Detailed statistics')
+print('  4. viz_04_augmentation_comparison.png - Standard vs Aggressive aug')
+print('  5. viz_05_difficult_cases.png - Edge cases and difficult samples')
+print('\nKey findings:')
 print(f"  • Brightness difference: {abs(pos_means.mean()-neg_means.mean()):.4f}")
 print(f"  • Ink density difference: {abs(pos_ink.mean()-neg_ink.mean()):.4f}")
 if abs(pos_means.mean()-neg_means.mean()) > 0.05:
-    print("  ⚠️  WARNING: Large brightness difference - model may use shortcuts!")
+    print('  ⚠️  WARNING: Large brightness difference - model may use shortcuts!')
 if abs(pos_ink.mean()-neg_ink.mean()) > 0.1:
-    print("  ⚠️  WARNING: Large ink density difference - model may use shortcuts!")
-print("\nReview the images to identify potential issues with the data!")
+    print('  ⚠️  WARNING: Large ink density difference - model may use shortcuts!')
+print('\nReview the images to identify potential issues with the data!')
