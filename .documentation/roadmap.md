@@ -156,15 +156,15 @@
   - `[ ]` SSL/TLS configuration
   - `[ ]` Environment configuration
 
-- `[-]` **Model Optimization**
-  - `[-]` Convert to TensorFlow Lite
-  - `[-]` Model quantization (INT8)
-  - `[ ]` Benchmark quantized model performance (target: <20ms per inference)
-  - `[ ]` Reduce model size (<5MB for TFLite)
-  - `[ ]` Optimize inference speed
-  - `[ ]` Knowledge distillation (train smaller student model)
-  - `[ ]` Prune unnecessary weights
-  - `[ ]` Optimize model architecture for edge devices
+- `[x]` **Model Optimization**
+  - `[x]` Convert to TensorFlow Lite
+  - `[x]` Model quantization (INT8)
+  - `[x]` Benchmark quantized model performance (target: <20ms per inference)
+  - `[x]` Reduce model size (<5MB for TFLite)
+  - `[x]` Optimize inference speed
+  - `[x]` Knowledge distillation (train smaller student model)
+  - `[x]` Prune unnecessary weights
+  - `[x]` Optimize model architecture for edge devices
 
 - `[ ]` **Robustness Improvements**
   - `[ ]` Region-based detection (sliding window)

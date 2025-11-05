@@ -40,32 +40,71 @@ CORS(app)
 
 # Global model and mapping
 model = None
+tflite_interpreter = None
+is_tflite = False
+model_name = "Unknown"
 idx_to_class = None
 THRESHOLD = 0.5
 
 
 def load_model_and_mapping():
     """Initialize trained model and class label mappings."""
-    global model, idx_to_class
+    global model, tflite_interpreter, is_tflite, model_name, idx_to_class
 
     models_dir = Path(__file__).parent.parent.parent / "models"
     data_dir = Path(__file__).parent.parent.parent / "data" / "processed"
 
-    # Find all compatible model file formats
-    # Why support both .h5 and .keras: Ensures compatibility across TensorFlow versions
+    # Priority: Use optimized TFLite INT8 model if available for better performance
+    tflite_int8_files = list(models_dir.glob("*_int8.tflite"))
+    tflite_files = list(models_dir.glob("*.tflite"))
     model_files = list(models_dir.glob("*.h5")) + list(models_dir.glob("*.keras"))
-    if not model_files:
+    
+    model_path = None
+    
+    # Try INT8 quantized TFLite first (smallest, fastest)
+    if tflite_int8_files:
+        model_path = max(tflite_int8_files, key=lambda p: p.stat().st_mtime)
+        is_tflite = True
+        model_name = "TFLite INT8 (Optimized)"
+        print(f"Loading optimized INT8 TFLite model: {model_path}")
+    # Then try regular TFLite
+    elif tflite_files:
+        model_path = max(tflite_files, key=lambda p: p.stat().st_mtime)
+        is_tflite = True
+        model_name = "TFLite Float32"
+        print(f"Loading TFLite model: {model_path}")
+    # Fall back to Keras/H5
+    elif model_files:
+        model_path = max(model_files, key=lambda p: p.stat().st_mtime)
+        is_tflite = False
+        model_name = "Keras/TensorFlow"
+        print(f"Loading Keras model: {model_path}")
+    else:
         raise FileNotFoundError(f"No model files found in {models_dir}")
 
-    # Use most recently modified model to get latest training results
-    # Why recent: Allows overwriting old models without changing configuration
-    model_path = max(model_files, key=lambda p: p.stat().st_mtime)
-
-    print(f"Loading model from: {model_path}")
     if not model_path.exists():
         raise FileNotFoundError(f"Model file not found: {model_path}")
     
-    model = keras.models.load_model(model_path)
+    # Load TFLite or Keras model
+    if is_tflite:
+        # Load TFLite model
+        tflite_interpreter = tf.lite.Interpreter(model_path=str(model_path))
+        tflite_interpreter.allocate_tensors()
+        
+        # Get model info
+        input_details = tflite_interpreter.get_input_details()
+        output_details = tflite_interpreter.get_output_details()
+        
+        print(f"TFLite model loaded successfully!")
+        print(f"  Input shape: {input_details[0]['shape']}")
+        print(f"  Input dtype: {input_details[0]['dtype']}")
+        
+        # Get model size
+        size_mb = model_path.stat().st_size / (1024 * 1024)
+        print(f"  Model size: {size_mb:.2f} MB")
+    else:
+        model = keras.models.load_model(model_path)
+        print(f"Keras model loaded successfully!")
 
     # Load class-to-index mapping for converting predictions to labels
     try:
@@ -162,7 +201,7 @@ def predict(image_data):
     """
     try:
         # Ensure model is available before processing
-        if model is None:
+        if model is None and tflite_interpreter is None:
             return {
                 'success': False,
                 'error': 'Model not loaded. Please train a model first or place a trained model (.h5 or .keras) in the models/ directory.'
@@ -176,9 +215,26 @@ def predict(image_data):
         img_array = preprocess_image(image_data)
         preprocess_time = time.time() - preprocess_start
         
-        # Predict
+        # Predict based on model type
         inference_start = time.time()
-        probability = model.predict(img_array, verbose=0)[0][0]
+        
+        if is_tflite:
+            # TFLite inference
+            input_details = tflite_interpreter.get_input_details()
+            output_details = tflite_interpreter.get_output_details()
+            
+            # Set input tensor
+            tflite_interpreter.set_tensor(input_details[0]['index'], img_array.astype(np.float32))
+            
+            # Run inference
+            tflite_interpreter.invoke()
+            
+            # Get output
+            probability = tflite_interpreter.get_tensor(output_details[0]['index'])[0][0]
+        else:
+            # Keras inference
+            probability = model.predict(img_array, verbose=0)[0][0]
+        
         inference_time = time.time() - inference_start
         
         # Total time
@@ -202,7 +258,7 @@ def predict(image_data):
             'confidence': round(confidence, 4),
             'raw_probability': round(float(probability), 4),
             'threshold': THRESHOLD,
-            'model_info': 'Binary classifier: penis vs 21 common shapes',
+            'model_info': f'Binary classifier: penis vs 21 common shapes ({model_name})',
             'drawing_statistics': {
                 'response_time_ms': round(total_time * 1000, 2),
                 'preprocess_time_ms': round(preprocess_time * 1000, 2),
