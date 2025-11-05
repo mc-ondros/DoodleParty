@@ -6,9 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-print("="*70)
-print("DIAGNOSING DATA ISSUES")
-print("="*70)
+print('='*70)
+print('DIAGNOSING DATA ISSUES')
+print('='*70)
 
 # Load processed training data to analyze quality issues that could affect model performance
 X_train = np.load('data/processed/X_train.npy')

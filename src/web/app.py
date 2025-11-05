@@ -34,6 +34,14 @@ import time
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 
+# Import region-based detection
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from src.core.patch_extraction import (
+    SlidingWindowDetector,
+    AggregationStrategy
+)
+
 
 app = Flask(__name__)
 CORS(app)
@@ -274,6 +282,140 @@ def predict(image_data):
         }
 
 
+def predict_region_based(image_data, use_region_detection=True):
+    """
+    Classify drawing using region-based detection for robustness.
+    
+    This approach analyzes multiple patches of the canvas to detect
+    suspicious content even when diluted with innocent content.
+    
+    Args:
+        image_data: Base64 encoded drawing from canvas
+        use_region_detection: Whether to use region-based detection
+    
+    Returns:
+        Dictionary with prediction results including patch information
+    """
+    try:
+        # Ensure model is available
+        if model is None and tflite_interpreter is None:
+            return {
+                'success': False,
+                'error': 'Model not loaded. Please train a model first or place a trained model in the models/ directory.'
+            }
+        
+        # Start timing
+        start_time = time.time()
+        
+        # Preprocess image
+        preprocess_start = time.time()
+        img_array = preprocess_image(image_data)
+        preprocess_time = time.time() - preprocess_start
+        
+        # Get the actual model object for region-based detection
+        # TFLite models need a wrapper
+        if is_tflite:
+            # Create a wrapper for TFLite interpreter
+            class TFLiteModelWrapper:
+                def __init__(self, interpreter):
+                    self.interpreter = interpreter
+                    self.input_details = interpreter.get_input_details()
+                    self.output_details = interpreter.get_output_details()
+                
+                def predict(self, x, verbose=0):
+                    # Handle batch inference
+                    batch_size = x.shape[0]
+                    results = []
+                    
+                    for i in range(batch_size):
+                        single_input = x[i:i+1]
+                        self.interpreter.set_tensor(
+                            self.input_details[0]['index'],
+                            single_input.astype(np.float32)
+                        )
+                        self.interpreter.invoke()
+                        output = self.interpreter.get_tensor(
+                            self.output_details[0]['index']
+                        )
+                        results.append(output[0])
+                    
+                    return np.array(results)
+            
+            model_wrapper = TFLiteModelWrapper(tflite_interpreter)
+        else:
+            model_wrapper = model
+        
+        # Remove batch dimension for detector
+        img_array_2d = img_array[0]  # (128, 128, 1)
+        
+        # Create sliding window detector
+        inference_start = time.time()
+        
+        detector = SlidingWindowDetector(
+            model=model_wrapper,
+            patch_size=(128, 128),
+            stride=(64, 64),  # 50% overlap for better coverage
+            min_content_ratio=0.05,
+            max_patches=16,
+            early_stopping=True,
+            early_stop_threshold=0.9,
+            aggregation_strategy=AggregationStrategy.MAX,
+            classification_threshold=THRESHOLD
+        )
+        
+        # Perform detection
+        detection_result = detector.detect_batch(img_array_2d)
+        
+        inference_time = time.time() - inference_start
+        total_time = time.time() - start_time
+        
+        # Format result
+        if detection_result.is_positive:
+            verdict = 'PENIS'
+            verdict_text = "Drawing looks like a penis! ✓ (Detected via region analysis)"
+            confidence = float(detection_result.confidence)
+        else:
+            verdict = 'OTHER_SHAPE'
+            verdict_text = "Drawing looks like a common shape (not penis). (Verified via region analysis)"
+            confidence = float(1 - detection_result.confidence)
+        
+        return {
+            'success': True,
+            'verdict': verdict,
+            'verdict_text': verdict_text,
+            'confidence': round(confidence, 4),
+            'raw_probability': round(float(detection_result.confidence), 4),
+            'threshold': THRESHOLD,
+            'model_info': f'Binary classifier with region-based detection ({model_name})',
+            'detection_details': {
+                'num_patches_analyzed': detection_result.num_patches_analyzed,
+                'early_stopped': detection_result.early_stopped,
+                'aggregation_strategy': detection_result.aggregation_strategy,
+                'patch_predictions': [
+                    {
+                        'x': p['x'],
+                        'y': p['y'],
+                        'confidence': round(p['confidence'], 4),
+                        'is_positive': p['is_positive']
+                    }
+                    for p in detection_result.patch_predictions[:5]  # Limit to first 5 for response size
+                ]
+            },
+            'drawing_statistics': {
+                'response_time_ms': round(total_time * 1000, 2),
+                'preprocess_time_ms': round(preprocess_time * 1000, 2),
+                'inference_time_ms': round(inference_time * 1000, 2)
+            }
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
 @app.route('/')
 def index():
     """Serve the main drawing interface page."""
@@ -301,13 +443,31 @@ def api_predict():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/predict/region', methods=['POST'])
+def api_predict_region():
+    """REST API endpoint for region-based detection (robust against content dilution)."""
+    try:
+        data = request.get_json()
+        image_data = data.get('image')
+        
+        if not image_data:
+            return jsonify({'success': False, 'error': 'No image data provided'}), 400
+        
+        # Run region-based prediction
+        result = predict_region_based(image_data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint for monitoring and load balancer probes."""
     return jsonify({
         'status': 'ok',
-        'model_loaded': model is not None,
-        'threshold': THRESHOLD
+        'model_loaded': model is not None or tflite_interpreter is not None,
+        'threshold': THRESHOLD,
+        'region_detection_available': True
     })
 
 

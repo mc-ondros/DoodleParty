@@ -54,7 +54,7 @@ for i in range(20):
                      rotation=0, ha='right', va='center')
 
 # Demonstrate proper augmentation using the calculated background value to prevent artifacts during training
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 
 # Estimate background value from corner pixels to configure augmentation with appropriate fill value
 sample_corners = []

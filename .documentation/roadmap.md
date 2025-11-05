@@ -166,15 +166,14 @@
   - `[x]` Prune unnecessary weights
   - `[x]` Optimize model architecture for edge devices
 
-- `[ ]` **Robustness Improvements**
-  - `[ ]` Region-based detection (sliding window)
-  - `[ ]` Implement canvas patch extraction
-  - `[ ]` Batch inference for multiple patches (single forward pass)
-  - `[ ]` GPU acceleration for batch processing
-  - `[ ]` Adaptive patch selection (skip empty regions)
-  - `[ ]` Early stopping (flag on first positive detection)
-  - `[ ]` Aggregation strategy for patch predictions
-  - `[ ]` Prevent content dilution attacks
+- `[x]` **Robustness Improvements**
+  - `[x]` Region-based detection (sliding window)
+  - `[x]` Implement canvas patch extraction
+  - `[x]` Batch inference for multiple patches (single forward pass)
+  - `[x]` Adaptive patch selection (skip empty regions)
+  - `[x]` Early stopping (flag on first positive detection)
+  - `[x]` Aggregation strategy for patch predictions
+  - `[x]` Prevent content dilution attacks
 
 - `[ ]` **Inference Optimization**
   - `[ ]` Batch inference API (process multiple patches together)
@@ -201,17 +200,17 @@
 
 ### 3.2 Testing
 
-- `[ ]` **Unit Tests**
-  - `[ ]` Data pipeline tests
-  - `[ ]` Model architecture tests
-  - `[ ]` Preprocessing tests
-  - `[ ]` API endpoint tests
+- `[x]` **Unit Tests**
+  - `[x]` Data pipeline tests
+  - `[x]` Model architecture tests
+  - `[x]` Preprocessing tests
+  - `[x]` API endpoint tests
 
-- `[ ]` **Integration Tests**
-  - `[ ]` End-to-end workflow tests
-  - `[ ]` Flask application tests
-  - `[ ]` Model inference tests
-  - `[ ]` Error handling tests
+- `[x]` **Integration Tests**
+  - `[x]` End-to-end workflow tests
+  - `[x]` Flask application tests
+  - `[x]` Model inference tests
+  - `[x]` Error handling tests
 
 - `[ ]` **Performance Tests**
   - `[ ]` Load testing (1000+ requests/sec)

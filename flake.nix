@@ -28,6 +28,7 @@
 
             propagatedBuildInputs = with pythonPackages; [
               tensorflow
+              keras
               numpy
               pandas
               matplotlib
@@ -35,6 +36,9 @@
               pillow
               flask
               flask-cors
+              tqdm
+              requests
+              seaborn
             ];
 
             # Skip tests during build
@@ -58,6 +62,7 @@
             pythonPackages.wheel
           ] ++ (with pythonPackages; [
             tensorflow
+            keras
             numpy
             pandas
             matplotlib
@@ -65,6 +70,9 @@
             pillow
             flask
             flask-cors
+            tqdm
+            requests
+            seaborn
             pytest
             pytest-cov
             black

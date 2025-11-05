@@ -10,6 +10,10 @@
 - [Model Architecture](#model-architecture)
 - [Web Application Architecture](#web-application-architecture)
 - [Training Pipeline](#training-pipeline)
+- [Performance Targets](#performance-targets)
+- [Raspberry Pi 4 Optimization Strategy](#raspberry-pi-4-optimization-strategy)
+- [Scalability Considerations](#scalability-considerations)
+- [Security Architecture](#security-architecture)
 
 ## Overview
 
@@ -19,13 +23,44 @@ DoodleHunter uses a modular Python/TensorFlow architecture with three primary co
 2. **Flask Web Application** - Real-time drawing classification interface
 3. **Model Inference** - CNN-based binary classification
 
-The system prioritizes accuracy and ease of use for content moderation tasks.
+The system prioritizes accuracy, performance, and edge device deployment for content moderation tasks.
 
 **Key Design Decisions:**
 - TensorFlow/Keras for ML framework (widely supported, easy deployment)
 - Flask for web interface (lightweight, Python-native)
 - QuickDraw dataset for training data (large, diverse, free)
 - Binary classification (simplifies model and improves accuracy)
+- **Raspberry Pi 4 deployment target** (requires aggressive optimization)
+
+### Deployment Targets
+
+**Primary Target: Raspberry Pi 4**
+- **CPU:** ARM Cortex-A72 (4 cores @ 1.5GHz)
+- **RAM:** 2GB/4GB/8GB variants (4GB+ recommended)
+- **Architecture:** ARMv8 (64-bit)
+- **Constraints:** No GPU acceleration, limited memory, thermal throttling
+- **Performance Target:** <50ms inference latency per image
+
+### Hardware Requirements for RPi4
+
+**Minimum Configuration:**
+- Raspberry Pi 4 Model B (2GB RAM)
+- 16GB microSD card (Class 10 or better)
+- 5V 3A USB-C power supply
+- Passive heatsink
+
+**Recommended Configuration:**
+- Raspberry Pi 4 Model B (4GB or 8GB RAM)
+- 32GB microSD card (UHS-I A1 or better)
+- 5V 3A USB-C power supply with surge protection
+- Active cooling (heatsink + 30mm fan)
+- Case with ventilation
+
+**Why Active Cooling is Critical:**
+- Sustained inference workload generates significant heat
+- CPU throttles from 1.5GHz to 1.0GHz at ~80°C
+- Performance degradation of 30-40% when throttled
+- Active cooling maintains <70°C under load
 
 ## System Components
 
@@ -36,26 +71,28 @@ The system prioritizes accuracy and ease of use for content moderation tasks.
 | **Data Pipeline** | Python + NumPy | Data loading and preprocessing | `src/data/loaders.py`, `src/data/augmentation.py` |
 | **Model Training** | TensorFlow/Keras | CNN model training | `scripts/train.py`, `src/core/training.py` |
 | **Web Interface** | Flask + HTML5 Canvas | Drawing and classification UI | `src/web/app.py` |
-| **Inference Engine** | TensorFlow/Keras | Real-time prediction | `src/core/inference.py` |
+| **Inference Engine** | TFLite + NumPy | Real-time prediction (optimized for RPi4) | `src/core/inference.py` |
 
 ### Component Interactions
 
 ```mermaid
 graph TB
-    subgraph Training["Training Pipeline"]
+    subgraph Training["Training Pipeline (Development Machine)"]
         QD[QuickDraw Dataset] --> DP[Data Processing]
         DP --> MT[Model Training]
-        MT --> TM[Trained Model<br/>.h5/.keras]
+        MT --> TM[Trained Model<br/>.keras]
+        TM --> OPT[Model Optimization]
+        OPT --> TFLITE[TFLite Model<br/>INT8 Quantized<br/><5MB]
     end
     
-    subgraph WebApp["Web Application"]
-        DC[Drawing Canvas<br/>HTML5] --> MI[Model Inference]
-        MI --> FS[Flask Server<br/>Port 5000]
+    subgraph RPi["Raspberry Pi 4 Deployment"]
+        TFLITE --> MI[TFLite Interpreter<br/>ARM-optimized]
+        DC[Drawing Canvas<br/>HTML5] --> FS[Flask Server<br/>Lightweight]
+        FS --> MI
+        MI --> FS
         FS --> CR[Classification Result]
         CR --> DC
     end
-    
-    TM --> MI
 ```
 
 ## Data Flow
@@ -238,26 +275,180 @@ datagen = create_augmentation_pipeline(
 
 ## Performance Targets
 
+### Development Environment
 | Metric | Target | Measured At |
 |--------|--------|-------------|
 | Training accuracy | >90% | Validation set |
-| Inference time | <100ms | Single image |
-| Model size | <50MB | Saved file |
-| Web response time | <200ms | End-to-end |
+| Inference time | <100ms | Single image (full TF model) |
+| Model size | <50MB | Saved .keras file |
+
+### Raspberry Pi 4 Deployment
+| Metric | Target | Critical? | Notes |
+|--------|--------|-----------|-------|
+| **Inference latency** | **<50ms** | **YES** | Single image, TFLite INT8 |
+| **Model size** | **<5MB** | **YES** | TFLite quantized model |
+| **Memory usage** | **<500MB** | **YES** | Total Python process |
+| **Cold start time** | **<3s** | NO | Model loading on startup |
+| **Multi-patch inference** | **<200ms** | YES | 9-16 patches batched |
+| **CPU utilization** | **<80%** | NO | Per inference, all cores |
+| **Accuracy retention** | **>88%** | **YES** | Post-quantization |
+
+## Raspberry Pi 4 Optimization Strategy
+
+### Critical Optimizations for RPi4 Deployment
+
+**1. Model Optimization (MANDATORY)**
+- **INT8 Quantization:** Reduce model size by 4x and inference time by 2-4x
+- **TensorFlow Lite Conversion:** Use optimized ARM runtime
+- **Model Pruning:** Remove redundant weights (target 30-50% sparsity)
+- **Architecture Simplification:** Consider reducing layer depth if needed
+
+**2. Inference Optimization**
+- **TFLite Interpreter:** Use `tflite_runtime` (lighter than full TensorFlow)
+- **XNNPACK Delegate:** Enable ARM NEON SIMD acceleration
+- **Thread Pool:** Configure TFLite to use 4 threads (all RPi4 cores)
+- **Batch Inference:** Process multiple patches in single forward pass
+
+**3. Memory Management**
+- **Lazy Loading:** Load model only when needed
+- **Memory Mapping:** Use mmap for model loading
+- **Garbage Collection:** Explicit cleanup after inference
+- **Swap Configuration:** Disable or minimize swap usage
+
+**4. System-Level Optimizations**
+- **CPU Governor:** Set to `performance` mode (avoid throttling)
+- **Thermal Management:** Ensure adequate cooling (heatsink + fan)
+- **Process Priority:** Run inference with higher priority
+- **Minimal OS:** Use Raspberry Pi OS Lite (no desktop environment)
+
+### TensorFlow Lite Conversion Pipeline
+
+```python
+# Convert Keras model to TFLite with INT8 quantization
+import tensorflow as tf
+
+# Load trained model
+model = tf.keras.models.load_model('quickdraw_classifier.keras')
+
+# Create representative dataset for calibration
+def representative_dataset():
+    for _ in range(100):
+        yield [np.random.rand(1, 128, 128, 1).astype(np.float32)]
+
+# Convert with INT8 quantization
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.representative_dataset = representative_dataset
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.inference_input_type = tf.uint8
+converter.inference_output_type = tf.uint8
+
+tflite_model = converter.convert()
+
+# Save optimized model
+with open('quickdraw_classifier_int8.tflite', 'wb') as f:
+    f.write(tflite_model)
+```
+
+### RPi4 Inference Implementation
+
+```python
+# Optimized inference for Raspberry Pi 4
+import numpy as np
+import tflite_runtime.interpreter as tflite
+
+class RPi4Inference:
+    def __init__(self, model_path):
+        # Load TFLite model with optimizations
+        self.interpreter = tflite.Interpreter(
+            model_path=model_path,
+            num_threads=4  # Use all 4 cores
+        )
+        self.interpreter.allocate_tensors()
+        
+        # Get input/output details
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
+    
+    def predict(self, image):
+        # Preprocess to uint8 (matches quantized model)
+        input_data = np.array(image, dtype=np.uint8)
+        
+        # Set input tensor
+        self.interpreter.set_tensor(
+            self.input_details[0]['index'], 
+            input_data
+        )
+        
+        # Run inference
+        self.interpreter.invoke()
+        
+        # Get output
+        output = self.interpreter.get_tensor(
+            self.output_details[0]['index']
+        )
+        
+        return output[0][0]
+```
+
+### Expected Performance on RPi4
+
+| Optimization Stage | Inference Time | Model Size | Accuracy |
+|-------------------|----------------|------------|----------|
+| Baseline (TF Keras) | ~300-500ms | 45MB | 92% |
+| TFLite FP32 | ~150-200ms | 45MB | 92% |
+| TFLite INT8 | **~30-50ms** | **<5MB** | ~90% |
+| TFLite INT8 + XNNPACK | **~20-40ms** | **<5MB** | ~90% |
+
+### Deployment Checklist for RPi4
+
+**Software Setup:**
+- [ ] Install Raspberry Pi OS Lite (64-bit)
+- [ ] Update system: `sudo apt update && sudo apt upgrade`
+- [ ] Install Python 3.9+ and pip
+- [ ] Install `tflite_runtime` (not full TensorFlow)
+  ```bash
+  pip3 install tflite-runtime
+  ```
+- [ ] Install minimal dependencies: `numpy`, `flask`, `pillow`
+- [ ] Convert model to TFLite INT8 format
+- [ ] Copy optimized model to RPi4
+
+**Hardware Setup:**
+- [ ] Install heatsink and active cooling fan
+- [ ] Verify power supply is 5V 3A minimum
+- [ ] Use quality microSD card (UHS-I A1 or better)
+
+**Performance Tuning:**
+- [ ] Configure CPU governor to `performance`:
+  ```bash
+  echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+  ```
+- [ ] Disable unnecessary system services
+- [ ] Disable swap or set swappiness to 10
+- [ ] Set process priority for inference
+
+**Validation:**
+- [ ] Benchmark inference latency on actual hardware
+- [ ] Verify accuracy retention (>88% required)
+- [ ] Test under sustained load (thermal throttling check)
+- [ ] Monitor CPU temperature (should stay <75°C)
+- [ ] Monitor memory usage (<500MB target)
+- [ ] Test multi-patch inference performance
 
 ## Scalability Considerations
 
-**Current Limitations:**
-- Single-threaded Flask server
-- Model loaded in memory (not optimized for concurrent requests)
-- No caching of predictions
+### Raspberry Pi 4 Constraints
+- **Single Device Limitation:** RPi4 not suitable for high-concurrency scenarios
+- **Thermal Throttling:** Sustained load may cause CPU frequency reduction
+- **Memory Constraints:** Limited to 2-8GB RAM
+- **No GPU Acceleration:** CPU-only inference
 
-**Future Improvements:**
-- Use Gunicorn for multi-worker deployment
-- Implement model caching and batching
-- Add Redis for prediction caching
-- Convert to TensorFlow Lite for faster inference
-- Deploy on cloud (AWS Lambda, Google Cloud Run)
+### Multi-Device Scaling (Future)
+- Deploy multiple RPi4 units with load balancer
+- Use edge computing architecture (distributed inference)
+- Consider RPi5 or Jetson Nano for better performance
+- Implement request queuing for burst traffic
 
 ## Security Architecture
 

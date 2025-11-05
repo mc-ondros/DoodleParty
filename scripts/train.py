@@ -21,10 +21,10 @@ from pathlib import Path
 import pickle
 
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers, models
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import keras
+from keras import layers, models
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.preprocessing.image import ImageDataGenerator
 
 # Import from models.py and data_pipeline.py
 from models import get_model

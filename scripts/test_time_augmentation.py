@@ -7,7 +7,7 @@ at the cost of inference time.
 """
 
 import numpy as np
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 from data_pipeline import normalize_image
 
 
