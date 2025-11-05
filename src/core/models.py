@@ -297,7 +297,7 @@ if __name__ == "__main__":
     print("\nTesting architecture loading...")
     
     for arch in ['custom', 'resnet50', 'mobilenetv3', 'efficientnet']:
-        print(f"\n--- {arch.upper()} ---")
+        print(f"\n{arch.upper()}")
         try:
             model, base = get_model(arch, summary=False)
             print(f"✓ Successfully loaded {arch}")

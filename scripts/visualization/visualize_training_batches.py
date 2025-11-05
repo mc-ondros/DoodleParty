@@ -48,9 +48,7 @@ train_generator = augmentation.flow(
 print(f"\nGenerating visualization of actual training batches...")
 print(f"Batch size: {batch_size}")
 
-# ============================================================================
 # VISUALIZATION 6: Actual Training Batches
-# ============================================================================
 fig = plt.figure(figsize=(20, 16))
 fig.suptitle('Actual Training Batches (What the Model Sees During Training)', 
              fontsize=16, fontweight='bold')
@@ -88,9 +86,7 @@ plt.savefig('viz_06_actual_training_batches.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_06_actual_training_batches.png")
 plt.close()
 
-# ============================================================================
 # VISUALIZATION 7: Batch-level Statistics
-# ============================================================================
 print("\n  Analyzing batch-level statistics over 100 batches...")
 
 batch_stats = {

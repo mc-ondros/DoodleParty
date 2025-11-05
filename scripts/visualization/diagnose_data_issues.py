@@ -17,9 +17,7 @@ y_train = np.load('data/processed/y_train.npy')
 pos_idx = np.where(y_train == 1)[0]
 neg_idx = np.where(y_train == 0)[0]
 
-# ============================================================================
 # ISSUE 1: Check for non-inverted or all-white images
-# ============================================================================
 print("\n1. CHECKING FOR PROBLEMATIC IMAGES:")
 print("-" * 70)
 
@@ -47,9 +45,7 @@ print(f"Negative class:")
 print(f"  All-white images: {len(neg_white)} ({100*len(neg_white)/len(neg_idx):.2f}%)")
 print(f"  All-black images: {len(neg_black)} ({100*len(neg_black)/len(neg_idx):.2f}%)")
 
-# ============================================================================
 # ISSUE 2: Analyze stroke width
-# ============================================================================
 print("\n2. ANALYZING STROKE WIDTH:")
 print("-" * 70)
 
@@ -80,9 +76,7 @@ print(f"Positive class stroke width: {np.mean(pos_strokes):.2f} ± {np.std(pos_s
 print(f"Negative class stroke width: {np.mean(neg_strokes):.2f} ± {np.std(neg_strokes):.2f}")
 print(f"Difference: {abs(np.mean(pos_strokes) - np.mean(neg_strokes)):.2f}")
 
-# ============================================================================
 # ISSUE 3: Background value distribution
-# ============================================================================
 print("\n3. CHECKING BACKGROUND VALUES:")
 print("-" * 70)
 
@@ -103,9 +97,7 @@ neg_bg = [get_background_value(X_train[i].squeeze()) for i in neg_idx[:100]]
 print(f"Positive class background: {np.mean(pos_bg):.3f} ± {np.std(pos_bg):.3f}")
 print(f"Negative class background: {np.mean(neg_bg):.3f} ± {np.std(neg_bg):.3f}")
 
-# ============================================================================
 # VISUALIZATION
-# ============================================================================
 print("\n4. CREATING DIAGNOSTIC VISUALIZATION...")
 
 fig = plt.figure(figsize=(20, 14))
@@ -199,9 +191,7 @@ plt.savefig('viz_09_data_quality_issues.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_09_data_quality_issues.png")
 plt.close()
 
-# ============================================================================
 # SUMMARY
-# ============================================================================
 print("\n" + "="*70)
 print("SUMMARY OF ISSUES")
 print("="*70)

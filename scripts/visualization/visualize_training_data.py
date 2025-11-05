@@ -34,9 +34,7 @@ print(f"  Training: {len(X_train_split):,}")
 print(f"  Validation: {len(X_val_split):,}")
 print(f"  Test: {len(X_test):,}")
 
-# ============================================================================
 # VISUALIZATION 1: Original Samples Grid
-# ============================================================================
 print("\n1. Creating original samples grid...")
 
 fig = plt.figure(figsize=(20, 12))
@@ -74,9 +72,7 @@ plt.savefig('viz_01_original_samples.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_01_original_samples.png")
 plt.close()
 
-# ============================================================================
 # VISUALIZATION 2: Augmented Samples (Aggressive)
-# ============================================================================
 print("\n2. Creating augmented samples visualization...")
 
 # Create augmentation generator (same as in training)
@@ -150,9 +146,7 @@ plt.savefig('viz_02_augmented_samples.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_02_augmented_samples.png")
 plt.close()
 
-# ============================================================================
 # VISUALIZATION 3: Statistical Analysis
-# ============================================================================
 print("\n3. Creating statistical analysis...")
 
 fig = plt.figure(figsize=(20, 12))
@@ -307,9 +301,7 @@ plt.savefig('viz_03_statistical_analysis.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_03_statistical_analysis.png")
 plt.close()
 
-# ============================================================================
 # VISUALIZATION 4: Augmentation Comparison
-# ============================================================================
 print("\n4. Creating augmentation strength comparison...")
 
 fig = plt.figure(figsize=(20, 8))
@@ -360,9 +352,7 @@ plt.savefig('viz_04_augmentation_comparison.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_04_augmentation_comparison.png")
 plt.close()
 
-# ============================================================================
 # VISUALIZATION 5: Difficult Cases
-# ============================================================================
 print("\n5. Creating difficult cases visualization...")
 
 fig = plt.figure(figsize=(20, 10))
@@ -404,9 +394,7 @@ plt.savefig('viz_05_difficult_cases.png', dpi=150, bbox_inches='tight')
 print("   ✓ Saved: viz_05_difficult_cases.png")
 plt.close()
 
-# ============================================================================
 # FINAL REPORT
-# ============================================================================
 print("\n" + "="*70)
 print("✅ VISUALIZATION COMPLETE")
 print("="*70)
