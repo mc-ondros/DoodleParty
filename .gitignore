@@ -75,3 +75,8 @@ notebooks/**/*.ipynb
 *.tmp
 *.temp
 /tmp/
+
+# Nix
+result
+result-*
+.direnv/

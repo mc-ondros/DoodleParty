@@ -10,11 +10,18 @@ ML system for classifying hand-drawn sketches using TensorFlow and QuickDraw dat
 
 ## Quick Start
 
+**With Nix:**
+```bash
+nix develop
+nix run .#web
+```
+
+**Without Nix:**
 ```bash
 pip install -r requirements.txt
-python src/download_quickdraw.py
-./train_max_accuracy.sh
-cd app && python app.py
+python scripts/download_quickdraw.py
+python scripts/train.py
+python src/web/app.py
 ```
 
 Access at `http://localhost:5000`
@@ -22,6 +29,7 @@ Access at `http://localhost:5000`
 ## Documentation
 
 - [Installation & Setup](.documentation/installation.md)
+- [Nix Usage Guide](.documentation/nix-usage.md)
 - [Architecture](.documentation/architecture.md)
 - [API Reference](.documentation/api.md)
 - [Development Roadmap](.documentation/roadmap.md)
