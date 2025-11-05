@@ -119,20 +119,25 @@ def build_model(num_classes=2, enhanced=False):
     return model
 
 
-def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5", 
-                learning_rate=0.001, label_smoothing=0.1, architecture='custom', 
-                enhanced=False, aggressive_aug=False):
+def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdraw_model.h5",
+                learning_rate=0.001, label_smoothing=0.1, architecture='custom',
+                enhanced=False, aggressive_aug=False, use_class_weighting=False):
     """
     Train the QuickDraw classifier with data augmentation.
-    
+
     Data augmentation applies random transformations during training:
     - Standard: Rotations (±15°), Shifts (±10%), Zoom (±15%)
     - Aggressive: Rotations (±30°), Shifts (±20%), Zoom (±25%), Brightness, Contrast
-    
+
     Label smoothing helps prevent overconfidence:
     - Converts hard labels (0/1) to soft labels (e.g., 0.05/0.95)
     - Reduces overfitting and improves generalization
-    
+
+    Class weighting addresses imbalanced datasets:
+    - Automatically calculates inverse class frequencies
+    - Applies higher loss weights to minority class
+    - Improves recall for underrepresented classes
+
     Args:
         data_dir: Directory containing processed data
         epochs: Number of training epochs
@@ -143,6 +148,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         architecture: Model architecture ('custom', 'resnet50', 'mobilenetv3', 'efficientnet')
         enhanced: Use larger model with more capacity (slower, more accurate)
         aggressive_aug: Use more aggressive data augmentation
+        use_class_weighting: Apply class weighting for imbalanced data
     """
     data_dir = Path(data_dir)
     
@@ -166,7 +172,45 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         num_classes = len(class_mapping)
         class_names = {v: k for k, v in class_mapping.items() if isinstance(v, int)}
         print(f"Multi-class task detected with {num_classes} classes")
-    
+
+    # Calculate class distribution
+    print(f"\nClass distribution in training data:")
+    unique, counts = np.unique(y_train, return_counts=True)
+    for cls, count in zip(unique, counts):
+        percentage = 100 * count / len(y_train)
+        print(f"  Class {int(cls)}: {count} samples ({percentage:.1f}%)")
+
+    # Calculate class weights for imbalanced data
+    # Using inverse frequency weighting: n_samples / (n_classes * np.bincount(y))
+    class_weights = None
+    if use_class_weighting:
+        # Calculate balanced class weights
+        total_samples = len(y_train)
+        n_classes = len(unique)
+
+        # Count samples per class
+        class_counts = np.bincount(y_train.astype(int))
+
+        # Calculate weights: total_samples / (n_classes * count_per_class)
+        # This gives higher weight to minority classes
+        computed_weights = {}
+        for i in range(n_classes):
+            computed_weights[i] = total_samples / (n_classes * class_counts[i])
+
+        # Normalize weights to have mean ≈ 1.0 (optional but recommended)
+        mean_weight = np.mean(list(computed_weights.values()))
+        for key in computed_weights:
+            computed_weights[key] = computed_weights[key] / mean_weight
+
+        class_weights = computed_weights
+
+        print(f"\n✓ Using class weighting for imbalanced data:")
+        for cls, weight in class_weights.items():
+            print(f"  Class {int(cls)}: {weight:.3f}")
+        print(f"  (Higher weight = more emphasis during training)")
+    else:
+        print(f"\n⚪ Class weighting disabled (using equal weights)")
+
     # Build model
     print("\nBuilding model...")
     if architecture == 'custom':
@@ -323,14 +367,24 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
     
     # Train model
     print("\nStarting training...")
-    
+
+    # Prepare fit arguments
+    fit_kwargs = {
+        'epochs': epochs,
+        'validation_data': (X_val_norm, y_val_split),
+        'callbacks': callbacks,
+        'steps_per_epoch': steps_per_epoch,
+        'verbose': 1
+    }
+
+    # Add class weights if specified
+    if class_weights is not None:
+        fit_kwargs['class_weight'] = class_weights
+        print(f"✓ Applying class weights during training")
+
     history = model.fit(
         train_generator,
-        epochs=epochs,
-        validation_data=(X_val_norm, y_val_split),
-        callbacks=callbacks,
-        steps_per_epoch=steps_per_epoch,
-        verbose=1
+        **fit_kwargs
     )
     
     # Evaluate on test set
@@ -400,7 +454,9 @@ def main():
                        help="Use enhanced model with more capacity (slower, more accurate)")
     parser.add_argument("--aggressive-aug", action="store_true",
                        help="Use aggressive data augmentation (rotation ±30°, shift ±20%, zoom ±25%)")
-    
+    parser.add_argument("--use-class-weighting", action="store_true",
+                       help="Apply class weighting to handle imbalanced data")
+
     args = parser.parse_args()
     
     train_model(
@@ -412,7 +468,8 @@ def main():
         label_smoothing=args.label_smoothing,
         architecture=args.architecture,
         enhanced=args.enhanced,
-        aggressive_aug=args.aggressive_aug
+        aggressive_aug=args.aggressive_aug,
+        use_class_weighting=args.use_class_weighting
     )
 
 
