@@ -22,11 +22,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install tensorflow==2.13.0 tf2onnx==1.16.1 onnx numpy pillow
 
-      - name: Convert model to ONNX
+      - name: Check if model exists
+        id: check_model
         run: |
-          python scripts/convert/convert_to_onnx.py --model models/quickdraw_model.h5 --output models/quickdraw_model.onnx --opset 15
+          if [ -f "models/quickdraw_model.h5" ] || [ -f "models/quickdraw_model.keras" ]; then
+            echo "model_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "model_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No model file found. Skipping ONNX conversion."
+          fi
+
+      - name: Convert model to ONNX
+        if: steps.check_model.outputs.model_exists == 'true'
+        run: |
+          # Find the model file (.h5 or .keras)
+          if [ -f "models/quickdraw_model.h5" ]; then
+            MODEL_PATH="models/quickdraw_model.h5"
+          else
+            MODEL_PATH="models/quickdraw_model.keras"
+          fi
+          python scripts/convert/convert_to_onnx.py --model $MODEL_PATH --output models/quickdraw_model.onnx --opset 15
 
       - name: Upload ONNX artifact
+        if: steps.check_model.outputs.model_exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: quickdraw_model.onnx

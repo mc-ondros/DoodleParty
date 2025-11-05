@@ -102,9 +102,9 @@
 
 - `[-]` **Advanced Training**
   - `[x]` Implement learning rate scheduling
-  - `[ ]` Add class weighting for imbalanced data
-  - `[ ]` Experiment with different architectures
-  - `[ ]` Ensemble multiple models
+  - `[x]` Add class weighting for imbalanced data
+  - `[x]` Experiment with different architectures
+  - `[x]` Ensemble multiple models
 
 - `[ ]` **Threshold Optimization**
   - `[x]` Implement threshold optimization script

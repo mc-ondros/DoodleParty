@@ -13,7 +13,7 @@ print("="*70)
 print("VISUALIZING ACTUAL TRAINING BATCHES")
 print("="*70)
 
-# Load and split data (same as training)
+# Load and split data using identical parameters to training to ensure visualization reflects actual training conditions
 X_train_full = np.load('data/processed/X_train.npy')
 y_train_full = np.load('data/processed/y_train.npy')
 
@@ -25,7 +25,7 @@ X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
     shuffle=True
 )
 
-# Create augmentation generator (same as training)
+# Configure augmentation generator with identical parameters to training to visualize realistic batch contents
 augmentation = ImageDataGenerator(
     rotation_range=25,
     width_shift_range=0.15,
@@ -37,7 +37,7 @@ augmentation = ImageDataGenerator(
 
 batch_size = 32
 
-# Create training generator
+# Create training data generator that produces batches with the same shuffling and augmentation as actual training
 train_generator = augmentation.flow(
     X_train_split, y_train_split,
     batch_size=batch_size,
@@ -53,7 +53,7 @@ fig = plt.figure(figsize=(20, 16))
 fig.suptitle('Actual Training Batches (What the Model Sees During Training)', 
              fontsize=16, fontweight='bold')
 
-# Get 4 real batches from the generator
+# Extract 4 actual training batches to show the real-time augmented samples the model sees during training
 for batch_num in range(4):
     X_batch, y_batch = next(train_generator)
     
@@ -186,7 +186,7 @@ plt.close()
 # VISUALIZATION 8: Augmentation Effect on Separability
 print("\n  Analyzing how augmentation affects class separability...")
 
-# Get samples before and after augmentation
+# Compare original and augmented samples to analyze how augmentation affects class separability and feature distribution
 pos_idx = np.where(y_train_split == 1)[0][:100]
 neg_idx = np.where(y_train_split == 0)[0][:100]
 
@@ -194,7 +194,7 @@ neg_idx = np.where(y_train_split == 0)[0][:100]
 pos_original = X_train_split[pos_idx]
 neg_original = X_train_split[neg_idx]
 
-# Generate augmented samples
+# Apply augmentation to original samples to create comparable augmented versions for separability analysis
 pos_aug_list = []
 neg_aug_list = []
 
@@ -258,7 +258,7 @@ ax4.set_title('Augmented: Std Deviation')
 ax4.legend()
 ax4.grid(True, alpha=0.3)
 
-# Sample comparison
+# Show side-by-side comparison of original and augmented samples to visualize the transformation effects
 ax5 = plt.subplot(2, 4, 5)
 ax5.imshow(pos_original[0].squeeze(), cmap='gray', vmin=0, vmax=1)
 ax5.set_title('Positive: Original')

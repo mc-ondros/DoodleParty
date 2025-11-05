@@ -9,7 +9,7 @@ print("="*70)
 print("BEFORE/AFTER FIX COMPARISON")
 print("="*70)
 
-# Load new fixed data
+# Load the corrected dataset to verify that data quality issues have been properly resolved
 X_train_new = np.load('data/processed/X_train.npy')
 y_train_new = np.load('data/processed/y_train.npy')
 
@@ -29,7 +29,7 @@ fig = plt.figure(figsize=(20, 12))
 fig.suptitle('FIXED Training Data - Quality Improvements', 
              fontsize=16, fontweight='bold')
 
-# Row 1-2: Fixed positive samples
+# Display fixed positive samples to verify that penis drawings now have proper inversion and quality
 for i in range(20):
     ax = plt.subplot(6, 10, i + 1)
     idx = pos_idx[np.random.randint(len(pos_idx))]
@@ -41,7 +41,7 @@ for i in range(20):
         ax.set_ylabel('POSITIVE\n(Fixed)', fontsize=10, fontweight='bold',
                      rotation=0, ha='right', va='center')
 
-# Row 3-4: Fixed negative samples
+# Display fixed negative samples to verify that QuickDraw drawings maintain consistent quality without artifacts
 for i in range(20):
     ax = plt.subplot(6, 10, 20 + i + 1)
     idx = neg_idx[np.random.randint(len(neg_idx))]
@@ -53,10 +53,10 @@ for i in range(20):
         ax.set_ylabel('NEGATIVE\n(Fixed)', fontsize=10, fontweight='bold',
                      rotation=0, ha='right', va='center')
 
-# Row 5: Augmentation test with correct background
+# Demonstrate proper augmentation using the calculated background value to prevent artifacts during training
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-# Calculate background value
+# Estimate background value from corner pixels to configure augmentation with appropriate fill value
 sample_corners = []
 for i in np.random.choice(len(X_train_new), 100, replace=False):
     img = X_train_new[i].squeeze()
@@ -71,7 +71,7 @@ background_value = np.median(sample_corners)
 
 print(f"   Background value for augmentation: {background_value:.3f}")
 
-# Create augmentation with CORRECT background
+# Configure augmentation generator with the estimated background value to ensure realistic transformations during training
 augmentation = ImageDataGenerator(
     rotation_range=25,
     width_shift_range=0.15,
@@ -81,7 +81,7 @@ augmentation = ImageDataGenerator(
     cval=background_value
 )
 
-# Show augmentation examples
+# Display augmented samples using the correct background value to demonstrate improved augmentation quality
 idx = pos_idx[5]
 original = X_train_new[idx:idx+1]
 
@@ -101,7 +101,7 @@ for i in range(9):
     ax.set_title(f'Aug {i+1}', fontsize=7)
     ax.axis('off')
 
-# Row 6: Statistics comparison
+# Show statistical comparison to quantify the improvements in data quality and class balance
 ax = plt.subplot(6, 3, 16)
 pos_means = X_train_new[y_train_new == 1].mean(axis=(1,2,3))
 neg_means = X_train_new[y_train_new == 0].mean(axis=(1,2,3))
@@ -136,7 +136,7 @@ ax.text(0.1, 0.5, summary, fontsize=9, family='monospace',
        verticalalignment='center')
 
 ax = plt.subplot(6, 3, 18)
-# Show mean images
+# Display difference map between class means to verify that brightness shortcuts have been eliminated
 pos_mean_img = X_train_new[y_train_new == 1].mean(axis=0).squeeze()
 neg_mean_img = X_train_new[y_train_new == 0].mean(axis=0).squeeze()
 diff_img = pos_mean_img - neg_mean_img
