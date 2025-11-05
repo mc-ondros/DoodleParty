@@ -2,9 +2,9 @@
 
 **Purpose:** Documentation of file organization and directory structure.
 
-## Proposed Better Structure
+## Current Structure
 
-The current structure mixes concerns and doesn't follow Python best practices. Here's the recommended structure using src-layout:
+The project follows Python best practices using src-layout with proper package organization:
 
 ```
 DoodleHunter/
@@ -18,12 +18,10 @@ DoodleHunter/
 │   ├── data/              # Data handling
 │   │   ├── __init__.py
 │   │   ├── loaders.py     # Dataset loading
-│   │   ├── preprocessing.py
+│   │   ├── appendix_loader.py  # Additional data loading
 │   │   └── augmentation.py
 │   ├── utils/             # Utilities
-│   │   ├── __init__.py
-│   │   ├── metrics.py
-│   │   └── visualization.py
+│   │   └── __init__.py
 │   └── web/               # Web interface
 │       ├── __init__.py
 │       ├── app.py         # Flask app
@@ -32,52 +30,76 @@ DoodleHunter/
 ├── scripts/               # Executable scripts
 │   ├── train.py
 │   ├── evaluate.py
-│   ├── download_data.py
-│   └── optimize_threshold.py
+│   ├── ensemble_model.py
+│   ├── optimize_threshold.py
+│   ├── test_time_augmentation.py
+│   ├── generate_hard_negatives.py
+│   ├── data_processing/   # Data download & processing
+│   ├── visualization/     # Visualization scripts
+│   └── convert/           # Model conversion scripts
 ├── tests/                 # Test suite
 │   ├── test_core/
 │   ├── test_data/
-│   └── test_web/
-├── data/                  # Data storage (gitignored)
-├── models/                # Saved models (gitignored)
-├── docs/                  # Documentation (not hidden)
+│   ├── test_web/
+│   └── conftest.py
+├── data/                  # Data storage
+│   └── raw_ndjson/        # QuickDraw NDJSON files
+├── models/                # Saved models
+│   ├── *.keras            # TensorFlow/Keras models (float32)
+│   ├── *.h5               # Legacy Keras format
+│   ├── *.tflite           # TensorFlow Lite (float32)
+│   ├── *_int8.tflite      # TensorFlow Lite (INT8 quantized)
+│   ├── *.onnx             # ONNX format
+│   └── benchmarks/        # Performance benchmark results
+├── .documentation/        # Documentation
 │   ├── api.md
 │   ├── architecture.md
-│   └── ...
+│   ├── installation.md
+│   ├── nix-usage.md
+│   ├── roadmap.md
+│   ├── structure.md
+│   ├── troubleshooting.md
+│   └── model_improvements.md
 ├── .github/               # GitHub workflows
+│   └── workflows/
 ├── pyproject.toml         # Modern Python packaging
 ├── requirements.txt       # Dependencies
+├── flake.nix              # Nix flake configuration
+├── module.nix             # NixOS module
+├── STYLE_GUIDE.md         # Code style guide
 └── README.md
 ```
 
-## Current Structure Issues
+## Structure Benefits
 
-1. **Flat `src/` directory** - All files mixed together, hard to navigate
-2. **Hidden documentation** - `.documentation/` is non-standard
-3. **No package structure** - Can't import as `from src.core import models`
-4. **Scripts mixed with modules** - Training scripts mixed with library code
-5. **No tests directory** - Tests scattered or missing
-6. **Missing `__init__.py`** - Not a proper Python package
-7. **No separation** - Executable scripts vs importable modules
+1. ✅ **Organized `src/` directory** - Clear separation by functionality
+2. ✅ **Proper package structure** - Can import as `from src.core import models`
+3. ✅ **Separated scripts** - Training scripts in `scripts/`, library code in `src/`
+4. ✅ **Tests directory** - Organized test suite with proper structure
+5. ✅ **Proper `__init__.py`** - Valid Python package
+6. ✅ **Clear separation** - Executable scripts vs importable modules
+7. ✅ **Modern packaging** - Uses `pyproject.toml` for configuration
 
-## Recommended Structure Details
+## Structure Details
 
 ### Package Layout (`src/`)
 
 **Core ML (`src/core/`):**
 - `models.py` - CNN architectures, model factory functions
 - `training.py` - Training loops, callbacks, checkpointing
-- `inference.py` - Single/batch prediction, TTA
+- `inference.py` - Single/batch prediction, TTA, region-based detection
+- `optimization.py` - Model quantization, pruning, distillation
+- `batch_inference.py` - Optimized batch processing for multiple patches
 
 **Data Handling (`src/data/`):**
 - `loaders.py` - QuickDraw dataset loading, class mapping
-- `preprocessing.py` - Image normalization, resizing
+- `appendix_loader.py` - Additional data loading utilities
 - `augmentation.py` - Data augmentation pipeline
 
 **Utilities (`src/utils/`):**
-- `metrics.py` - Custom metrics, evaluation functions
-- `visualization.py` - Plotting, confusion matrices
-- `config.py` - Configuration management
+- `profiling.py` - Performance profiling and benchmarking
+- `caching.py` - Redis integration for result caching
+- `metrics.py` - Performance metrics collection
 
 **Web Interface (`src/web/`):**
 - `app.py` - Flask application
@@ -90,47 +112,83 @@ DoodleHunter/
 Executable scripts that use the package:
 - `train.py` - CLI for training models
 - `evaluate.py` - CLI for evaluation
-- `download_data.py` - Data download utility
-- `serve.py` - Start web server
+- `ensemble_model.py` - Ensemble model creation
+- `optimize_threshold.py` - Threshold optimization
+- `test_time_augmentation.py` - TTA implementation
+- `generate_hard_negatives.py` - Hard negative mining
+- `test_region_detection.py` - Test region-based detection robustness
+- `benchmark_performance.py` - Comprehensive performance benchmarking
+- `profile_inference.py` - Profile inference pipeline
+- `data_processing/` - Data download and processing scripts
+- `visualization/` - Visualization utilities
+- `convert/` - Model conversion tools
+
+**Data Processing Scripts (`scripts/data_processing/`):**
+- `download_quickdraw_ndjson.py` - Download QuickDraw NDJSON files
+- `process_all_data_128x128.py` - Process data to 128x128 format
+- `fix_data_quality.py` - Data quality improvements
+
+**Visualization Scripts (`scripts/visualization/`):**
+- `visualize_training_batches.py` - Visualize training data
+- `diagnose_data_issues.py` - Data quality diagnostics
+
+**Conversion Scripts (`scripts/convert/`):**
+- `convert_to_onnx.py` - Convert models to ONNX format
+- `convert_to_tflite.py` - Convert Keras models to TensorFlow Lite
+- `quantize_int8.py` - Apply INT8 quantization to TFLite models
+- `benchmark_tflite.py` - Benchmark TFLite model performance
+- `prune_model.py` - Apply weight pruning to reduce model size
+- `distill_model.py` - Knowledge distillation for smaller models
+- `optimize_graph.py` - TensorFlow graph optimization
 
 ### Tests Directory
 
 Organized by module:
 - `test_core/` - Test core ML functionality
+  - `test_batch_inference.py` - Batch processing tests
+  - `test_optimization.py` - Model optimization tests
 - `test_data/` - Test data loading/preprocessing
 - `test_web/` - Test Flask endpoints
+- `test_performance/` - Performance and load tests
+  - `test_latency.py` - Latency benchmarks
+  - `test_throughput.py` - Throughput tests
+  - `test_memory.py` - Memory profiling
 - `conftest.py` - Pytest fixtures
 
 ### Documentation Directory
 
-Visible `docs/` instead of hidden `.documentation/`:
+Currently `.documentation/` (hidden directory):
 - `api.md` - API reference
 - `architecture.md` - System design
 - `installation.md` - Setup guide
+- `nix-usage.md` - Nix/NixOS guide
+- `roadmap.md` - Development roadmap
+- `structure.md` - This file
 - `troubleshooting.md` - Common issues
+- `model_improvements.md` - Model enhancement docs
 
-## Benefits of Proposed Structure
+## Benefits of Current Structure
 
-1. **Proper Python Package** - Can install with `pip install -e .`
-2. **Clear Imports** - `from src.core import models`
-3. **Separation of Concerns** - Scripts vs library code
-4. **Standard Src-Layout** - Follows Python packaging best practices
-5. **Testable** - Dedicated tests directory with proper structure
-6. **Discoverable Docs** - `docs/` instead of hidden `.documentation/`
-7. **Professional** - Used by major Python projects (pytest, setuptools, etc.)
+1. ✅ **Proper Python Package** - Can install with `pip install -e .`
+2. ✅ **Clear Imports** - `from src.core import models`
+3. ✅ **Separation of Concerns** - Scripts vs library code
+4. ✅ **Standard Src-Layout** - Follows Python packaging best practices
+5. ✅ **Testable** - Dedicated tests directory with proper structure
+6. ✅ **Nix Integration** - Full Nix flake support for reproducible builds
+7. ✅ **Professional** - Used by major Python projects (pytest, setuptools, etc.)
 
-## Migration Path
+## Data Format
 
-To migrate from current to proposed structure:
+**QuickDraw Dataset:**
+- Format: NDJSON (newline-delimited JSON)
+- Location: `data/raw_ndjson/`
+- Files: `{category}-raw.ndjson`
+- Each line contains a drawing with strokes and metadata
 
-1. Reorganize `src/` into subpackages (core, data, utils, web)
-2. Add `__init__.py` files to all packages
-3. Move executable scripts to `scripts/` directory
-4. Move `app/` contents to `src/web/`
-5. Rename `.documentation/` to `docs/`
-6. Create `tests/` directory structure
-7. Create `pyproject.toml` for modern packaging
-8. Update all imports throughout codebase
+**Processed Data:**
+- Location: `data/processed/`
+- Format: NumPy arrays and pickle files
+- Generated during training
 
 ## File Naming Conventions
 
@@ -151,23 +209,92 @@ To migrate from current to proposed structure:
 **Tests:**
 - Prefix with `test_`: `test_models.py`, `test_loaders.py`
 
-## Current Structure (For Reference)
+## Import Examples
 
-The existing structure has these directories:
-- `src/` - Flat directory with all Python modules (needs reorganization)
-- `app/` - Flask web interface (should move to `src/web/`)
-- `data/` - Dataset storage (keep as-is)
-- `models/` - Trained models (keep as-is)
-- `.documentation/` - Hidden documentation (rename to `docs/`)
-- `scripts/` - Shell scripts (keep, but move Python scripts here)
+**Core ML functionality:**
+```python
+from src.core.models import create_cnn_model
+from src.core.training import train_model
+from src.core.inference import predict_single
+```
 
-**Key Changes Needed:**
-1. Reorganize `src/` into subpackages
-2. Move `app/` → `src/web/`
-3. Rename `.documentation/` → `docs/`
-4. Separate executable scripts from library code
-5. Add proper `__init__.py` files
-6. Create `tests/` directory
+**Data handling:**
+```python
+from src.data.loaders import load_data
+from src.data.augmentation import create_augmentation_pipeline
+```
+
+**Web interface:**
+```python
+from src.web.app import app
+```
+
+## Performance Optimization Structure
+
+### Model Optimization Pipeline
+
+```
+Original Model (*.keras)
+    ↓
+TFLite Conversion (convert_to_tflite.py)
+    ↓
+INT8 Quantization (quantize_int8.py)
+    ↓
+Benchmarking (benchmark_tflite.py)
+    ↓
+Production Model (*_int8.tflite)
+```
+
+### Inference Pipeline Architecture
+
+**Single Image (Current):**
+```
+Canvas → Preprocess → Model → Result (78-85ms)
+```
+
+**Multi-Region (Planned):**
+```
+Canvas → Extract Patches (9-16) → Batch Preprocess
+    ↓
+Batch Inference (single forward pass)
+    ↓
+Aggregate Results → Final Decision (<200ms target)
+```
+
+### Key Performance Components
+
+**`src/core/batch_inference.py`** - Core batch processing
+- Batch patch extraction
+- Parallel preprocessing
+- Single forward pass for all patches
+- Result aggregation strategies
+
+**`src/core/optimization.py`** - Model optimization
+- INT8 quantization
+- Weight pruning
+- Knowledge distillation
+- Graph optimization
+
+**`src/utils/profiling.py`** - Performance monitoring
+- Latency tracking
+- Memory profiling
+- Throughput measurement
+- Bottleneck identification
+
+**`scripts/benchmark_performance.py`** - Comprehensive benchmarking
+- Single vs batch inference comparison
+- Memory usage analysis
+- Latency distribution (p50, p95, p99)
+- GPU utilization metrics
+
+## Nix Integration
+
+The project includes comprehensive Nix support:
+- `flake.nix` - Nix flake with development shell and apps
+- `module.nix` - NixOS service module
+- `.envrc` - direnv integration
+
+See [Nix Usage Guide](nix-usage.md) for details.
 
 ## Related Documentation
 

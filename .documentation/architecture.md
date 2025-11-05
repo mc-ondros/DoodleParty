@@ -33,10 +33,10 @@ The system prioritizes accuracy and ease of use for content moderation tasks.
 
 | Component | Technology | Responsibility | Location |
 |-----------|-----------|----------------|----------|
-| **Data Pipeline** | Python + NumPy | Data loading and preprocessing | `src/data_pipeline.py` |
-| **Model Training** | TensorFlow/Keras | CNN model training | `src/train.py` |
-| **Web Interface** | Flask + HTML5 Canvas | Drawing and classification UI | `app/app.py` |
-| **Inference Engine** | TensorFlow/Keras | Real-time prediction | `src/predict.py` |
+| **Data Pipeline** | Python + NumPy | Data loading and preprocessing | `src/data/loaders.py`, `src/data/augmentation.py` |
+| **Model Training** | TensorFlow/Keras | CNN model training | `scripts/train.py`, `src/core/training.py` |
+| **Web Interface** | Flask + HTML5 Canvas | Drawing and classification UI | `src/web/app.py` |
+| **Inference Engine** | TensorFlow/Keras | Real-time prediction | `src/core/inference.py` |
 
 ### Component Interactions
 
@@ -148,10 +148,10 @@ def preprocess_image(image):
 ### Flask Application Structure
 
 **Directory Layout:**
-- `app/app.py` - Flask server
-- `app/templates/index.html` - Drawing interface
-- `app/static/css/style.css` - Styles
-- `app/static/js/canvas.js` - Canvas drawing logic
+- `src/web/app.py` - Flask server
+- `src/web/templates/index.html` - Drawing interface
+- `src/web/static/css/style.css` - Styles
+- `src/web/static/js/canvas.js` - Canvas drawing logic
 
 **Flask Routes:**
 - `GET /` - Serve drawing interface
@@ -184,29 +184,29 @@ sequenceDiagram
 **Phase 1: Data Preparation**
 ```bash
 # Download QuickDraw data
-python src/download_quickdraw.py
+python scripts/data_processing/download_quickdraw_ndjson.py
 ```
 
 **Data Organization:**
-- `data/raw/` - Downloaded NPY files (penis.npy, circle.npy, etc.)
+- `data/raw_ndjson/` - Downloaded NDJSON files (penis-raw.ndjson, circle-raw.ndjson, etc.)
 - `data/processed/` - Processed data and class_mapping.pkl
 
 **Phase 2: Model Training**
 ```python
 # Train model
-python src/train.py \
+python scripts/train.py \
   --epochs 50 \
   --batch-size 32 \
   --learning-rate 0.001
 
-# Output: models/quickdraw_classifier.h5
+# Output: models/quickdraw_classifier.keras
 ```
 
 **Phase 3: Evaluation**
 ```python
 # Evaluate model
-python src/evaluate.py \
-  --model models/quickdraw_classifier.h5
+python scripts/evaluate.py \
+  --model models/quickdraw_classifier.keras
 
 # Outputs:
 # - Accuracy, precision, recall, F1
@@ -224,9 +224,10 @@ python src/evaluate.py \
 
 **Implementation:**
 ```python
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+# See src/data/augmentation.py for implementation
+from src.data.augmentation import create_augmentation_pipeline
 
-datagen = ImageDataGenerator(
+datagen = create_augmentation_pipeline(
     rotation_range=15,
     width_shift_range=0.1,
     height_shift_range=0.1,

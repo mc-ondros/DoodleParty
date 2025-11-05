@@ -25,8 +25,8 @@ python src/train.py --image-size 64
 
 **Solutions:**
 1. Increase training epochs: `--epochs 100`
-2. Add more data augmentation in `src/data_pipeline.py`
-3. Try different model architecture in `src/models.py`
+2. Add more data augmentation in `src/data/augmentation.py`
+3. Try different model architecture in `src/core/models.py`
 4. Check data quality and class balance
 5. Verify labels are correct
 
@@ -40,7 +40,7 @@ python src/train.py --image-size 64
 export CUDA_VISIBLE_DEVICES=0
 
 # Reduce dataset size
-python src/train.py --max-samples 5000
+python scripts/train.py --max-samples 5000
 
 # Enable mixed precision
 export TF_ENABLE_AUTO_MIXED_PRECISION=1
@@ -73,11 +73,11 @@ FLASK_PORT=5001 python app.py
 # Verify model exists
 ls -lh models/
 
-# Check path in app/app.py
+# Check path in src/web/app.py
 # Update MODEL_PATH if needed
 
 # Retrain model if missing
-./train_max_accuracy.sh
+./scripts/train_max_accuracy.sh
 ```
 
 ### Canvas Not Responding
@@ -88,7 +88,7 @@ ls -lh models/
 1. Clear browser cache (Ctrl+Shift+R)
 2. Try different browser (Chrome recommended)
 3. Check browser console for JavaScript errors
-4. Verify `app/static/js/canvas.js` exists
+4. Verify `src/web/static/js/canvas.js` exists
 
 ## Data Issues
 
@@ -99,7 +99,7 @@ ls -lh models/
 **Solutions:**
 ```bash
 # Retry with specific categories
-python src/download_quickdraw.py --categories penis circle square
+python scripts/data_processing/download_quickdraw_ndjson.py --categories penis circle square
 
 # Check internet connection
 ping storage.googleapis.com
@@ -113,15 +113,9 @@ ping storage.googleapis.com
 **Symptoms:** Model always predicts one class
 
 **Solutions:**
-```python
-# In src/train.py, add class weights
-from sklearn.utils.class_weight import compute_class_weight
-
-class_weights = compute_class_weight(
-    'balanced',
-    classes=np.unique(y_train),
-    y=y_train
-)
+```bash
+# Use class weighting flag when training
+python scripts/train.py --use-class-weighting --epochs 50
 ```
 
 ## Performance Issues
@@ -162,7 +156,7 @@ pip install tensorflow>=2.13.0
 
 ### `ValueError: Input arrays should have the same number of samples`
 
-Check data loading in `src/dataset.py`:
+Check data loading in `src/data/loaders.py`:
 ```python
 # Verify X and y have same length
 print(f"X shape: {X.shape}, y shape: {y.shape}")

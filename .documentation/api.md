@@ -74,7 +74,7 @@ Health check endpoint.
 
 ## Python Module API
 
-### Data Loading (`src/dataset.py`)
+### Data Loading (`src/data/loaders.py`)
 
 #### `load_data(data_dir, categories, max_samples_per_class=10000)`
 
@@ -90,10 +90,10 @@ Load QuickDraw dataset for training.
 
 **Example:**
 ```python
-from src.dataset import load_data
+from src.data.loaders import load_data
 
 X_train, y_train, X_test, y_test, mapping = load_data(
-    data_dir='data/raw',
+    data_dir='data/raw_ndjson',
     categories=['penis', 'circle', 'square'],
     max_samples_per_class=5000
 )
@@ -110,7 +110,7 @@ Preprocess image for model input.
 **Returns:**
 - `np.ndarray`: Preprocessed image (normalized, resized)
 
-### Model Architecture (`src/models.py`)
+### Model Architecture (`src/core/models.py`)
 
 #### `create_cnn_model(input_shape=(128, 128, 1), num_classes=2)`
 
@@ -125,7 +125,7 @@ Create CNN model for binary classification.
 
 **Example:**
 ```python
-from src.models import create_cnn_model
+from src.core.models import create_cnn_model
 
 model = create_cnn_model(
     input_shape=(128, 128, 1),
@@ -133,7 +133,7 @@ model = create_cnn_model(
 )
 ```
 
-### Training (`src/train.py`)
+### Training (`scripts/train.py`, `src/core/training.py`)
 
 #### `train_model(model, X_train, y_train, X_val, y_val, epochs=50, batch_size=32)`
 
@@ -153,7 +153,7 @@ Train the classification model.
 
 **Example:**
 ```python
-from src.train import train_model
+from src.core.training import train_model
 
 history = train_model(
     model=model,
@@ -166,7 +166,7 @@ history = train_model(
 )
 ```
 
-### Evaluation (`src/evaluate.py`)
+### Evaluation (`scripts/evaluate.py`)
 
 #### `evaluate_model(model, X_test, y_test)`
 
@@ -182,7 +182,11 @@ Evaluate model performance.
 
 **Example:**
 ```python
-from src.evaluate import evaluate_model
+# Run evaluation script
+python scripts/evaluate.py --model models/quickdraw_classifier.keras
+
+# Or use the module directly
+from src.core.inference import evaluate_model
 
 metrics = evaluate_model(model, X_test, y_test)
 print(f"Accuracy: {metrics['accuracy']:.2%}")
@@ -190,7 +194,7 @@ print(f"Accuracy: {metrics['accuracy']:.2%}")
 
 ## Model Inference API
 
-### Prediction (`src/predict.py`)
+### Prediction (`src/core/inference.py`)
 
 #### `predict_single(model, image, threshold=0.5)`
 
@@ -206,7 +210,7 @@ Predict class for a single image.
 
 **Example:**
 ```python
-from src.predict import predict_single
+from src.core.inference import predict_single
 
 result = predict_single(
     model=model,
@@ -285,12 +289,12 @@ FLASK_PORT=5000
 FLASK_DEBUG=False
 
 # Model configuration
-MODEL_PATH=models/quickdraw_classifier.h5
+MODEL_PATH=models/quickdraw_classifier.keras
 IMAGE_SIZE=128
 THRESHOLD=0.5
 
 # Data paths
-DATA_DIR=data/raw
+DATA_DIR=data/raw_ndjson
 PROCESSED_DIR=data/processed
 ```
 
@@ -298,7 +302,7 @@ PROCESSED_DIR=data/processed
 
 **Training Parameters:**
 ```python
-# src/train.py
+# scripts/train.py
 BATCH_SIZE = 32
 EPOCHS = 50
 LEARNING_RATE = 0.001
@@ -307,7 +311,7 @@ VALIDATION_SPLIT = 0.2
 
 **Data Augmentation:**
 ```python
-# src/data_pipeline.py
+# src/data/augmentation.py
 ROTATION_RANGE = 15
 WIDTH_SHIFT_RANGE = 0.1
 HEIGHT_SHIFT_RANGE = 0.1
@@ -319,14 +323,14 @@ ZOOM_RANGE = 0.1
 ### Complete Training Workflow
 
 ```python
-from src.dataset import load_data
-from src.models import create_cnn_model
-from src.train import train_model
-from src.evaluate import evaluate_model
+from src.data.loaders import load_data
+from src.core.models import create_cnn_model
+from src.core.training import train_model
+from src.core.inference import evaluate_model
 
 # Load data
 X_train, y_train, X_test, y_test, mapping = load_data(
-    data_dir='data/raw',
+    data_dir='data/raw_ndjson',
     categories=['penis', 'circle', 'square', 'triangle'],
     max_samples_per_class=10000
 )
@@ -345,7 +349,7 @@ metrics = evaluate_model(model, X_test, y_test)
 print(f"Test Accuracy: {metrics['accuracy']:.2%}")
 
 # Save
-model.save('models/quickdraw_classifier.h5')
+model.save('models/quickdraw_classifier.keras')
 ```
 
 ### Flask API Usage

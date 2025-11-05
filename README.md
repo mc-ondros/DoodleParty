@@ -19,7 +19,8 @@ nix run .#web
 **Without Nix:**
 ```bash
 pip install -r requirements.txt
-python scripts/download_quickdraw.py
+python scripts/data_processing/download_quickdraw_ndjson.py
+python scripts/data_processing/process_all_data_128x128.py
 python scripts/train.py
 python src/web/app.py
 ```
@@ -49,7 +50,7 @@ Access at `http://localhost:5000`
 - Python 3.9+
 - 4GB+ RAM (8GB for training)
 - 2GB+ disk space
-- See `requirements.txt` for dependencies
+- See `requirements.txt` and `pyproject.toml` for dependencies
 
 ## Installation
 
@@ -57,7 +58,7 @@ Access at `http://localhost:5000`
 git clone https://github.com/yourusername/doodlehunter.git
 cd doodlehunter
 pip install -r requirements.txt
-python src/download_quickdraw.py
+python scripts/data_processing/download_quickdraw_ndjson.py
 ```
 
 See [Installation Guide](.documentation/installation.md) for detailed setup.
@@ -66,18 +67,18 @@ See [Installation Guide](.documentation/installation.md) for detailed setup.
 
 **Train Model:**
 ```bash
-./train_max_accuracy.sh
-# or: python src/train.py --epochs 50 --batch-size 32
+./scripts/train_max_accuracy.sh
+# or: python scripts/train.py --epochs 50 --batch-size 32
 ```
 
 **Run Web Interface:**
 ```bash
-cd app && python app.py
+python src/web/app.py
 ```
 
 **Evaluate Model:**
 ```bash
-python src/evaluate.py --model models/quickdraw_classifier.h5
+python scripts/evaluate.py --model models/quickdraw_classifier.h5
 ```
 
 See [API Reference](.documentation/api.md) for detailed usage.
