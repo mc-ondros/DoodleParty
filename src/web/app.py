@@ -102,7 +102,7 @@ def preprocess_image(image_data):
     img_array = 255 - img_array  # Invert colors
     
     # Resize to 128x128 using high-quality LANCZOS
-    image_inverted = Image.fromarray(img_array, mode='L')
+    image_inverted = Image.fromarray(img_array, 'L')
     image_resized = image_inverted.resize((128, 128), Image.Resampling.LANCZOS)
     
     # Convert to numpy array and normalize to 0-1
@@ -132,6 +132,13 @@ def predict(image_data):
         Dictionary with prediction results
     """
     try:
+        # Check if model is loaded
+        if model is None:
+            return {
+                'success': False,
+                'error': 'Model not loaded. Please train a model first or place a trained model (.h5 or .keras) in the models/ directory.'
+            }
+        
         # Preprocess image
         img_array = preprocess_image(image_data)
         

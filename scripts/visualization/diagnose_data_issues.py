@@ -10,14 +10,14 @@ print("="*70)
 print("DIAGNOSING DATA ISSUES")
 print("="*70)
 
-# Load data
+# Load processed training data to analyze quality issues that could affect model performance
 X_train = np.load('data/processed/X_train.npy')
 y_train = np.load('data/processed/y_train.npy')
 
 pos_idx = np.where(y_train == 1)[0]
 neg_idx = np.where(y_train == 0)[0]
 
-# ISSUE 1: Check for non-inverted or all-white images
+# Check for problematic images that could cause model shortcuts: all-white images indicate failed inversion, all-black images indicate data corruption
 print("\n1. CHECKING FOR PROBLEMATIC IMAGES:")
 print("-" * 70)
 
@@ -29,7 +29,7 @@ def is_mostly_black(img, threshold=0.1):
     """Check if image is mostly black (mean < threshold)"""
     return img.mean() < threshold
 
-# Check positive class
+# Analyze positive class (penis drawings) for quality issues that could indicate improper data processing
 pos_white = [i for i in pos_idx if is_mostly_white(X_train[i])]
 pos_black = [i for i in pos_idx if is_mostly_black(X_train[i])]
 
@@ -37,7 +37,7 @@ print(f"Positive class:")
 print(f"  All-white images: {len(pos_white)} ({100*len(pos_white)/len(pos_idx):.2f}%)")
 print(f"  All-black images: {len(pos_black)} ({100*len(pos_black)/len(pos_idx):.2f}%)")
 
-# Check negative class
+# Analyze negative class (QuickDraw drawings) to ensure they don't contain quality issues that could create unfair advantages
 neg_white = [i for i in neg_idx if is_mostly_white(X_train[i])]
 neg_black = [i for i in neg_idx if is_mostly_black(X_train[i])]
 
@@ -45,7 +45,7 @@ print(f"Negative class:")
 print(f"  All-white images: {len(neg_white)} ({100*len(neg_white)/len(neg_idx):.2f}%)")
 print(f"  All-black images: {len(neg_black)} ({100*len(neg_black)/len(neg_idx):.2f}%)")
 
-# ISSUE 2: Analyze stroke width
+# Analyze stroke width differences between classes that could create model shortcuts based on drawing thickness rather than content
 print("\n2. ANALYZING STROKE WIDTH:")
 print("-" * 70)
 
@@ -53,10 +53,10 @@ from scipy.ndimage import binary_erosion, binary_dilation
 
 def estimate_stroke_width(img, threshold=0.5):
     """Estimate average stroke width using morphological operations"""
-    # Binarize
+    # Convert to binary to enable morphological operations for stroke width estimation
     binary = img < threshold
     
-    # Erode until most strokes disappear
+    # Use iterative erosion to estimate stroke width by counting how many operations are needed to eliminate most strokes
     eroded = binary.copy()
     erosions = 0
     while eroded.sum() > binary.sum() * 0.1 and erosions < 10:
@@ -76,11 +76,11 @@ print(f"Positive class stroke width: {np.mean(pos_strokes):.2f} ± {np.std(pos_s
 print(f"Negative class stroke width: {np.mean(neg_strokes):.2f} ± {np.std(neg_strokes):.2f}")
 print(f"Difference: {abs(np.mean(pos_strokes) - np.mean(neg_strokes)):.2f}")
 
-# ISSUE 3: Background value distribution
+# Check background value consistency between classes to prevent model from using background brightness as a shortcut feature
 print("\n3. CHECKING BACKGROUND VALUES:")
 print("-" * 70)
 
-# Sample corner pixels (likely background)
+# Estimate background value by sampling corner pixels since drawings typically don't extend to image corners
 def get_background_value(img):
     """Estimate background by sampling corners"""
     corners = [
@@ -103,7 +103,7 @@ print("\n4. CREATING DIAGNOSTIC VISUALIZATION...")
 fig = plt.figure(figsize=(20, 14))
 fig.suptitle('Data Quality Issues Diagnosis', fontsize=16, fontweight='bold')
 
-# Row 1: Problematic positive samples
+# Show problematic positive samples to identify data quality issues that need fixing before training
 if len(pos_white) > 0 or len(pos_black) > 0:
     for i in range(min(10, max(len(pos_white), len(pos_black)))):
         ax = plt.subplot(5, 10, i + 1)
@@ -122,7 +122,7 @@ if len(pos_white) > 0 or len(pos_black) > 0:
             ax.set_ylabel('POS\nIssues', fontsize=9, fontweight='bold',
                          rotation=0, ha='right', va='center')
 
-# Row 2: Problematic negative samples  
+# Show problematic negative samples to ensure QuickDraw data doesn't contain artifacts that could create unfair advantages  
 if len(neg_white) > 0 or len(neg_black) > 0:
     for i in range(min(10, max(len(neg_white), len(neg_black)))):
         ax = plt.subplot(5, 10, 10 + i + 1)
@@ -141,7 +141,7 @@ if len(neg_white) > 0 or len(neg_black) > 0:
             ax.set_ylabel('NEG\nIssues', fontsize=9, fontweight='bold',
                          rotation=0, ha='right', va='center')
 
-# Row 3: Stroke width comparison
+# Compare stroke widths between classes to identify potential model shortcuts based on drawing thickness
 for i in range(10):
     ax = plt.subplot(5, 10, 20 + i + 1)
     idx = pos_idx[i]
@@ -154,7 +154,7 @@ for i in range(10):
         ax.set_ylabel('POS\nStroke', fontsize=9, fontweight='bold',
                      rotation=0, ha='right', va='center')
 
-# Row 4: Negative stroke widths
+# Show negative class stroke widths to compare with positive class and identify systematic differences
 for i in range(10):
     ax = plt.subplot(5, 10, 30 + i + 1)
     idx = neg_idx[i]
@@ -167,7 +167,7 @@ for i in range(10):
         ax.set_ylabel('NEG\nStroke', fontsize=9, fontweight='bold',
                      rotation=0, ha='right', va='center')
 
-# Row 5: Statistics
+# Show statistical distributions to quantify differences between classes that could lead to model shortcuts
 ax = plt.subplot(5, 2, 9)
 ax.hist(pos_strokes, bins=15, alpha=0.6, label='Positive', color='red', edgecolor='black')
 ax.hist(neg_strokes, bins=15, alpha=0.6, label='Negative', color='blue', edgecolor='black')

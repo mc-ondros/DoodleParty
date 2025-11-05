@@ -8,61 +8,149 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🎨 DoodleHunter</h1>
-            <p class="subtitle">Test the ML Model with Your Drawings</p>
+        <!-- Header -->
+        <header class="glass-panel header-card">
+            <h1 class="header-title">DoodleHunter</h1>
+            <p class="header-subtitle">Binary Classification Testing Interface</p>
         </header>
 
-        <main>
-            <div class="canvas-section">
-                <div class="canvas-container">
-                    <canvas id="drawingCanvas" width="512" height="512"></canvas>
-                    <div class="canvas-overlay" id="canvasOverlay"></div>
-                </div>
-
-                <div class="controls">
-                    <button id="clearBtn" class="btn btn-secondary">Clear</button>
-                    <button id="predictBtn" class="btn btn-primary">Get Verdict</button>
-                    <label class="brush-size">
-                        Brush Size: 
-                        <input type="range" id="brushSize" min="5" max="50" value="24">
-                        <span id="sizeDisplay">24</span>px
-                    </label>
-                </div>
-            </div>
-
-            <div class="result-section">
-                <div id="resultBox" class="result-box hidden">
-                    <div class="result-header">
-                        <h2 id="verdict">Verdict</h2>
-                    </div>
-                    <div class="result-content">
-                        <p id="verdictText" class="verdict-text"></p>
-                        <div class="confidence-display">
-                            <p>Confidence: <span id="confidence">0%</span></p>
-                            <div class="confidence-bar">
-                                <div id="confidenceBar" class="confidence-fill" style="width: 0%"></div>
+        <!-- Main Content -->
+        <main class="main-grid">
+            <!-- Drawing Area -->
+            <section class="drawing-section">
+                <div class="glass-panel canvas-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Drawing Canvas</h2>
+                        <div class="brush-controls">
+                            <label class="control-label">Brush Size</label>
+                            <div class="brush-slider-group">
+                                <input type="range" id="brushSize" min="5" max="50" value="24" class="brush-slider">
+                                <span id="sizeDisplay" class="size-indicator">24</span>
                             </div>
                         </div>
-                        <p class="raw-probability">Raw Probability: <code id="rawProb">0.0000</code></p>
-                        <p class="threshold-info">Threshold: <code id="thresholdVal">0.5</code></p>
+                    </div>
+                    
+                    <div class="canvas-wrapper">
+                        <canvas id="drawingCanvas" width="512" height="512"></canvas>
+                    </div>
+
+                    <div class="canvas-actions">
+                        <button id="clearBtn" class="btn btn-secondary glass-panel">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"></path>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                            Clear Canvas
+                        </button>
+                        <button id="predictBtn" class="btn btn-primary glass-panel">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Analyze Drawing
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Area -->
+            <section class="results-section">
+                <!-- Analysis Panel -->
+                <div class="analysis-panel">
+                    <!-- Empty State -->
+                    <div id="emptyState" class="empty-state glass-panel">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                        </svg>
+                        <h3 class="empty-title">Ready to Analyze</h3>
+                        <p class="empty-text">Draw something on the canvas and click "Analyze Drawing" to test the model</p>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loadingBox" class="loading-box glass-panel hidden">
+                        <div class="spinner"></div>
+                        <p class="loading-text">Analyzing your drawing...</p>
+                    </div>
+
+                    <!-- Result State -->
+                    <div id="resultBox" class="result-box glass-panel hidden">
+                        <div class="result-status">
+                            <div id="statusIcon" class="status-icon"></div>
+                            <h2 id="verdict" class="result-verdict">Verdict</h2>
+                        </div>
+                        <p id="verdictText" class="result-description"></p>
+                        
+                        <div class="result-metrics">
+                            <div class="metric-card glass-panel">
+                                <label class="metric-label">Confidence</label>
+                                <div class="metric-value" id="confidence">0%</div>
+                                <div class="confidence-bar">
+                                    <div id="confidenceBar" class="confidence-fill" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">Raw Probability</span>
+                                    <code id="rawProb" class="detail-value">0.0000</code>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Threshold</span>
+                                    <code id="thresholdVal" class="detail-value">0.5</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="errorBox" class="error-box glass-panel hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="error-icon">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p id="errorMessage" class="error-message"></p>
                     </div>
                 </div>
 
-                <div id="loadingBox" class="loading-box hidden">
-                    <div class="spinner"></div>
-                    <p>Analyzing your drawing...</p>
+                <!-- Statistics Panel -->
+                <div class="stats-panel glass-panel">
+                    <div class="card-header">
+                        <h2 class="card-title">Drawing Statistics</h2>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <label class="stat-label">Total Strokes</label>
+                            <div class="stat-value" id="totalStrokes">0</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <label class="stat-label">Canvas Coverage</label>
+                            <div class="stat-value" id="canvasCoverage">0%</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <label class="stat-label">Drawing Time</label>
+                            <div class="stat-value" id="drawingTime">0s</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <label class="stat-label">Pixels Drawn</label>
+                            <div class="stat-value" id="pixelsDrawn">0</div>
+                        </div>
+                    </div>
                 </div>
-
-                <div id="errorBox" class="error-box hidden">
-                    <p id="errorMessage"></p>
-                </div>
-            </div>
+            </section>
         </main>
 
-        <footer>
-            <p>Draw a doodle and click "Get Verdict" to test the ML model</p>
-            <p class="info">Model: QuickDraw Binary Classifier | Input: 128x128 High-Res | Black BG + White Strokes</p>
+        <!-- Footer -->
+        <footer class="footer">
+            <p class="footer-info">QuickDraw Binary Classifier • 128×128 Resolution • Real-time Inference</p>
         </footer>
     </div>
 

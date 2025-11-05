@@ -14,13 +14,13 @@ print("="*70)
 print("COMPREHENSIVE TRAINING DATA VISUALIZATION")
 print("="*70)
 
-# Load data
+# Load processed training data to visualize the actual samples the model will see during training
 X_train_full = np.load('data/processed/X_train.npy')
 y_train_full = np.load('data/processed/y_train.npy')
 X_test = np.load('data/processed/X_test.npy')
 y_test = np.load('data/processed/y_test.npy')
 
-# Create the same validation split used in training
+# Replicate the exact train/validation split used during model training to ensure visualization matches actual training conditions
 X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
     X_train_full, y_train_full,
     test_size=0.2,
@@ -41,7 +41,7 @@ fig = plt.figure(figsize=(20, 12))
 fig.suptitle('Training Data: Original Samples (Positive=Penis, Negative=QuickDraw)', 
              fontsize=16, fontweight='bold')
 
-# Get indices
+# Separate indices for positive and negative classes to enable class-specific sampling and analysis
 pos_idx = np.where(y_train_split == 1)[0]
 neg_idx = np.where(y_train_split == 0)[0]
 
@@ -75,7 +75,7 @@ plt.close()
 # VISUALIZATION 2: Augmented Samples (Aggressive)
 print("\n2. Creating augmented samples visualization...")
 
-# Create augmentation generator (same as in training)
+# Configure augmentation generators that match the exact parameters used during model training to visualize realistic augmented samples
 augmentation_aggressive = ImageDataGenerator(
     rotation_range=25,
     width_shift_range=0.15,
@@ -98,7 +98,7 @@ fig = plt.figure(figsize=(20, 10))
 fig.suptitle('Data Augmentation Examples (Same Sample, Different Augmentations)', 
              fontsize=16, fontweight='bold')
 
-# Show 2 positive samples with their augmentations (rows 1-2)
+# Display positive class samples with aggressive augmentation to show how penis drawings are transformed during training
 for sample_num in range(2):
     # Pick a positive sample
     idx = pos_idx[sample_num]
@@ -120,7 +120,7 @@ for sample_num in range(2):
         ax.set_title(f'Aug {i+1}', fontsize=8)
         ax.axis('off')
 
-# Show 2 negative samples with their augmentations (rows 3-4)
+# Display negative class samples with aggressive augmentation to show how QuickDraw drawings are transformed during training for fair comparison
 for sample_num in range(2):
     idx = neg_idx[sample_num]
     original = X_train_split[idx:idx+1]
@@ -308,17 +308,17 @@ fig = plt.figure(figsize=(20, 8))
 fig.suptitle('Augmentation Strength Comparison: Standard vs Aggressive', 
              fontsize=16, fontweight='bold')
 
-# Use one sample
+# Select a representative positive sample to demonstrate the difference between standard and aggressive augmentation strategies
 idx = pos_idx[5]
 original = X_train_split[idx:idx+1]
 
-# Row 1: Original
+# Show the original un-augmented sample as baseline for comparison
 ax = plt.subplot(3, 10, 1)
 ax.imshow(original.squeeze(), cmap='gray', vmin=0, vmax=1)
 ax.set_title('Original', fontweight='bold')
 ax.axis('off')
 
-# Row 2: Standard augmentation
+# Show standard augmentation results that represent typical training-time transformations
 gen_std = augmentation_standard.flow(original, batch_size=1, shuffle=False)
 for i in range(9):
     ax = plt.subplot(3, 10, i + 2)
@@ -332,7 +332,7 @@ ax.imshow(original.squeeze(), cmap='gray', vmin=0, vmax=1)
 ax.set_title('Original', fontweight='bold')
 ax.axis('off')
 
-# Row 3: Aggressive augmentation
+# Show aggressive augmentation results that represent the full range of possible training-time transformations
 gen_agg = augmentation_aggressive.flow(original, batch_size=1, shuffle=False)
 for i in range(9):
     ax = plt.subplot(3, 10, 11 + i + 2)
