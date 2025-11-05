@@ -367,7 +367,7 @@ simple_pos_idx = pos_idx[np.argsort(pos_ink_density)[:20]]
 neg_ink_density = (X_train_split[y_train_split == 0] < 0.3).mean(axis=(1,2,3))
 complex_neg_idx = neg_idx[np.argsort(-neg_ink_density)[:20]]
 
-# Show simple positives
+# Display simple positive samples (minimal ink density) that represent edge cases the model might struggle with
 for i in range(20):
     ax = plt.subplot(4, 10, i + 1)
     idx = simple_pos_idx[i]
@@ -378,7 +378,7 @@ for i in range(20):
         ax.set_ylabel('Simple\nPositives', fontsize=10, fontweight='bold',
                      rotation=0, ha='right', va='center')
 
-# Show complex negatives
+# Display complex negative samples (high ink density) that could be confused with positive class due to visual similarity
 for i in range(20):
     ax = plt.subplot(4, 10, 20 + i + 1)
     idx = complex_neg_idx[i]
