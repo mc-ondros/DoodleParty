@@ -29,10 +29,10 @@ def build_model(num_classes=2, enhanced=False):
         enhanced: If True, use larger model with more capacity (slower but more accurate)
     """
     if enhanced:
-        # ENHANCED MODEL - More capacity for better real-world accuracy
+        # ENHANCED MODEL - More capacity for better real-world accuracy (128x128 input)
         model = models.Sequential([
             # First Conv Block - 64 filters
-            layers.Conv2D(64, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            layers.Conv2D(64, (3, 3), activation='relu', input_shape=(128, 128, 1)),
             layers.BatchNormalization(),
             layers.Conv2D(64, (3, 3), activation='relu'),
             layers.BatchNormalization(),
@@ -71,10 +71,10 @@ def build_model(num_classes=2, enhanced=False):
         ])
         print("✓ Using ENHANCED model (larger capacity, ~2.5M params)")
     else:
-        # STANDARD MODEL - Original architecture
+        # STANDARD MODEL - Original architecture (128x128 input)
         model = models.Sequential([
             # First Conv Block
-            layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            layers.Conv2D(32, (3, 3), activation='relu', input_shape=(128, 128, 1)),
             layers.BatchNormalization(),
             layers.MaxPooling2D((2, 2)),
             layers.Dropout(0.25),
@@ -254,9 +254,24 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         X_val_norm = prepare_test_data(X_val_split)
         X_test_norm = prepare_test_data(X_test)
     
-    # Create augmentation generator with CORRECT data
+    # Determine proper background fill value from data
+    # Sample corner pixels to estimate background
+    sample_corners = []
+    for i in np.random.choice(len(X_train_norm), min(100, len(X_train_norm)), replace=False):
+        img = X_train_norm[i].squeeze()
+        corners = [
+            img[0:2, 0:2].mean(),
+            img[0:2, -2:].mean(),
+            img[-2:, 0:2].mean(),
+            img[-2:, -2:].mean()
+        ]
+        sample_corners.extend(corners)
+    background_value = np.median(sample_corners)
+    print(f"\n✓ Detected background value: {background_value:.3f}")
+    
+    # Create augmentation generator with CORRECT background fill
     if aggressive_aug:
-        print("\nSetting up AGGRESSIVE data augmentation...")
+        print("Setting up AGGRESSIVE data augmentation...")
         augmentation = ImageDataGenerator(
             rotation_range=25,          # ±25 degrees (vs 15)
             width_shift_range=0.15,     # ±15% (vs 10%)
@@ -264,19 +279,20 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
             zoom_range=0.2,             # ±20% (vs 15%)
             # NOTE: NO brightness_range! Data is already normalized to remove brightness bias
             fill_mode='constant',
-            cval=0.5,
+            cval=background_value,      # Use actual background value, not 0.5!
         )
-        print("  ✓ Using aggressive augmentation (geometric only, no brightness)")
+        print(f"  ✓ Using aggressive augmentation with background fill={background_value:.3f}")
     else:
-        print("\nSetting up standard data augmentation...")
+        print("Setting up standard data augmentation...")
         augmentation = ImageDataGenerator(
             rotation_range=15,
             width_shift_range=0.1,
             height_shift_range=0.1,
             zoom_range=0.15,
             fill_mode='constant',
-            cval=0.5,
+            cval=background_value,      # Use actual background value, not 0.5!
         )
+        print(f"  ✓ Using standard augmentation with background fill={background_value:.3f}")
     
     # Create generator from the SPLIT training data (not all data)
     train_generator = augmentation.flow(

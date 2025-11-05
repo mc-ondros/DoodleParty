@@ -1,15 +1,17 @@
 """
 Regenerate training dataset with the fixed penis data.
 Uses penis as positive class and QuickDraw classes as hard negatives.
+Works with 128x128 images for better resolution.
 """
 
 import numpy as np
 import pickle
 from pathlib import Path
 from sklearn.model_selection import train_test_split
+from PIL import Image
 
 print("="*70)
-print("REGENERATING TRAINING DATA WITH FIXED PENIS PROCESSING")
+print("REGENERATING TRAINING DATA (128x128)")
 print("="*70)
 
 # Paths
@@ -17,20 +19,19 @@ data_dir = Path('data')
 raw_dir = data_dir / 'raw'
 processed_dir = data_dir / 'processed'
 
-# Load fixed penis data (positive class)
-print("\n1. Loading fixed penis data (positive class)...")
-penis_data = np.load(processed_dir / 'penis_raw_X.npy')
+# Load fixed penis data (positive class) - now 128x128
+print("\n1. Loading fixed penis data (positive class, 128x128)...")
+penis_data = np.load(processed_dir / 'penis_raw_X_128.npy')
 print(f"   ✓ Loaded {len(penis_data):,} penis samples")
 print(f"   Shape: {penis_data.shape}")
+print(f"   Range: {penis_data.min()} - {penis_data.max()}, mean: {penis_data.mean():.2f}")
 
-# IMPORTANT: Invert penis data to match QuickDraw's black-on-white format
-# Penis data currently has white background (high values), QuickDraw has black background
-print("   ✓ Inverting penis data to match QuickDraw format (black background)")
-penis_data = 255 - penis_data
-print(f"   New range: {penis_data.min()} - {penis_data.max()}, mean: {penis_data.mean():.2f}")
+# Penis data is already in correct format (black background, white strokes)
+# No inversion needed!
+print("   ✓ Penis data already in QuickDraw format (black background, white strokes)")
 
-# Load negative classes (QuickDraw standard classes)
-print("\n2. Loading QuickDraw negative classes...")
+# Load negative classes (QuickDraw standard classes) - now 128x128
+print("\n2. Loading QuickDraw negative classes (128x128)...")
 negative_classes = [
     'airplane', 'apple', 'arm', 'banana', 'bird', 'boomerang',
     'cat', 'circle', 'cloud', 'dog', 'drill', 'fish', 'flower',
@@ -39,26 +40,12 @@ negative_classes = [
 
 negative_data_list = []
 for cls in negative_classes:
-    filepath = raw_dir / f'{cls}.npy'
+    # Load pre-processed 128x128 files (already filtered, inverted, and formatted)
+    filepath = processed_dir / f'{cls}_128.npy'
     if filepath.exists():
         data = np.load(filepath)
-        # Take up to 1200 samples per class to match penis data size
-        samples = min(1200, len(data))
-        data = data[:samples]
-        
-        # Ensure consistent shape (N, 28, 28)
-        if len(data.shape) == 2:
-            # Flattened (N, 784), reshape to (N, 28, 28)
-            data = data.reshape(-1, 28, 28)
-        elif len(data.shape) == 3 and data.shape[-1] == 1:
-            # Has channel dimension (N, 28, 28, 1), squeeze it
-            data = data.reshape(-1, 28, 28)
-        elif len(data.shape) == 4:
-            # (N, 28, 28, 1), squeeze channel
-            data = data.squeeze(-1)
-        
+        print(f"   ✓ {cls}: {len(data):,} samples (128x128)")
         negative_data_list.append(data)
-        print(f"   ✓ {cls}: {samples:,} samples")
     else:
         print(f"   ⚠️  {cls}: file not found, skipping")
 
@@ -106,7 +93,7 @@ print(f"   First 10 labels after shuffle: {y[:10]}")
 
 # Normalize to 0-1 range and add channel dimension
 print("\n4. Normalizing and reshaping...")
-X = X.reshape(-1, 28, 28, 1).astype(np.float32) / 255.0
+X = X.reshape(-1, 128, 128, 1).astype(np.float32) / 255.0
 print(f"   ✓ Shape: {X.shape}, dtype: {X.dtype}")
 print(f"   Value range: {X.min():.3f} - {X.max():.3f}")
 
@@ -148,6 +135,12 @@ np.save(processed_dir / 'y_train.npy', y_train)
 np.save(processed_dir / 'X_test.npy', X_test)
 np.save(processed_dir / 'y_test.npy', y_test)
 
+# Calculate file sizes
+train_size = X_train.nbytes / 1024 / 1024
+test_size = X_test.nbytes / 1024 / 1024
+print(f"   ✓ X_train.npy: {train_size:.2f} MB")
+print(f"   ✓ X_test.npy: {test_size:.2f} MB")
+
 # Save class mapping
 class_mapping = {
     'positive': 1,
@@ -156,7 +149,8 @@ class_mapping = {
         'penis': 1,
         'hard_negatives': negative_classes
     },
-    'description': 'Binary classification: positive=penis, negative=21 QuickDraw (per-image normalized)'
+    'description': 'Binary classification: positive=penis, negative=21 QuickDraw (per-image normalized, 128x128)',
+    'image_size': (128, 128)
 }
 
 with open(processed_dir / 'class_mapping.pkl', 'wb') as f:
@@ -173,9 +167,11 @@ print("\n" + "="*70)
 print("✅ TRAINING DATA REGENERATED SUCCESSFULLY")
 print("="*70)
 print("\nDataset ready for training with:")
+print("  • 128x128 high-resolution images")
 print("  • Fixed, properly centered penis drawings")
 print("  • Balanced positive/negative classes")
 print("  • 80/20 train/test split")
 print("  • Normalized to 0-1 range")
+print("  • Filtered blank samples")
 print("\nNext step: Run training")
 print("  bash train_max_accuracy.sh")

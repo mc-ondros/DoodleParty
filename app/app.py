@@ -29,8 +29,16 @@ def load_model_and_mapping():
     """Load trained model and class mapping."""
     global model, idx_to_class
     
-    model_path = Path(__file__).parent.parent / "models" / "quickdraw_model.h5"
+    models_dir = Path(__file__).parent.parent / "models"
     data_dir = Path(__file__).parent.parent / "data" / "processed"
+    
+    # Try to find the most recent model file
+    model_files = list(models_dir.glob("*.h5")) + list(models_dir.glob("*.keras"))
+    if not model_files:
+        raise FileNotFoundError(f"No model files found in {models_dir}")
+    
+    # Use the most recently modified model
+    model_path = max(model_files, key=lambda p: p.stat().st_mtime)
     
     print(f"Loading model from: {model_path}")
     model = keras.models.load_model(model_path)
@@ -62,24 +70,43 @@ def load_model_and_mapping():
 def preprocess_image(image_data):
     """
     Preprocess canvas image data for model prediction.
+    Converts to 128x128 with black background and white strokes to match training data.
     
     Args:
         image_data: Base64 encoded image data from canvas
     
     Returns:
-        Preprocessed numpy array suitable for model input
+        Preprocessed numpy array suitable for model input (1, 128, 128, 1)
     """
     # Decode base64 image
     image_data = image_data.split(',')[1] if ',' in image_data else image_data
     image = Image.open(BytesIO(base64.b64decode(image_data)))
     
-    # Convert to grayscale and resize to 28x28
+    # Convert to grayscale
     image = image.convert('L')
-    image = image.resize((28, 28), Image.Resampling.LANCZOS)
     
-    # Normalize
-    img_array = np.array(image, dtype=np.float32) / 255.0
-    img_array = img_array.reshape(1, 28, 28, 1)
+    # Canvas has WHITE background and BLACK strokes
+    # Model expects BLACK background and WHITE strokes
+    # So we need to invert: 255 - pixel_value
+    img_array = np.array(image, dtype=np.uint8)
+    img_array = 255 - img_array  # Invert colors
+    
+    # Resize to 128x128 using high-quality LANCZOS
+    image_inverted = Image.fromarray(img_array, mode='L')
+    image_resized = image_inverted.resize((128, 128), Image.Resampling.LANCZOS)
+    
+    # Convert to numpy array and normalize to 0-1
+    img_array = np.array(image_resized, dtype=np.float32) / 255.0
+    
+    # Apply per-image normalization (same as training)
+    img_flat = img_array.flatten()
+    if img_flat.std() > 0.01:  # Only normalize if there's variation
+        img_array = (img_array - img_flat.mean()) / (img_flat.std() + 1e-7)
+        img_array = (img_array + 3) / 6  # Rescale to approximately 0-1 range
+        img_array = np.clip(img_array, 0, 1)
+    
+    # Reshape for model input (batch_size=1, height=128, width=128, channels=1)
+    img_array = img_array.reshape(1, 128, 128, 1)
     
     return img_array
 
@@ -159,10 +186,15 @@ def health():
     })
 
 
-if __name__ == '__main__':
-    # Load model on startup
+# Load model on startup (works for both flask run and direct execution)
+try:
     load_model_and_mapping()
-    
+except Exception as e:
+    print(f"Warning: Failed to load model on startup: {e}")
+    print("Model will need to be loaded manually")
+
+
+if __name__ == '__main__':
     # Run Flask app
     print("Starting Penis Classifier Interface...")
     print("Visit http://localhost:5000 to use the drawing board")

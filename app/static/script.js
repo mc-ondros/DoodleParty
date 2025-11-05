@@ -17,10 +17,11 @@ let lastX = 0;
 let lastY = 0;
 
 // Set canvas resolution for better drawing quality
+// Using 512x512 for smooth drawing, will be downsampled to 128x128 by backend
 function resizeCanvas() {
     const rect = canvas.getBoundingClientRect();
-    canvas.width = 400;
-    canvas.height = 400;
+    canvas.width = 512;
+    canvas.height = 512;
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 }

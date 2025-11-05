@@ -16,7 +16,7 @@
         <main>
             <div class="canvas-section">
                 <div class="canvas-container">
-                    <canvas id="drawingCanvas" width="400" height="400"></canvas>
+                    <canvas id="drawingCanvas" width="512" height="512"></canvas>
                     <div class="canvas-overlay" id="canvasOverlay"></div>
                 </div>
 
@@ -25,8 +25,8 @@
                     <button id="predictBtn" class="btn btn-primary">Get Verdict</button>
                     <label class="brush-size">
                         Brush Size: 
-                        <input type="range" id="brushSize" min="2" max="20" value="5">
-                        <span id="sizeDisplay">5</span>px
+                        <input type="range" id="brushSize" min="5" max="50" value="24">
+                        <span id="sizeDisplay">24</span>px
                     </label>
                 </div>
             </div>
@@ -62,7 +62,7 @@
 
         <footer>
             <p>Draw a doodle and click "Get Verdict" to test the ML model</p>
-            <p class="info">Model: QuickDraw Binary Classifier | Input: 28x28 Grayscale</p>
+            <p class="info">Model: QuickDraw Binary Classifier | Input: 128x128 High-Res | Black BG + White Strokes</p>
         </footer>
     </div>
 
