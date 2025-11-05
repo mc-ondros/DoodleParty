@@ -248,6 +248,14 @@ function showResult(data) {
     // Update threshold
     document.getElementById('thresholdVal').textContent = data.threshold.toFixed(1);
 
+    // Update timing statistics if available
+    if (data.drawing_statistics) {
+        const stats = data.drawing_statistics;
+        document.getElementById('responseTime').textContent = stats.response_time_ms + ' ms';
+        document.getElementById('preprocessTime').textContent = stats.preprocess_time_ms + ' ms';
+        document.getElementById('inferenceTime').textContent = stats.inference_time_ms + ' ms';
+    }
+
     // Show result box
     resultBox.classList.remove('hidden');
 }

@@ -22,6 +22,7 @@ import tensorflow as tf
 from tensorflow import keras
 import pickle
 from pathlib import Path
+import time
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 
@@ -39,18 +40,14 @@ def load_model_and_mapping():
     """Load trained model and class mapping."""
     global model, idx_to_class
     
-    models_dir = Path(__file__).parent.parent / "models"
-    data_dir = Path(__file__).parent.parent / "data" / "processed"
-    
-    # Try to find the most recent model file
-    model_files = list(models_dir.glob("*.h5")) + list(models_dir.glob("*.keras"))
-    if not model_files:
-        raise FileNotFoundError(f"No model files found in {models_dir}")
-    
-    # Use the most recently modified model
-    model_path = max(model_files, key=lambda p: p.stat().st_mtime)
+    # Load the .h5 model from the root models directory
+    model_path = Path(__file__).parent.parent.parent / "models" / "quickdraw_model.h5"
+    data_dir = Path(__file__).parent.parent.parent / "data" / "processed"
     
     print(f"Loading model from: {model_path}")
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model file not found: {model_path}")
+    
     model = keras.models.load_model(model_path)
     
     try:
@@ -102,7 +99,7 @@ def preprocess_image(image_data):
     img_array = 255 - img_array  # Invert colors
     
     # Resize to 128x128 using high-quality LANCZOS
-    image_inverted = Image.fromarray(img_array, 'L')
+    image_inverted = Image.fromarray(img_array, mode='L')
     image_resized = image_inverted.resize((128, 128), Image.Resampling.LANCZOS)
     
     # Convert to numpy array and normalize to 0-1
@@ -129,21 +126,24 @@ def predict(image_data):
         image_data: Base64 encoded image data
     
     Returns:
-        Dictionary with prediction results
+        Dictionary with prediction results including response time
     """
     try:
-        # Check if model is loaded
-        if model is None:
-            return {
-                'success': False,
-                'error': 'Model not loaded. Please train a model first or place a trained model (.h5 or .keras) in the models/ directory.'
-            }
+        # Start timing
+        start_time = time.time()
         
         # Preprocess image
+        preprocess_start = time.time()
         img_array = preprocess_image(image_data)
+        preprocess_time = time.time() - preprocess_start
         
         # Predict
+        inference_start = time.time()
         probability = model.predict(img_array, verbose=0)[0][0]
+        inference_time = time.time() - inference_start
+        
+        # Total time
+        total_time = time.time() - start_time
         
         # Determine class based on threshold
         if probability >= THRESHOLD:
@@ -162,7 +162,12 @@ def predict(image_data):
             'confidence': round(confidence, 4),
             'raw_probability': round(float(probability), 4),
             'threshold': THRESHOLD,
-            'model_info': 'Binary classifier: penis vs 21 common shapes'
+            'model_info': 'Binary classifier: penis vs 21 common shapes',
+            'drawing_statistics': {
+                'response_time_ms': round(total_time * 1000, 2),
+                'preprocess_time_ms': round(preprocess_time * 1000, 2),
+                'inference_time_ms': round(inference_time * 1000, 2)
+            }
         }
     except Exception as e:
         return {
