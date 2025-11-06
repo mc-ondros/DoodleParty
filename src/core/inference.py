@@ -401,8 +401,8 @@ def main():
             save_visualization_path=vis_path
         )
         
-        print(f"\n=== Region-Based Detection Results === ')
-        print(f'Predicted: {class_name}")
+        print(f"\n=== Region-Based Detection Results ===")
+        print(f'Predicted: {class_name}')
         print(f"Confidence: {confidence:.2%}")
         print(f"Patches analyzed: {detection_result.num_patches_analyzed}")
         print(f"Early stopped: {detection_result.early_stopped}")

@@ -27,21 +27,21 @@ def main():
     parser = argparse.ArgumentParser(
         description = 'DoodleHunter Training with All Improvements',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog = ''"
+        epilog = '''
 Examples:
   # Standard training with improvements
   python training_orchestrator.py --quick-wins all
-  
+
   # Training with hard negatives only
   python training_orchestrator.py --quick-wins 1
-  
+
   # Training with specific improvements
   python training_orchestrator.py --quick-wins 1 2 5 --architecture resnet50
-  
+
   # Full transfer learning with all optimizations
   python training_orchestrator.py --architecture resnet50 --label-smoothing 0.1 \\
                                    --learning-rate-schedule --cross-validation
-        """
+'''
     )
     
     # Training options

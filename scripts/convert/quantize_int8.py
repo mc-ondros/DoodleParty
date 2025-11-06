@@ -158,7 +158,7 @@ def quantize_model(model_path: Path, calibration_data, optimize_ops=True):
     except Exception as e:
         print(f"✗ Quantization failed: {e}")
         print('\nTroubleshooting:')
-        print('  1. Ensure you're using a Keras model, not TFLite')
+        print('  1. Ensure you are using a Keras model, not TFLite')
         print('  2. Check that calibration data is valid')
         print('  3. Try with a smaller --num-samples')
         sys.exit(3)

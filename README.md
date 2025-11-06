@@ -3,6 +3,9 @@
 **Binary classification for drawing content moderation**
 
 ML system for classifying hand-drawn sketches using TensorFlow and QuickDraw dataset.
+Uses 28x28 pixel images from Google's QuickDraw dataset (NumPy bitmap format).
+
+**Status: Experimental** - This project is under active development. Documentation may not always match code.
 
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
 [![TensorFlow](https://img.shields.io/badge/tensorflow-2.13%2B-orange.svg)](https://www.tensorflow.org/)
@@ -19,11 +22,12 @@ nix run .#web
 **Without Nix:**
 ```bash
 pip install -r requirements.txt
-python scripts/data_processing/download_quickdraw_ndjson.py
-python scripts/data_processing/process_all_data_128x128.py
+python scripts/data_processing/download_quickdraw_npy.py
 python scripts/train.py
 python src/web/app.py
 ```
+
+**Note:** This project uses 28x28 pixel images from the QuickDraw dataset (NumPy bitmap format), not NDJSON. The dataset is pre-processed and doesn't require resizing.
 
 Access at `http://localhost:5000`
 
@@ -35,16 +39,16 @@ Access at `http://localhost:5000`
 - [API Reference](.documentation/api.md)
 - [Development Roadmap](.documentation/roadmap.md)
 - [Project Structure](.documentation/structure.md)
-- [Region-Based Detection](.documentation/region_detection.md)
 - [Code Style Guide](STYLE_GUIDE.md)
 
 ## Features
 
-- Binary classification of hand-drawn sketches
-- QuickDraw dataset integration
-- CNN model with TensorFlow/Keras
-- Flask web interface
-- Threshold optimization and test-time augmentation
+- Binary classification of hand-drawn sketches (28x28 pixel images)
+- QuickDraw dataset integration (NumPy bitmap format)
+- Multiple CNN architectures (Custom, ResNet50, MobileNetV3, EfficientNet)
+- Flask web interface with multiple detection modes
+- Basic region-based detection (experimental)
+- Support for TensorFlow Lite (optimized for edge devices)
 
 ## Requirements
 
@@ -68,8 +72,7 @@ See [Installation Guide](.documentation/installation.md) for detailed setup.
 
 **Train Model:**
 ```bash
-./scripts/train_max_accuracy.sh
-# or: python scripts/train.py --epochs 50 --batch-size 32
+python scripts/train.py --epochs 50 --batch-size 32
 ```
 
 **Run Web Interface:**
@@ -79,7 +82,12 @@ python src/web/app.py
 
 **Evaluate Model:**
 ```bash
-python scripts/evaluate.py --model models/quickdraw_classifier.h5
+python scripts/evaluate.py --model models/quickdraw_model.h5
+```
+
+**Download Data:**
+```bash
+python scripts/data_processing/download_quickdraw_npy.py
 ```
 
 See [API Reference](.documentation/api.md) for detailed usage.

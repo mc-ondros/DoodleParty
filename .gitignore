@@ -66,6 +66,7 @@ models/**/*.pt
 
 # Output
 *.log
+logs/
 .DS_Store
 
 # Notebooks

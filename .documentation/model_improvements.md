@@ -1,5 +1,7 @@
 # Model Improvements Implementation - Task 2.1
 
+**Status: DEPRECATED** - This document describes implementation details that may be outdated. Refer to the main [roadmap](roadmap.md) for current project status.
+
 ## Overview
 
 This document describes the implementation of **two key model improvements** for DoodleHunter's binary classification system, addressing items from Phase 2.1 of the roadmap:

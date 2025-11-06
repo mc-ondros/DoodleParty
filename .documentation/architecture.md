@@ -2,6 +2,8 @@
 
 **Purpose:** Technical documentation of system design, component interactions, and data flow for DoodleHunter binary classification system.
 
+**Status: Experimental** - This documentation may not fully reflect the current codebase. Last updated to match code: Nov 2024.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -28,8 +30,9 @@ The system prioritizes accuracy, performance, and edge device deployment for con
 **Key Design Decisions:**
 - TensorFlow/Keras for ML framework (widely supported, easy deployment)
 - Flask for web interface (lightweight, Python-native)
-- QuickDraw dataset for training data (large, diverse, free)
+- QuickDraw dataset (NumPy bitmap format, pre-processed 28x28 images)
 - Binary classification (simplifies model and improves accuracy)
+- Multiple CNN architectures available (Custom, ResNet50, MobileNetV3, EfficientNet)
 - **Raspberry Pi 4 deployment target** (requires aggressive optimization)
 
 ### Deployment Targets
@@ -101,10 +104,10 @@ graph TB
 
 ```mermaid
 graph LR
-    A[Download QuickDraw<br/>NPY format] --> B[Load & Preprocess<br/>128x128, normalize]
+    A[Download QuickDraw<br/>NPY format] --> B[Load & Preprocess<br/>28x28, normalize]
     B --> C[Data Augmentation<br/>rotation, translation, zoom]
     C --> D[Train CNN Model<br/>binary crossentropy]
-    D --> E[Save Model<br/>quickdraw_classifier.h5]
+    D --> E[Save Model<br/>quickdraw_model.h5]
 ```
 
 ### Inference Data Flow
@@ -130,23 +133,34 @@ sequenceDiagram
 
 ### CNN Architecture
 
+**Available Architectures:**
+
+The project includes multiple CNN architectures with different complexity/performance trade-offs:
+
+1. **Custom CNN** (423K parameters)
 ```mermaid
 graph TB
-    Input[Input<br/>128x128x1 grayscale] --> Conv1[Conv2D 32, 3x3<br/>ReLU + MaxPool 2x2]
-    Conv1 --> Conv2[Conv2D 64, 3x3<br/>ReLU + MaxPool 2x2]
-    Conv2 --> Conv3[Conv2D 128, 3x3<br/>ReLU + MaxPool 2x2]
+    Input[Input<br/>28x28x1 grayscale] --> Conv1[Conv2D 32, 3x3<br/>ReLU + BatchNorm + MaxPool + Dropout]
+    Conv1 --> Conv2[Conv2D 64, 3x3<br/>ReLU + BatchNorm + MaxPool + Dropout]
+    Conv2 --> Conv3[Conv2D 128, 3x3<br/>ReLU + BatchNorm + Dropout]
     Conv3 --> Flatten[Flatten]
-    Flatten --> Dense1[Dense 128<br/>ReLU + Dropout 0.5]
+    Flatten --> Dense1[Dense 256<br/>ReLU + BatchNorm + Dropout 0.5]
     Dense1 --> Dense2[Dense 1<br/>Sigmoid]
     Dense2 --> Output[Output<br/>Binary probability]
 ```
 
-**Model Specifications:**
-- Input: 128x128 grayscale images
+2. **Transfer Learning Models** (larger, higher accuracy)
+   - ResNet50: 23.5M parameters
+   - MobileNetV3: 5.4M parameters
+   - EfficientNet: 5.3M parameters
+
+**Model Specifications (Custom CNN):**
+- Input: 28x28 grayscale images
 - Output: Single probability value (0.0-1.0)
 - Loss: Binary crossentropy
 - Optimizer: Adam (lr=0.001)
 - Metrics: Accuracy, precision, recall
+- Parameters: ~423K (lightweight, fast inference)
 
 **Training Configuration:**
 ```python
@@ -164,19 +178,30 @@ model.compile(
 def preprocess_image(image):
     # 1. Convert to grayscale
     image = image.convert('L')
-    
+
     # 2. Invert colors (canvas has white bg, model expects black bg)
     img_array = 255 - np.array(image)
-    
-    # 3. Resize to 128x128
-    image = Image.fromarray(img_array).resize((128, 128))
-    
-    # 4. Normalize to [0, 1]
+
+    # 3. Apply morphological dilation to thicken strokes
+    # Prevents thin lines from disappearing
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    img_array = cv2.dilate(img_array, kernel, iterations=1)
+
+    # 4. Resize to 28x28 (model input size)
+    image = Image.fromarray(img_array).resize((28, 28))
+
+    # 5. Normalize to [0, 1]
     img_array = np.array(image, dtype=np.float32) / 255.0
-    
-    # 5. Add batch and channel dimensions
+
+    # 6. Apply z-score normalization (only if sufficient variation)
+    if img_array.std() > 0.01:
+        img_array = (img_array - img_array.mean()) / (img_array.std() + 1e-7)
+        img_array = (img_array + 2) / 4  # Rescale to [0, 1]
+        img_array = np.clip(img_array, 0, 1)
+
+    # 7. Add batch and channel dimensions
     img_array = np.expand_dims(img_array, axis=(0, -1))
-    
+
     return img_array
 ```
 
@@ -220,13 +245,14 @@ sequenceDiagram
 
 **Phase 1: Data Preparation**
 ```bash
-# Download QuickDraw data
-python scripts/data_processing/download_quickdraw_ndjson.py
+# Download QuickDraw data (NumPy bitmap format, 28x28 pre-processed)
+python scripts/data_processing/download_quickdraw_npy.py
 ```
 
 **Data Organization:**
-- `data/raw_ndjson/` - Downloaded NDJSON files (penis-raw.ndjson, circle-raw.ndjson, etc.)
+- `data/raw/` - Downloaded NumPy bitmap files (penis.npy, circle.npy, etc.)
 - `data/processed/` - Processed data and class_mapping.pkl
+- Format: Pre-processed 28x28 grayscale bitmaps from Google's QuickDraw dataset
 
 **Phase 2: Model Training**
 ```python
@@ -236,14 +262,14 @@ python scripts/train.py \
   --batch-size 32 \
   --learning-rate 0.001
 
-# Output: models/quickdraw_classifier.keras
+# Output: models/quickdraw_model.h5
 ```
 
 **Phase 3: Evaluation**
 ```python
 # Evaluate model
 python scripts/evaluate.py \
-  --model models/quickdraw_classifier.keras
+  --model models/quickdraw_model.h5
 
 # Outputs:
 # - Accuracy, precision, recall, F1
@@ -261,17 +287,16 @@ python scripts/evaluate.py \
 
 **Implementation:**
 ```python
-# See src/data/augmentation.py for implementation
-from src.data.augmentation import create_augmentation_pipeline
-
-datagen = create_augmentation_pipeline(
-    rotation_range=15,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    zoom_range=0.1,
-    horizontal_flip=True
-)
+# Note: Data augmentation is applied during training
+# The QuickDraw dataset is pre-processed (28x28 bitmap format)
+# No additional preprocessing needed beyond what's in the dataset
 ```
+
+**Data Source:**
+- Google QuickDraw Dataset (NumPy bitmap format)
+- Pre-processed 28x28 grayscale images
+- Downloaded from: `https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap/`
+- Categories: penis (positive) + 21 common shapes (negative)
 
 ## Performance Targets
 
@@ -328,7 +353,7 @@ datagen = create_augmentation_pipeline(
 import tensorflow as tf
 
 # Load trained model
-model = tf.keras.models.load_model('quickdraw_classifier.keras')
+model = tf.keras.models.load_model('quickdraw_model.h5')
 
 # Create representative dataset for calibration
 def representative_dataset():
@@ -346,7 +371,7 @@ converter.inference_output_type = tf.uint8
 tflite_model = converter.convert()
 
 # Save optimized model
-with open('quickdraw_classifier_int8.tflite', 'wb') as f:
+with open('quickdraw_model_int8.tflite', 'wb') as f:
     f.write(tflite_model)
 ```
 

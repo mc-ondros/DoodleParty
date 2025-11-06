@@ -34,6 +34,8 @@ For production, use a WSGI server:
 
 from typing import Dict, Any, Optional, Tuple, Union, TYPE_CHECKING
 import os
+import logging
+import traceback
 import numpy as np
 import base64
 from io import BytesIO
@@ -47,11 +49,32 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import cv2
 
+# Set up comprehensive logging
+# Logs go to both console and file for debugging
+log_dir = Path(__file__).parent.parent.parent / "logs"
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / "doodlehunter.log"
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger('DoodleHunter')
+
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from src.core.patch_extraction import (
     SlidingWindowDetector,
     AggregationStrategy
+)
+from src.core.tile_detection import (
+    TileDetector,
+    TileGridConfig
 )
 
 if TYPE_CHECKING:
@@ -66,6 +89,7 @@ is_tflite: bool = False
 model_name: str = 'Unknown'
 idx_to_class: Optional[Dict[int, str]] = None
 THRESHOLD: float = 0.5
+tile_detector: Optional[TileDetector] = None
 
 
 def load_model_and_mapping() -> None:
@@ -86,73 +110,199 @@ def load_model_and_mapping() -> None:
     """
     global model, tflite_interpreter, is_tflite, model_name, idx_to_class
 
+    logger.info("=== Starting model and mapping initialization ===")
+
     models_dir = Path(__file__).parent.parent.parent / "models"
     data_dir = Path(__file__).parent.parent.parent / "data" / "processed"
 
+    logger.info(f"Models directory: {models_dir}")
+    logger.info(f"Data directory: {data_dir}")
+
+    # Check if directories exist
+    if not models_dir.exists():
+        logger.error(f"Models directory does not exist: {models_dir}")
+        raise FileNotFoundError(f"Models directory not found: {models_dir}")
+
+    if not data_dir.exists():
+        logger.warning(f"Data directory does not exist: {data_dir}")
+
+    # Scan for available model files
     tflite_int8_files = list(models_dir.glob("*_int8.tflite"))
     tflite_files = list(models_dir.glob("*.tflite"))
     model_files = list(models_dir.glob("*.h5")) + list(models_dir.glob("*.keras"))
-    
+
+    logger.debug(f"Found {len(tflite_int8_files)} INT8 TFLite files: {tflite_int8_files}")
+    logger.debug(f"Found {len(tflite_files)} TFLite files: {tflite_files}")
+    logger.debug(f"Found {len(model_files)} Keras files: {model_files}")
+
     model_path: Optional[Path] = None
-    
+
+    # Select best model based on priority
     if tflite_int8_files:
         model_path = max(tflite_int8_files, key=lambda p: p.stat().st_mtime)
         is_tflite = True
         model_name = 'TFLite INT8 (Optimized)'
-        print(f"Loading optimized INT8 TFLite model: {model_path}")
+        logger.info(f"Selected INT8 TFLite model: {model_path}")
     elif tflite_files:
         model_path = max(tflite_files, key=lambda p: p.stat().st_mtime)
         is_tflite = True
         model_name = 'TFLite Float32'
-        print(f"Loading TFLite model: {model_path}")
+        logger.info(f"Selected TFLite model: {model_path}")
     elif model_files:
         model_path = max(model_files, key=lambda p: p.stat().st_mtime)
         is_tflite = False
         model_name = 'Keras/TensorFlow'
-        print(f"Loading Keras model: {model_path}")
+        logger.info(f"Selected Keras model: {model_path}")
     else:
+        logger.error(f"No model files found in {models_dir}")
         raise FileNotFoundError(f"No model files found in {models_dir}")
 
+    # Verify model file exists
     if not model_path.exists():
+        logger.error(f"Selected model file not found: {model_path}")
         raise FileNotFoundError(f"Model file not found: {model_path}")
-    
+
+    # Log model file details
+    size_mb = model_path.stat().st_size / (1024 * 1024)
+    modified_time = model_path.stat().st_mtime
+    logger.info(f"Model file size: {size_mb:.2f} MB")
+    logger.info(f"Model last modified: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(modified_time))}")
+
+    # Load the selected model
     if is_tflite:
-        tflite_interpreter = tf.lite.Interpreter(model_path=str(model_path))
-        tflite_interpreter.allocate_tensors()
-        
-        input_details = tflite_interpreter.get_input_details()
-        output_details = tflite_interpreter.get_output_details()
-        
-        print(f"TFLite model loaded successfully!")
-        print(f"  Input shape: {input_details[0]['shape']}")
-        print(f"  Input dtype: {input_details[0]['dtype']}")
-        
-        size_mb = model_path.stat().st_size / (1024 * 1024)
-        print(f"  Model size: {size_mb:.2f} MB")
+        logger.info("Initializing TFLite interpreter with optimizations...")
+        try:
+            # Configure TFLite interpreter with multi-threading
+            # XNNPACK delegate is automatically used if available
+            num_threads = 4  # RPi4 has 4 cores
+            
+            logger.info(f"Loading TFLite with {num_threads} threads...")
+            tflite_interpreter = tf.lite.Interpreter(
+                model_path=str(model_path),
+                num_threads=num_threads
+            )
+            logger.info("✓ TFLite loaded with multi-threading")
+            
+            # Allocate tensors with memory mapping for faster loading
+            tflite_interpreter.allocate_tensors()
+
+            input_details = tflite_interpreter.get_input_details()
+            output_details = tflite_interpreter.get_output_details()
+
+            logger.info("TFLite model loaded successfully!")
+            logger.info(f"  Threads: {num_threads}")
+            logger.info(f"  Input shape: {input_details[0]['shape']}")
+            logger.info(f"  Input dtype: {input_details[0]['dtype']}")
+            logger.info(f"  Input name: {input_details[0]['name']}")
+            logger.info(f"  Output shape: {output_details[0]['shape']}")
+            logger.info(f"  Output dtype: {output_details[0]['dtype']}")
+            logger.info(f"  Output name: {output_details[0]['name']}")
+            
+            # Warm up the model with a dummy inference
+            logger.info("Warming up model with dummy inference...")
+            dummy_input = np.zeros((1, 128, 128, 1), dtype=np.float32)
+            tflite_interpreter.set_tensor(input_details[0]['index'], dummy_input)
+            tflite_interpreter.invoke()
+            logger.info("✓ Model warm-up complete")
+            
+        except Exception as e:
+            logger.error(f"Failed to load TFLite model: {e}")
+            raise
     else:
-        model = keras.models.load_model(model_path)
-        print(f"Keras model loaded successfully!")
+        logger.info("Loading Keras model...")
+        try:
+            model = keras.models.load_model(model_path)
+            logger.info("Keras model loaded successfully!")
+            logger.info(f"Model input shape: {model.input_shape}")
+            logger.info(f"Model output shape: {model.output_shape}")
+            logger.info(f"Model total params: {model.count_params():,}")
+        except Exception as e:
+            logger.error(f"Failed to load Keras model: {e}")
+            raise
 
+    # Load class mapping
+    logger.info("Loading class mapping...")
     try:
-        with open(data_dir / "class_mapping.pkl", 'rb') as f:
-            class_mapping = pickle.load(f)
+        mapping_file = data_dir / "class_mapping.pkl"
+        if mapping_file.exists():
+            logger.debug(f"Reading mapping from: {mapping_file}")
+            with open(mapping_file, 'rb') as f:
+                class_mapping = pickle.load(f)
 
-        idx_to_class = {}
-        for k, v in class_mapping.items():
-            if isinstance(v, int):
-                idx_to_class[v] = k
+            logger.debug(f"Raw class mapping: {class_mapping}")
 
-        if not idx_to_class:
-            print('Warning: Could not extract class mappings from file, using defaults')
+            idx_to_class = {}
+            for k, v in class_mapping.items():
+                if isinstance(v, int):
+                    idx_to_class[v] = k
+
+            logger.info(f"Processed class mapping: {idx_to_class}")
+
+            if not idx_to_class:
+                logger.warning('Could not extract class mappings from file, using defaults')
+                idx_to_class = {0: 'negative', 1: 'positive'}
+                logger.info(f"Using default mapping: {idx_to_class}")
+        else:
+            logger.warning('class_mapping.pkl not found, using defaults')
             idx_to_class = {0: 'negative', 1: 'positive'}
+            logger.info(f"Using default mapping: {idx_to_class}")
     except FileNotFoundError:
-        print('Warning: class_mapping.pkl not found')
+        logger.warning('class_mapping.pkl not found, using defaults')
         idx_to_class = {0: 'negative', 1: 'positive'}
+        logger.info(f"Using default mapping: {idx_to_class}")
     except Exception as e:
-        print(f"Warning: Error loading class mapping: {e}")
+        logger.error(f"Error loading class mapping: {e}, using defaults")
         idx_to_class = {0: 'negative', 1: 'positive'}
+        logger.info(f"Using default mapping: {idx_to_class}")
 
-    print('Model loaded successfully!')
+    logger.info(f"Model '{model_name}' loaded successfully with mapping: {idx_to_class}")
+    
+    # Initialize tile detector with loaded model
+    global tile_detector
+    try:
+        logger.info("Initializing tile detector...")
+        
+        # Create model wrapper for tile detector
+        if is_tflite:
+            # Wrap TFLite interpreter for tile detector
+            class TFLiteModelWrapper:
+                def __init__(self, interpreter):
+                    self.interpreter = interpreter
+                    self.input_details = interpreter.get_input_details()
+                    self.output_details = interpreter.get_output_details()
+                
+                def predict(self, x: np.ndarray, verbose: int = 0) -> np.ndarray:
+                    """Batch predict for tile detector."""
+                    batch_size = x.shape[0]
+                    results = []
+                    
+                    for i in range(batch_size):
+                        single_input = np.expand_dims(x[i], axis=0).astype(np.float32)
+                        self.interpreter.set_tensor(self.input_details[0]['index'], single_input)
+                        self.interpreter.invoke()
+                        output = self.interpreter.get_tensor(self.output_details[0]['index'])
+                        results.append(output[0])
+                    
+                    return np.array(results)
+            
+            model_wrapper = TFLiteModelWrapper(tflite_interpreter)
+        else:
+            model_wrapper = model
+        
+        # Initialize tile detector with 8x8 grid (64 tiles)
+        tile_config = TileGridConfig(
+            canvas_width=512,
+            canvas_height=512,
+            grid_size=8,  # 8x8 = 64 tiles
+            tile_size=128  # Model input size
+        )
+        tile_detector = TileDetector(model_wrapper, tile_config)
+        logger.info(f"✓ Tile detector initialized with {tile_config.grid_size}x{tile_config.grid_size} grid")
+    except Exception as e:
+        logger.warning(f"Failed to initialize tile detector: {e}")
+        tile_detector = None
+    
+    logger.info("=== Model and mapping initialization complete ===")
 
 
 def preprocess_image(image_data: str) -> np.ndarray:
@@ -172,33 +322,82 @@ def preprocess_image(image_data: str) -> np.ndarray:
     Raises:
         ValueError: If image data is invalid or cannot be decoded
     """
+    logger.debug("=== Starting image preprocessing ===")
+    logger.debug(f"Input image_data length: {len(image_data)}")
+
+    # Validate input
+    if not image_data:
+        logger.error("Empty image data received")
+        raise ValueError("Image data is empty")
+
+    # Remove data URL prefix if present
     image_data_clean = image_data.split(',')[1] if ',' in image_data else image_data
-    image = Image.open(BytesIO(base64.b64decode(image_data_clean)))
+    logger.debug(f"Cleaned image_data length: {len(image_data_clean)}")
+
+    # Decode base64
+    try:
+        decoded_data = base64.b64decode(image_data_clean)
+        logger.debug(f"Decoded data size: {len(decoded_data)} bytes")
+    except Exception as e:
+        logger.error(f"Failed to decode base64 image data: {e}")
+        raise ValueError(f"Invalid base64 data: {e}")
+
+    # Open image
+    try:
+        image = Image.open(BytesIO(decoded_data))
+        logger.info(f"Image opened: {image.size} pixels, mode: {image.mode}")
+    except Exception as e:
+        logger.error(f"Failed to open image: {e}")
+        raise ValueError(f"Invalid image format: {e}")
 
     # Convert to grayscale to match training data format
     # Redundant color channels would add noise to the model
+    logger.debug("Converting to grayscale...")
     image = image.convert('L')
+    logger.debug(f"Grayscale image: {image.size}")
 
+    # Convert to numpy array
     img_array = np.array(image, dtype=np.uint8)
+    logger.debug(f"Array shape: {img_array.shape}, dtype: {img_array.dtype}")
+    logger.debug(f"Array value range: [{img_array.min()}, {img_array.max()}]")
 
     # Invert colors because canvas draws black on white
     # Model was trained on white drawings on black background
+    logger.debug("Inverting colors...")
     img_array = 255 - img_array
+    logger.debug(f"After inversion - value range: [{img_array.min()}, {img_array.max()}]")
 
     # Apply morphological dilation to thicken strokes
     # Prevents thin lines from disappearing during resizing
+    logger.debug("Applying morphological dilation...")
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     img_array = cv2.dilate(img_array, kernel, iterations=1)
-    
-    image_inverted = Image.fromarray(img_array, 'L')
-    image_resized = image_inverted.resize((128, 128), Image.Resampling.LANCZOS)
+    logger.debug(f"After dilation - value range: [{img_array.min()}, {img_array.max()}]")
 
+    # Convert back to PIL for high-quality resize
+    logger.debug("Converting to PIL for resize...")
+    image_inverted = Image.fromarray(img_array, 'L')
+    logger.debug(f"Created PIL image: {image_inverted.size}")
+
+    # Resize to model input size
+    logger.debug("Resizing to 128x128...")
+    image_resized = image_inverted.resize((128, 128), Image.Resampling.LANCZOS)
+    logger.debug(f"Resized image: {image_resized.size}")
+
+    # Convert back to numpy array and normalize
+    logger.debug("Converting to float32 and normalizing...")
     img_array = np.array(image_resized, dtype=np.float32) / 255.0
+    logger.debug(f"After normalization - shape: {img_array.shape}, range: [{img_array.min():.4f}, {img_array.max():.4f}]")
 
     # Apply z-score normalization for consistent brightness
     # Only normalize if image has sufficient variation (avoid noise amplification)
     img_flat = img_array.flatten()
+    original_mean = img_flat.mean()
+    original_std = img_flat.std()
+    logger.debug(f"Pre-normalization stats: mean={original_mean:.4f}, std={original_std:.4f}")
+
     if img_flat.std() > 0.01:
+        logger.debug("Applying z-score normalization...")
         # Standardize to zero mean, unit variance
         img_array = (img_array - img_flat.mean()) / (img_flat.std() + 1e-7)
         # Rescale from [-2, 2] to [0, 1] to match training distribution
@@ -206,8 +405,16 @@ def preprocess_image(image_data: str) -> np.ndarray:
         # Ensure all values are in valid range
         img_array = np.clip(img_array, 0, 1)
 
-    img_array = img_array.reshape(1, 128, 128, 1)
+        logger.debug(f"After normalization - range: [{img_array.min():.4f}, {img_array.max():.4f}]")
+    else:
+        logger.debug("Skipping normalization due to low standard deviation")
 
+    # Add batch dimension
+    logger.debug("Adding batch dimension...")
+    img_array = img_array.reshape(1, 128, 128, 1)
+    logger.debug(f"Final output shape: {img_array.shape}")
+
+    logger.debug("=== Image preprocessing complete ===")
     return img_array
 
 
@@ -235,47 +442,96 @@ def predict(image_data: str) -> Dict[str, Any]:
     Raises:
         Exception: Propagates from preprocessing or inference errors
     """
+    logger.info("=== Starting predict() function ===")
+    logger.debug(f"predict() input: image_data length={len(image_data)}")
+
     try:
+        # Check model state before processing
+        logger.debug(f"Model state check - model is None: {model is None}")
+        logger.debug(f"Model state check - tflite_interpreter is None: {tflite_interpreter is None}")
+        logger.debug(f"Model state check - is_tflite: {is_tflite}")
+        logger.debug(f"Model state check - model_name: {model_name}")
+
         if model is None and tflite_interpreter is None:
+            logger.error("predict() - Model not loaded, returning error")
             return {
                 'success': False,
                 'error': 'Model not loaded. Please train a model first or place a trained model (.h5 or .keras) in the models/ directory.'
             }
 
         start_time = time.time()
-        
+        logger.debug(f"predict() - Start time: {start_time}")
+
         preprocess_start = time.time()
+        logger.debug(f"predict() - Starting preprocessing at: {preprocess_start}")
+
         img_array = preprocess_image(image_data)
         preprocess_time = time.time() - preprocess_start
-        
+        logger.info(f"predict() - Preprocessing completed in {preprocess_time*1000:.2f}ms")
+        logger.debug(f"predict() - Preprocessed array shape: {img_array.shape}")
+        logger.debug(f"predict() - Preprocessed array dtype: {img_array.dtype}")
+        logger.debug(f"predict() - Preprocessed array value range: [{img_array.min():.4f}, {img_array.max():.4f}]")
+
         inference_start = time.time()
-        
+        logger.debug(f"predict() - Starting inference at: {inference_start}")
+
+        probability = None
         if is_tflite:
+            logger.debug("predict() - Using TFLite model for inference")
             input_details = tflite_interpreter.get_input_details()
             output_details = tflite_interpreter.get_output_details()
-            
-            tflite_interpreter.set_tensor(input_details[0]['index'], img_array.astype(np.float32))
-            
+
+            logger.debug(f"predict() - TFLite input details: {input_details[0]}")
+            logger.debug(f"predict() - TFLite output details: {output_details[0]}")
+
+            # Set input tensor
+            input_array = img_array.astype(np.float32)
+            logger.debug(f"predict() - Setting input tensor with shape: {input_array.shape}")
+            tflite_interpreter.set_tensor(input_details[0]['index'], input_array)
+
+            # Invoke interpreter
+            logger.debug("predict() - Invoking TFLite interpreter")
             tflite_interpreter.invoke()
-            
-            probability = tflite_interpreter.get_tensor(output_details[0]['index'])[0][0]
+
+            # Get output tensor
+            output_tensor = tflite_interpreter.get_tensor(output_details[0]['index'])
+            probability = output_tensor[0][0]
+            logger.debug(f"predict() - TFLite output tensor shape: {output_tensor.shape}")
+            logger.debug(f"predict() - TFLite raw probability: {probability}")
         else:
-            probability = model.predict(img_array, verbose=0)[0][0]
-        
+            logger.debug("predict() - Using Keras model for inference")
+            logger.debug(f"predict() - Keras model input shape: {model.input_shape}")
+            logger.debug(f"predict() - Keras model output shape: {model.output_shape}")
+
+            # Run prediction with verbose=0 to suppress progress output
+            predictions = model.predict(img_array, verbose=0)
+            probability = predictions[0][0]
+            logger.debug(f"predict() - Keras prediction shape: {predictions.shape}")
+            logger.debug(f"predict() - Keras raw probability: {probability}")
+
         inference_time = time.time() - inference_start
-        
+        logger.info(f"predict() - Inference completed in {inference_time*1000:.2f}ms")
+
         total_time = time.time() - start_time
+        logger.info(f"predict() - Total prediction time: {total_time*1000:.2f}ms")
+
+        # Apply classification threshold and format results
+        # Binary classification: above threshold = PENIS, below = OTHER_SHAPE
+        logger.debug(f"predict() - Applying threshold: {THRESHOLD}")
+        logger.debug(f"predict() - Raw probability: {probability}")
 
         if probability >= THRESHOLD:
             verdict = 'PENIS'
             verdict_text = 'Drawing looks like a penis! ✓'
             confidence = float(probability)
+            logger.info(f"predict() - Classification: PENIS (confidence: {confidence:.4f})")
         else:
             verdict = 'OTHER_SHAPE'
             verdict_text = 'Drawing looks like a common shape (not penis).'
             confidence = float(1 - probability)
+            logger.info(f"predict() - Classification: OTHER_SHAPE (confidence: {confidence:.4f})")
 
-        return {
+        result = {
             'success': True,
             'verdict': verdict,
             'verdict_text': verdict_text,
@@ -289,404 +545,222 @@ def predict(image_data: str) -> Dict[str, Any]:
                 'inference_time_ms': round(inference_time * 1000, 2)
             }
         }
+
+        logger.debug(f"predict() - Returning result: success={result['success']}, verdict={result['verdict']}")
+        logger.debug(f"predict() - Drawing statistics: {result['drawing_statistics']}")
+        logger.info("=== predict() function completed successfully ===")
+
+        return result
     except Exception as e:
+        logger.error(f"predict() - Exception occurred: {type(e).__name__}: {e}")
+        logger.error(f"predict() - Traceback: {traceback.format_exc()}")
         return {
             'success': False,
             'error': str(e)
         }
 
-
-def predict_region_based(image_data: str, use_region_detection: bool = True) -> Dict[str, Any]:
-    """
-    Classify drawing using region-based detection for robustness.
-    
-    This approach analyzes multiple patches of the canvas to detect
-    suspicious content even when diluted with innocent content.
-    
-    Args:
-        image_data: Base64 encoded drawing from canvas
-        use_region_detection: Whether to use region-based detection (currently always True)
-    
-    Returns:
-        Dictionary with prediction results including:
-        - success: Boolean indicating if prediction succeeded
-        - verdict: Classification result
-        - verdict_text: Human-readable description with detection method
-        - confidence: Confidence score (0-1)
-        - raw_probability: Raw model output probability
-        - threshold: Classification threshold used
-        - model_info: Description of model and detection method
-        - detection_details: Region-based detection metadata
-        - drawing_statistics: Timing information in milliseconds
-    
-    Raises:
-        Exception: Propagates from preprocessing or inference errors
-    """
-    try:
-        if model is None and tflite_interpreter is None:
-            return {
-                'success': False,
-                'error': 'Model not loaded. Please train a model first or place a trained model in the models/ directory.'
-            }
-        
-        start_time = time.time()
-        
-        preprocess_start = time.time()
-        
-        image_data_clean = image_data.split(',')[1] if ',' in image_data else image_data
-        image = Image.open(BytesIO(base64.b64decode(image_data_clean)))
-        image = image.convert('L')
-        
-        img_array = np.array(image, dtype=np.uint8)
-        img_array = 255 - img_array
-        
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        img_array = cv2.dilate(img_array, kernel, iterations=1)
-        
-        img_array = img_array.astype(np.float32) / 255.0
-        
-        if len(img_array.shape) == 2:
-            img_array = np.expand_dims(img_array, axis=-1)
-        
-        preprocess_time = time.time() - preprocess_start
-        
-        if is_tflite:
-            class TFLiteModelWrapper:
-                """
-                Wrapper class for TFLite interpreter to enable batch processing.
-                
-                TFLite interpreter natively handles single inputs, but region-based
-                detection requires batch inference. This wrapper handles patch
-                resizing and standardization for each patch before inference.
-                """
-                def __init__(self, interpreter: tf.lite.Interpreter) -> None:
-                    self.interpreter = interpreter
-                    self.input_details = interpreter.get_input_details()
-                    self.output_details = interpreter.get_output_details()
-                
-                def predict(self, x: np.ndarray, verbose: int = 0) -> np.ndarray:
-                    batch_size = x.shape[0]
-                    results = []
-                    
-                    for i in range(batch_size):
-                        patch = x[i]
-                        
-                        # Ensure patches match model input size (128x128)
-                        # Some patches may be smaller when extracted near edges
-                        if patch.shape[0] != 128 or patch.shape[1] != 128:
-                            # Convert normalized patch back to image format for resizing
-                            # Preserves interpolation quality compared to numpy resize
-                            patch_img = Image.fromarray((patch[:,:,0] * 255).astype(np.uint8), 'L')
-                            patch_img = patch_img.resize((128, 128), Image.Resampling.LANCZOS)
-                            patch = np.array(patch_img, dtype=np.float32) / 255.0
-                            # Restore channel dimension after resize
-                            patch = np.expand_dims(patch, axis=-1)
-
-                        # Apply same normalization used in main preprocessing
-                        # Ensures consistent input distribution across all patches
-                        patch_flat = patch.flatten()
-                        if patch_flat.std() > 0.01:
-                            patch = (patch - patch_flat.mean()) / (patch_flat.std() + 1e-7)
-                            patch = (patch + 2) / 4
-                            patch = np.clip(patch, 0, 1)
-
-                        # Add batch dimension for TFLite interpreter (expects 4D tensor)
-                        single_input = np.expand_dims(patch, axis=0)
-                        
-                        self.interpreter.set_tensor(
-                            self.input_details[0]['index'],
-                            single_input.astype(np.float32)
-                        )
-                        self.interpreter.invoke()
-                        output = self.interpreter.get_tensor(
-                            self.output_details[0]['index']
-                        )
-                        results.append(output[0])
-                    
-                    return np.array(results)
-            
-            model_wrapper = TFLiteModelWrapper(tflite_interpreter)
-        else:
-            model_wrapper = model
-        
-        inference_start = time.time()
-        
-        # Multi-scale detection: analyze full image and zoomed regions
-        # This preserves semantic content while detecting dilution attacks
-        def multi_scale_detection(img_array, model_wrapper):
-            """
-            Analyze drawing at multiple scales to detect content dilution.
-            
-            Strategy:
-            1. Full image (512x512 -> 128x128) - catches normal drawings
-            2. Center crop (384x384 -> 128x128) - focuses on main content
-            3. Quadrants (256x256 -> 128x128) - detects dilution in corners
-            4. Content-focused crop - zooms into densest region
-            
-            Returns max confidence across all scales.
-            """
-            from src.core.patch_extraction import DetectionResult
-            
-            h, w = img_array.shape[:2]
-            predictions = []
-            
-            def process_region(region, name, x=0, y=0):
-                """Process a single region through the model."""
-                # Resize to 128x128
-                region_img = Image.fromarray((region[:,:,0] * 255).astype(np.uint8), 'L')
-                region_resized = region_img.resize((128, 128), Image.Resampling.LANCZOS)
-                region_array = np.array(region_resized, dtype=np.float32) / 255.0
-                
-                # Apply z-score normalization
-                region_flat = region_array.flatten()
-                if region_flat.std() > 0.01:
-                    region_array = (region_array - region_flat.mean()) / (region_flat.std() + 1e-7)
-                    region_array = (region_array + 2) / 4
-                    region_array = np.clip(region_array, 0, 1)
-                
-                # Add batch and channel dimensions
-                region_array = region_array.reshape(1, 128, 128, 1)
-                
-                # Predict
-                confidence = model_wrapper.predict(region_array, verbose=0)[0][0]
-                
-                predictions.append({
-                    'name': name,
-                    'x': x,
-                    'y': y,
-                    'confidence': float(confidence),
-                    'is_positive': confidence >= THRESHOLD
-                })
-                
-                return confidence
-            
-            # 1. Full image (baseline)
-            full_conf = process_region(img_array, 'full', 0, 0)
-            
-            # 2. Center crop (75% of image) - focuses on main content
-            crop_size = int(min(h, w) * 0.75)
-            cx, cy = w // 2, h // 2
-            x1, y1 = cx - crop_size // 2, cy - crop_size // 2
-            x2, y2 = x1 + crop_size, y1 + crop_size
-            center_crop = img_array[y1:y2, x1:x2, :]
-            center_conf = process_region(center_crop, 'center_crop', x1, y1)
-            
-            # 3. Quadrants - detect if inappropriate content is in corners
-            # Attackers may hide content in corners to dilute main area
-            # Analyzing each quadrant separately catches this strategy
-            quad_size = min(h, w) // 2
-            quadrants = [
-                (img_array[0:quad_size, 0:quad_size, :], 'top_left', 0, 0),
-                (img_array[0:quad_size, w-quad_size:w, :], 'top_right', w-quad_size, 0),
-                (img_array[h-quad_size:h, 0:quad_size, :], 'bottom_left', 0, h-quad_size),
-                (img_array[h-quad_size:h, w-quad_size:w, :], 'bottom_right', w-quad_size, h-quad_size),
-            ]
-
-            quad_confs = []
-            for quad_img, name, qx, qy in quadrants:
-                conf = process_region(quad_img, name, qx, qy)
-                quad_confs.append(conf)
-            
-            # 4. Smart content extraction - find and analyze interior regions
-            # This detects boxes/frames and analyzes what's INSIDE them
-            content_confs = []
-            
-            # Convert to binary for contour detection
-            # Threshold at 0.1 to catch light strokes while ignoring background
-            binary = (img_array[:,:,0] > 0.1).astype(np.uint8) * 255
-
-            # Find contours (potential boxes/frames)
-            # Common attack: draw box around inappropriate content to hide it
-            contours, _ = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-            # Analyze regions inside contours
-            for contour in contours:
-                area = cv2.contourArea(contour)
-                # Only process significant contours (not tiny noise or full canvas)
-                # Skip tiny specks and avoid analyzing the entire image as one contour
-                if area < 1000 or area > h * w * 0.9:
-                    continue
-
-                # Get bounding box
-                x, y, cw, ch = cv2.boundingRect(contour)
-
-                # Extract interior content (shrink bounding box by 15% to avoid edges)
-                # Margin prevents box lines from contaminating the interior analysis
-                margin = int(min(cw, ch) * 0.15)
-                interior_x1 = max(0, x + margin)
-                interior_y1 = max(0, y + margin)
-                interior_x2 = min(w, x + cw - margin)
-                interior_y2 = min(h, y + ch - margin)
-
-                if interior_x2 - interior_x1 > 50 and interior_y2 - interior_y1 > 50:
-                    interior = img_array[interior_y1:interior_y2, interior_x1:interior_x2, :]
-                    perimeter = img_array[y:y+ch, x:x+cw, :]
-
-                    # Calculate content density
-                    # Compare interior vs perimeter to detect hollow boxes
-                    interior_density = np.mean(interior > 0.1)
-                    perimeter_density = np.mean(perimeter > 0.1)
-
-                    # Only analyze if interior has significant content
-                    # AND it's not just an empty box (perimeter has content but interior doesn't)
-                    if interior_density > 0.08:  # Interior must have content
-                        # Check if this is an empty box (perimeter dense, interior sparse)
-                        # Attackers may draw hollow boxes to mask content
-                        if perimeter_density > 0.2 and interior_density < 0.12:
-                            # This is likely an empty box, skip it
-                            continue
-
-                        conf = process_region(interior, f'interior_{x}_{y}', interior_x1, interior_y1)
-                        content_confs.append(conf)
-            
-            # 4b. Also check densest regions (fallback for drawings without boxes)
-            grid_size = 4
-            cell_h, cell_w = h // grid_size, w // grid_size
-            density_map = []
-            
-            for i in range(grid_size):
-                for j in range(grid_size):
-                    cell = img_array[i*cell_h:(i+1)*cell_h, j*cell_w:(j+1)*cell_w, :]
-                    density = np.mean(cell > 0.1)
-                    density_map.append((density, i, j))
-            
-            # Only analyze the single densest region at one scale
-            density_map.sort(reverse=True)
-            if density_map and density_map[0][0] > 0.1:
-                density, ci, cj = density_map[0]
-                focus_size = int(min(h, w) * 0.5)
-                fx1 = max(0, cj * cell_w + cell_w // 2 - focus_size // 2)
-                fy1 = max(0, ci * cell_h + cell_h // 2 - focus_size // 2)
-                fx2 = min(w, fx1 + focus_size)
-                fy2 = min(h, fy1 + focus_size)
-                
-                if fx2 - fx1 > 50 and fy2 - fy1 > 50:
-                    focus_crop = img_array[fy1:fy2, fx1:fx2, :]
-                    conf = process_region(focus_crop, 'densest_region', fx1, fy1)
-                    content_confs.append(conf)
-            
-            # Aggregate: use max confidence (most aggressive)
-            all_confs = [full_conf, center_conf] + quad_confs + content_confs
-            max_conf = max(all_confs) if all_confs else 0.0
-            is_positive = max_conf >= THRESHOLD
-            
-            return DetectionResult(
-                is_positive=is_positive,
-                confidence=max_conf,
-                patch_predictions=predictions,
-                num_patches_analyzed=len(predictions),
-                early_stopped=max_conf >= 0.9,
-                aggregation_strategy='multi_scale_max'
-            )
-        
-        detection_result = multi_scale_detection(img_array, model_wrapper)
-        
-        inference_time = time.time() - inference_start
-        total_time = time.time() - start_time
-        
-        if detection_result.is_positive:
-            verdict = 'PENIS'
-            verdict_text = 'Drawing looks like a penis! ✓ (Detected via region analysis)'
-            confidence = float(detection_result.confidence)
-        else:
-            verdict = 'OTHER_SHAPE'
-            verdict_text = 'Drawing looks like a common shape (not penis). (Verified via region analysis)'
-            confidence = float(1 - detection_result.confidence)
-        
-        return {
-            'success': True,
-            'verdict': verdict,
-            'verdict_text': verdict_text,
-            'confidence': round(confidence, 4),
-            'raw_probability': round(float(detection_result.confidence), 4),
-            'threshold': THRESHOLD,
-            'model_info': f'Binary classifier with region-based detection ({model_name})',
-            'detection_details': {
-                'num_patches_analyzed': int(detection_result.num_patches_analyzed),
-                'early_stopped': bool(detection_result.early_stopped),
-                'aggregation_strategy': str(detection_result.aggregation_strategy),
-                'patch_predictions': [
-                    {
-                        'x': int(p['x']),
-                        'y': int(p['y']),
-                        'confidence': round(float(p['confidence']), 4),
-                        'is_positive': bool(p['is_positive'])
-                    }
-                    for p in detection_result.patch_predictions[:5]
-                ]
-            },
-            'drawing_statistics': {
-                'response_time_ms': round(total_time * 1000, 2),
-                'preprocess_time_ms': round(preprocess_time * 1000, 2),
-                'inference_time_ms': round(inference_time * 1000, 2)
-            }
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-
-@app.route('/')
-def index() -> str:
-    """Serve the main drawing interface page."""
-    return render_template('index.html')
 
 
 @app.route('/api/predict', methods=['POST'])
 def api_predict() -> Tuple[Union[Dict[str, Any], Any], int]:
     """
-    REST API endpoint for drawing classification requests.
-    
+    REST API endpoint for simple single-image classification.
+
+    This is the most basic detection mode - classifies the entire canvas
+    as a single image without any region-based or stroke-based analysis.
+
     Expects JSON payload with 'image' field containing base64 encoded drawing.
-    Returns prediction results with confidence scores and timing information.
-    
+
     Returns:
         Tuple of (response_dict, status_code)
-        - 200: Success with prediction results
-        - 400: Bad request (missing or invalid image data)
-        - 500: Internal server error
-    
-    SECURITY: Validates input before processing to prevent resource exhaustion
     """
+    request_id = f"req_{int(time.time() * 1000000)}"
+    logger.info(f"api_predict() - {request_id} - Received POST request")
+
     try:
         data = request.get_json()
+        logger.debug(f"api_predict() - {request_id} - Request content-type: {request.content_type}")
+
+        if not data:
+            logger.warning(f"api_predict() - {request_id} - No JSON data provided")
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+
         image_data = data.get('image')
+        logger.debug(f"api_predict() - {request_id} - Image data present: {image_data is not None}")
 
         if not image_data:
+            logger.warning(f"api_predict() - {request_id} - Missing 'image' field in request")
             return jsonify({'success': False, 'error': 'No image data provided'}), 400
 
+        logger.info(f"api_predict() - {request_id} - Starting simple prediction pipeline")
+        prediction_start = time.time()
+
+        # Call prediction function
         result = predict(image_data)
-        return jsonify(result)
+
+        prediction_time = time.time() - prediction_start
+        logger.info(f"api_predict() - {request_id} - Simple prediction completed in {prediction_time*1000:.2f}ms")
+
+        if result.get('success'):
+            logger.info(f"api_predict() - {request_id} - Response: verdict={result.get('verdict')}, confidence={result.get('confidence')}")
+
+        result['request_id'] = request_id
+
+        logger.info(f"api_predict() - {request_id} - Returning 200 OK")
+        return jsonify(result), 200
     except Exception as e:
+        logger.error(f"api_predict() - {request_id} - Exception occurred: {type(e).__name__}: {e}")
+        logger.error(f"api_predict() - {request_id} - Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/api/predict/region', methods=['POST'])
-def api_predict_region() -> Tuple[Union[Dict[str, Any], Any], int]:
+@app.route('/api/predict/tile', methods=['POST'])
+def api_predict_tile() -> Tuple[Union[Dict[str, Any], Any], int]:
     """
-    REST API endpoint for region-based detection (robust against content dilution).
+    REST API endpoint for tile-based detection (optimized for RPi4).
     
-    Expects JSON payload with 'image' field containing base64 encoded drawing.
-    Returns detailed region-based analysis results.
+    Uses fixed tile grid with dirty tracking for efficient incremental updates.
+    Only analyzes tiles that have been modified since last analysis.
+    
+    Expects JSON payload with:
+    - 'image': base64 encoded drawing
+    - 'strokes' (optional): array of stroke data for dirty tracking
     
     Returns:
         Tuple of (response_dict, status_code)
-        - 200: Success with prediction and detection details
+        - 200: Success with tile-based analysis results
         - 400: Bad request (missing or invalid image data)
         - 500: Internal server error
     """
+    request_id = f"req_{int(time.time() * 1000000)}"
+    logger.info(f"api_predict_tile() - {request_id} - Received POST request to /api/predict/tile")
+    
     try:
-        data = request.get_json()
-        image_data = data.get('image')
+        # Check if tile detector is available
+        if tile_detector is None:
+            logger.error(f"api_predict_tile() - {request_id} - Tile detector not initialized")
+            return jsonify({
+                'success': False,
+                'error': 'Tile detector not available. Please check server logs.'
+            }), 500
         
-        if not image_data:
+        # Get JSON payload
+        data = request.get_json()
+        if not data:
+            logger.warning(f"api_predict_tile() - {request_id} - No JSON data provided")
             return jsonify({'success': False, 'error': 'No image data provided'}), 400
         
-        result = predict_region_based(image_data)
-        return jsonify(result)
+        # Extract image data
+        image_data = data.get('image')
+        if not image_data:
+            logger.warning(f"api_predict_tile() - {request_id} - Missing 'image' field")
+            return jsonify({'success': False, 'error': 'No image data provided'}), 400
+        
+        logger.info(f"api_predict_tile() - {request_id} - Starting tile-based prediction")
+        start_time = time.time()
+        
+        # Preprocess image
+        image_data_clean = image_data.split(',')[1] if ',' in image_data else image_data
+        image = Image.open(BytesIO(base64.b64decode(image_data_clean)))
+        image = image.convert('L')
+        
+        # Convert to numpy array
+        img_array = np.array(image, dtype=np.uint8)
+        
+        # Invert colors (canvas is black on white, model expects white on black)
+        img_array = 255 - img_array
+        
+        # Apply morphological dilation
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        img_array = cv2.dilate(img_array, kernel, iterations=1)
+        
+        # Normalize
+        img_array = img_array.astype(np.float32) / 255.0
+        
+        # Ensure channel dimension
+        if len(img_array.shape) == 2:
+            img_array = np.expand_dims(img_array, axis=-1)
+        
+        preprocess_time = (time.time() - start_time) * 1000
+        
+        # Mark dirty tiles if stroke data provided
+        strokes = data.get('strokes', [])
+        if strokes:
+            logger.info(f"api_predict_tile() - {request_id} - Processing {len(strokes)} strokes for dirty tracking")
+            for stroke in strokes:
+                if 'points' in stroke:
+                    points = [(p['x'], p['y']) for p in stroke['points']]
+                    tile_detector.mark_dirty_by_stroke(points)
+        else:
+            # No stroke data, mark all tiles as dirty
+            logger.info(f"api_predict_tile() - {request_id} - No stroke data, analyzing full canvas")
+            tile_detector.grid.mark_dirty_by_bbox(0, 0, 512, 512)
+        
+        # Run tile-based analysis
+        result = tile_detector.analyze_canvas(img_array, threshold=THRESHOLD)
+        
+        total_time = (time.time() - start_time) * 1000
+        
+        # Format response
+        if result['success']:
+            is_positive = result['is_positive']
+            verdict = 'PENIS' if is_positive else 'OTHER_SHAPE'
+            verdict_text = ('Drawing looks like a penis! ✓ (Tile-based detection)' if is_positive 
+                          else 'Drawing looks like a common shape (not penis). (Tile-based detection)')
+            
+            response = {
+                'success': True,
+                'verdict': verdict,
+                'verdict_text': verdict_text,
+                'confidence': round(result['confidence'], 4),
+                'raw_probability': round(result['final_prediction'], 4),
+                'threshold': THRESHOLD,
+                'model_info': f'Binary classifier with tile-based detection ({model_name})',
+                'detection_details': {
+                    'num_tiles_analyzed': result['num_tiles_analyzed'],
+                    'total_tiles': result['total_tiles'],
+                    'grid_size': result['grid_size'],
+                    'cached': result.get('cached', False),
+                    'aggregation_strategy': 'tile_max'
+                },
+                'drawing_statistics': {
+                    'response_time_ms': round(total_time, 2),
+                    'preprocess_time_ms': round(preprocess_time, 2),
+                    'inference_time_ms': round(result['inference_time_ms'], 2)
+                }
+            }
+            
+            logger.info(f"api_predict_tile() - {request_id} - Analysis complete: "
+                       f"verdict={verdict}, tiles_analyzed={result['num_tiles_analyzed']}/{result['total_tiles']}, "
+                       f"time={total_time:.2f}ms")
+            
+            return jsonify(response), 200
+        else:
+            logger.error(f"api_predict_tile() - {request_id} - Analysis failed")
+            return jsonify(result), 500
+            
     except Exception as e:
+        logger.error(f"api_predict_tile() - {request_id} - Exception: {type(e).__name__}: {e}")
+        logger.error(f"api_predict_tile() - {request_id} - Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/tile/reset', methods=['POST'])
+def api_tile_reset() -> Tuple[Union[Dict[str, Any], Any], int]:
+    """Reset tile detector state (clear all cached predictions)."""
+    request_id = f"req_{int(time.time() * 1000000)}"
+    logger.info(f"api_tile_reset() - {request_id} - Received POST request to /api/tile/reset")
+    
+    try:
+        if tile_detector is None:
+            return jsonify({'success': False, 'error': 'Tile detector not available'}), 500
+        
+        tile_detector.reset()
+        logger.info(f"api_tile_reset() - {request_id} - Tile detector reset successfully")
+        
+        return jsonify({'success': True, 'message': 'Tile detector reset'}), 200
+    except Exception as e:
+        logger.error(f"api_tile_reset() - {request_id} - Exception: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -694,16 +768,36 @@ def api_predict_region() -> Tuple[Union[Dict[str, Any], Any], int]:
 def health() -> Dict[str, Any]:
     """
     Health check endpoint for monitoring and load balancer probes.
-    
+
     Returns:
         Dictionary with service status and configuration information
     """
-    return jsonify({
+    request_id = f"req_{int(time.time() * 1000000)}"
+    logger.info(f"health() - {request_id} - Received GET request to /api/health")
+    logger.debug(f"health() - {request_id} - Request headers: {dict(request.headers)}")
+
+    # Check model state
+    model_loaded = model is not None or tflite_interpreter is not None
+    logger.debug(f"health() - {request_id} - Model loaded: {model_loaded}")
+    logger.debug(f"health() - {request_id} - Keras model: {model is not None}")
+    logger.debug(f"health() - {request_id} - TFLite interpreter: {tflite_interpreter is not None}")
+    logger.debug(f"health() - {request_id} - Model type: {model_name}")
+    logger.debug(f"health() - {request_id} - Threshold: {THRESHOLD}")
+
+    # Prepare health response
+    health_response = {
         'status': 'ok',
-        'model_loaded': model is not None or tflite_interpreter is not None,
+        'model_loaded': model_loaded,
+        'model_name': model_name,
+        'model_type': 'TFLite' if is_tflite else 'Keras',
         'threshold': THRESHOLD,
         'region_detection_available': True
-    })
+    }
+
+    logger.info(f"health() - {request_id} - Returning health status: {health_response['status']}")
+    logger.debug(f"health() - {request_id} - Response: {health_response}")
+
+    return jsonify(health_response)
 
 
 try:

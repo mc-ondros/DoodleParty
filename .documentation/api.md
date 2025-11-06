@@ -2,6 +2,8 @@
 
 **Purpose:** Complete API documentation for Flask endpoints and Python module interfaces.
 
+**Status: Updated to match actual implementation** - Nov 2024
+
 ## Table of Contents
 
 1. [Flask Web API](#flask-web-api)
@@ -23,9 +25,9 @@ Serve the main drawing interface.
 **Status Codes:**
 - `200 OK` - Page loaded successfully
 
-### `POST /predict`
+### `POST /api/predict`
 
-Classify a hand-drawn image.
+Classify a hand-drawn image using standard single-image prediction.
 
 **Request Body:**
 ```json
@@ -37,9 +39,18 @@ Classify a hand-drawn image.
 **Response:**
 ```json
 {
-  "class": "positive" | "negative",
+  "success": true,
+  "verdict": "PENIS" | "OTHER_SHAPE",
+  "verdict_text": "Drawing looks like a penis! ✓",
   "confidence": 0.95,
-  "threshold": 0.5
+  "raw_probability": 0.95,
+  "threshold": 0.5,
+  "model_info": "Binary classifier: penis vs 21 common shapes (TFLite INT8)",
+  "drawing_statistics": {
+    "response_time_ms": 45.2,
+    "preprocess_time_ms": 12.3,
+    "inference_time_ms": 28.7
+  }
 }
 ```
 
@@ -50,27 +61,142 @@ Classify a hand-drawn image.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:5000/predict \
+curl -X POST http://localhost:5000/api/predict \
   -H "Content-Type: application/json" \
   -d '{"image": "data:image/png;base64,..."}'
 ```
 
-### `GET /health`
+### `POST /api/predict/region`
 
-Health check endpoint.
+Classify a hand-drawn image using region-based detection (contour extraction).
+
+**Request Body:**
+```json
+{
+  "image": "data:image/png;base64,iVBORw0KGgoAAAANS..."
+}
+```
 
 **Response:**
 ```json
 {
-  "status": "healthy",
+  "success": true,
+  "verdict": "PENIS" | "OTHER_SHAPE",
+  "verdict_text": "Drawing looks like a penis! ✓ (Detected via region analysis)",
+  "confidence": 0.87,
+  "raw_probability": 0.87,
+  "threshold": 0.5,
+  "model_info": "Binary classifier with region-based detection (TFLite INT8)",
+  "detection_details": {
+    "num_patches_analyzed": 5,
+    "early_stopped": false,
+    "aggregation_strategy": "shape_max",
+    "patch_predictions": [
+      {"x": 0, "y": 0, "confidence": 0.87, "is_positive": true},
+      {"x": 64, "y": 0, "confidence": 0.23, "is_positive": false}
+    ]
+  },
+  "drawing_statistics": {
+    "response_time_ms": 125.4,
+    "preprocess_time_ms": 45.2,
+    "inference_time_ms": 76.8
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Classification successful
+- `400 Bad Request` - Invalid image data
+- `500 Internal Server Error` - Model inference failed
+
+**Example:**
+```bash
+curl -X POST http://localhost:5000/api/predict/region \
+  -H "Content-Type: application/json" \
+  -d '{"image": "data:image/png;base64,..."}'
+```
+
+### `POST /api/predict/tile` (Experimental)
+
+Classify using tile-based detection with grid partitioning.
+
+**Request Body:**
+```json
+{
+  "image": "data:image/png;base64,iVBORw0KGgoAAAANS...",
+  "strokes": [
+    {"points": [{"x": 10, "y": 20}, {"x": 15, "y": 25}]}
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "verdict": "PENIS" | "OTHER_SHAPE",
+  "verdict_text": "Drawing looks like a penis! ✓ (Tile-based detection)",
+  "confidence": 0.92,
+  "raw_probability": 0.92,
+  "threshold": 0.5,
+  "model_info": "Binary classifier with tile-based detection (TFLite INT8)",
+  "detection_details": {
+    "num_tiles_analyzed": 12,
+    "total_tiles": 64,
+    "grid_size": 8,
+    "cached": false,
+    "aggregation_strategy": "tile_max"
+  },
+  "drawing_statistics": {
+    "response_time_ms": 85.3,
+    "preprocess_time_ms": 22.1,
+    "inference_time_ms": 58.7
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Classification successful
+- `400 Bad Request` - Invalid image data
+- `500 Internal Server Error` - Model inference failed or tile detector not available
+
+### `POST /api/tile/reset`
+
+Reset tile detector state and clear cached predictions.
+
+**Request Body:** (empty)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Tile detector reset"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Reset successful
+- `500 Internal Server Error` - Tile detector not available
+
+### `GET /api/health`
+
+Health check endpoint with model status.
+
+**Response:**
+```json
+{
+  "status": "ok",
   "model_loaded": true,
-  "model_path": "models/quickdraw_classifier.h5"
+  "model_name": "TFLite INT8 (Optimized)",
+  "model_type": "TFLite",
+  "threshold": 0.5,
+  "region_detection_available": true
 }
 ```
 
 **Status Codes:**
 - `200 OK` - Service healthy
-- `503 Service Unavailable` - Model not loaded
+- `500 Internal Server Error` - Service unhealthy
 
 ## Python Module API
 
@@ -90,13 +216,15 @@ Load QuickDraw dataset for training.
 
 **Example:**
 ```python
-from src.data.loaders import load_data
+from src.data.loaders import QuickDrawDataset
 
-X_train, y_train, X_test, y_test, mapping = load_data(
-    data_dir='data/raw_ndjson',
-    categories=['penis', 'circle', 'square'],
-    max_samples_per_class=5000
-)
+dataset = QuickDrawDataset(data_dir='data/raw')
+# Load specific categories
+dataset.load_category('penis')
+dataset.load_category('circle')
+dataset.load_category('square')
+# Get processed data
+X_train, y_train, X_test, y_test = dataset.prepare_data()
 ```
 
 #### `preprocess_image(image, target_size=(128, 128))`
@@ -183,7 +311,7 @@ Evaluate model performance.
 **Example:**
 ```python
 # Run evaluation script
-python scripts/evaluate.py --model models/quickdraw_classifier.keras
+python scripts/evaluate.py --model models/quickdraw_model.h5
 
 # Or use the module directly
 from src.core.inference import evaluate_model
@@ -289,12 +417,12 @@ FLASK_PORT=5000
 FLASK_DEBUG=False
 
 # Model configuration
-MODEL_PATH=models/quickdraw_classifier.keras
+MODEL_PATH=models/quickdraw_model.h5
 IMAGE_SIZE=128
 THRESHOLD=0.5
 
 # Data paths
-DATA_DIR=data/raw_ndjson
+DATA_DIR=data/raw
 PROCESSED_DIR=data/processed
 ```
 
@@ -349,7 +477,7 @@ metrics = evaluate_model(model, X_test, y_test)
 print(f"Test Accuracy: {metrics['accuracy']:.2%}")
 
 # Save
-model.save('models/quickdraw_classifier.keras')
+model.save('models/quickdraw_model.h5')
 ```
 
 ### Flask API Usage

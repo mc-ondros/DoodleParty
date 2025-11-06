@@ -2,6 +2,8 @@
 
 **Purpose:** Documentation of file organization and directory structure.
 
+**Status: Updated to match actual code** - Nov 2024
+
 ## Current Structure
 
 The project follows Python best practices using src-layout with proper package organization:
@@ -12,21 +14,22 @@ DoodleHunter/
 │   ├── __init__.py
 │   ├── core/              # Core ML functionality
 │   │   ├── __init__.py
-│   │   ├── models.py      # Model architectures
+│   │   ├── models.py      # Multiple CNN architectures (4 different models)
 │   │   ├── training.py    # Training logic
-│   │   └── inference.py   # Prediction logic
+│   │   ├── inference.py   # Prediction logic
+│   │   ├── patch_extraction.py  # Region-based detection (basic)
+│   │   ├── optimization.py      # Model optimization
+│   │   ├── batch_inference.py   # Batch processing
+│   │   └── tile_detection.py    # Tile-based detection (experimental)
 │   ├── data/              # Data handling
 │   │   ├── __init__.py
-│   │   ├── loaders.py     # Dataset loading
+│   │   ├── loaders.py     # Dataset loading (NumPy bitmap format)
 │   │   ├── appendix_loader.py  # Additional data loading
 │   │   └── augmentation.py
-│   ├── utils/             # Utilities
-│   │   └── __init__.py
 │   └── web/               # Web interface
 │       ├── __init__.py
-│       ├── app.py         # Flask app
-│       ├── templates/
-│       └── static/
+│       ├── app.py         # Flask app with multiple routes
+│       └── routes.py      # API route definitions
 ├── scripts/               # Executable scripts
 │   ├── training/          # Training scripts
 │   ├── evaluation/        # Evaluation & testing scripts
@@ -34,20 +37,17 @@ DoodleHunter/
 │   ├── data_processing/   # Data download & processing
 │   ├── visualization/     # Visualization scripts
 │   └── convert/           # Model conversion scripts
-├── tests/                 # Test suite
-│   ├── test_core/
-│   ├── test_data/
-│   ├── test_web/
-│   └── conftest.py
+├── tests/                 # Test suite (minimal/incomplete)
+│   └── (test files may be minimal)
 ├── data/                  # Data storage
-│   └── raw_ndjson/        # QuickDraw NDJSON files
+│   └── raw/               # QuickDraw NumPy bitmap files (28x28)
 ├── models/                # Saved models
-│   ├── *.keras            # TensorFlow/Keras models (float32)
-│   ├── *.h5               # Legacy Keras format
-│   ├── *.tflite           # TensorFlow Lite (float32)
-│   ├── *_int8.tflite      # TensorFlow Lite (INT8 quantized)
-│   ├── *.onnx             # ONNX format
+│   ├── quickdraw_model.h5              # Main model file
+│   ├── quickdraw_model.tflite          # TensorFlow Lite (float32)
+│   ├── quickdraw_model_int8.tflite     # TensorFlow Lite (INT8 quantized)
+│   ├── quickdraw_model.onnx            # ONNX format
 │   └── benchmarks/        # Performance benchmark results
+├── logs/                  # Application logs
 ├── .documentation/        # Documentation
 │   ├── api.md
 │   ├── architecture.md
@@ -56,8 +56,7 @@ DoodleHunter/
 │   ├── roadmap.md
 │   ├── structure.md
 │   ├── troubleshooting.md
-│   ├── model_improvements.md
-│   └── region_detection.md
+│   └── model_improvements.md
 ├── .github/               # GitHub workflows
 │   └── workflows/
 ├── pyproject.toml         # Modern Python packaging
@@ -73,7 +72,7 @@ DoodleHunter/
 1. ✅ **Organized `src/` directory** - Clear separation by functionality
 2. ✅ **Proper package structure** - Can import as `from src.core import models`
 3. ✅ **Separated scripts** - Training scripts in `scripts/`, library code in `src/`
-4. ✅ **Tests directory** - Organized test suite with proper structure
+4. ✅ **Tests directory** - Test suite structure (though may be incomplete)
 5. ✅ **Proper `__init__.py`** - Valid Python package
 6. ✅ **Clear separation** - Executable scripts vs importable modules
 7. ✅ **Modern packaging** - Uses `pyproject.toml` for configuration
@@ -83,27 +82,23 @@ DoodleHunter/
 ### Package Layout (`src/`)
 
 **Core ML (`src/core/`):**
-- `models.py` - CNN architectures, model factory functions
+- `models.py` - Multiple CNN architectures (Custom, ResNet50, MobileNetV3, EfficientNet)
 - `training.py` - Training loops, callbacks, checkpointing
-- `inference.py` - Single/batch prediction, TTA, region-based detection
-- `optimization.py` - Model quantization, pruning, distillation
+- `inference.py` - Single/batch prediction, region-based detection
+- `patch_extraction.py` - Sliding window detection (basic implementation)
 - `batch_inference.py` - Optimized batch processing for multiple patches
+- `optimization.py` - Model quantization, pruning, distillation
+- `tile_detection.py` - Tile-based detection (experimental/incomplete)
 
 **Data Handling (`src/data/`):**
-- `loaders.py` - QuickDraw dataset loading, class mapping
+- `loaders.py` - QuickDraw dataset loading (NumPy bitmap format)
 - `appendix_loader.py` - Additional data loading utilities
 - `augmentation.py` - Data augmentation pipeline
 
-**Utilities (`src/utils/`):**
-- `profiling.py` - Performance profiling and benchmarking
-- `caching.py` - Redis integration for result caching
-- `metrics.py` - Performance metrics collection
-
 **Web Interface (`src/web/`):**
-- `app.py` - Flask application
-- `routes.py` - API endpoints
-- `templates/` - HTML templates
-- `static/` - CSS, JS, images
+- `app.py` - Flask application with multiple prediction modes
+- `routes.py` - API route definitions
+- Note: templates/ and static/ directories are missing (should be checked/created)
 
 ### Scripts Directory
 
@@ -111,37 +106,27 @@ Executable scripts organized by purpose:
 
 **Training Scripts (`scripts/training/`):**
 - `train.py` - CLI for training models
-- `train_ensemble.py` - Train ensemble models
-- `ensemble_model.py` - Ensemble model creation
-- `generate_hard_negatives.py` - Hard negative mining
-- `generate_negatives.py` - Generate negative samples
 
 **Evaluation Scripts (`scripts/evaluation/`):**
 - `evaluate.py` - CLI for evaluation
 - `optimize_threshold.py` - Threshold optimization
 - `test_time_augmentation.py` - TTA implementation
-- `test_model_improvements.py` - Test model improvements
-
-**Demo Scripts (`scripts/demos/`):**
-- `demo_region_detection.py` - Demo region-based detection
-- `run_interface.sh` - Start web interface
-- `test_model.sh` - Quick model testing
-- `train_max_accuracy.sh` - Train for maximum accuracy
 
 **Data Processing Scripts (`scripts/data_processing/`):**
-- `download_quickdraw_ndjson.py` - Download QuickDraw NDJSON files
-- `download_quickdraw.py` - Download QuickDraw data
+- `download_quickdraw_npy.py` - **MAIN:** Download NumPy bitmap format (28x28)
 - `download_quickdraw_gcs.py` - Download from Google Cloud Storage
 - `download_quickdraw_npy.py` - Download NumPy format data
-- `process_all_data_128x128.py` - Process data to 128x128 format
+- `process_all_data_128x128.py` - Historical, no longer needed (data is already 28x28)
 - `fix_data_quality.py` - Data quality improvements
 - `regenerate_data_simple_norm.py` - Regenerate with simple normalization
 - `regenerate_training_data.py` - Regenerate training data
-- `reprocess_penis_ndjson.py` - Reprocess specific category
+- `reprocess_penis_ndjson.py` - Reprocess specific category (legacy NDJSON)
+
+**Note:** NDJSON processing scripts are legacy and not used in current implementation.
 
 **Visualization Scripts (`scripts/visualization/`):**
-- `visualize_training_batches.py` - Visualize training data
 - `visualize_training_data.py` - Visualize training dataset
+- `visualize_training_batches.py` - Visualize training batches
 - `visualize_fixed_data.py` - Visualize fixed data
 - `diagnose_data_issues.py` - Data quality diagnostics
 
@@ -156,17 +141,9 @@ Executable scripts organized by purpose:
 
 ### Tests Directory
 
-Organized by module:
-- `test_core/` - Test core ML functionality
-  - `test_batch_inference.py` - Batch processing tests
-  - `test_optimization.py` - Model optimization tests
-- `test_data/` - Test data loading/preprocessing
-- `test_web/` - Test Flask endpoints
-- `test_performance/` - Performance and load tests
-  - `test_latency.py` - Latency benchmarks
-  - `test_throughput.py` - Throughput tests
-  - `test_memory.py` - Memory profiling
-- `conftest.py` - Pytest fixtures
+Organized by module (NOTE: Test coverage is minimal):
+- Test files may be incomplete or missing
+- See `test_region_detection.py` in root for existing test example
 
 ### Documentation Directory
 
@@ -178,8 +155,9 @@ Currently `.documentation/` (hidden directory):
 - `roadmap.md` - Development roadmap
 - `structure.md` - This file
 - `troubleshooting.md` - Common issues
-- `model_improvements.md` - Model enhancement docs
-- `region_detection.md` - Region-based detection guide
+- `model_improvements.md` - Model enhancement docs (may be outdated)
+
+**Removed:** `region_detection.md` - Marked as outdated and removed.
 
 ## Benefits of Current Structure
 
@@ -187,22 +165,26 @@ Currently `.documentation/` (hidden directory):
 2. ✅ **Clear Imports** - `from src.core import models`
 3. ✅ **Separation of Concerns** - Scripts vs library code
 4. ✅ **Standard Src-Layout** - Follows Python packaging best practices
-5. ✅ **Testable** - Dedicated tests directory with proper structure
+5. ✅ **Testable** - Dedicated tests directory (though may be incomplete)
 6. ✅ **Nix Integration** - Full Nix flake support for reproducible builds
 7. ✅ **Professional** - Used by major Python projects (pytest, setuptools, etc.)
 
 ## Data Format
 
 **QuickDraw Dataset:**
-- Format: NDJSON (newline-delimited JSON)
-- Location: `data/raw_ndjson/`
-- Files: `{category}-raw.ndjson`
-- Each line contains a drawing with strokes and metadata
+- Format: NumPy bitmap (pre-processed 28x28 grayscale images)
+- Location: `data/raw/`
+- Files: `{category}.npy` (e.g., `penis.npy`, `circle.npy`)
+- Source: Google's QuickDraw dataset (numpy_bitmap format)
+- Each file contains NumPy array of 28x28 grayscale bitmaps
 
 **Processed Data:**
 - Location: `data/processed/`
-- Format: NumPy arrays and pickle files
+- Format: NumPy arrays and pickle files (class_mapping.pkl)
 - Generated during training
+
+**Note:** This is a change from earlier versions that used NDJSON format.
+Current implementation uses pre-processed NumPy bitmaps (28x28) for simplicity.
 
 ## File Naming Conventions
 
@@ -227,14 +209,14 @@ Currently `.documentation/` (hidden directory):
 
 **Core ML functionality:**
 ```python
-from src.core.models import create_cnn_model
+from src.core.models import build_custom_cnn
 from src.core.training import train_model
-from src.core.inference import predict_single
+from src.core.inference import predict_image
 ```
 
 **Data handling:**
 ```python
-from src.data.loaders import load_data
+from src.data.loaders import QuickDrawDataset
 from src.data.augmentation import create_augmentation_pipeline
 ```
 
@@ -243,12 +225,12 @@ from src.data.augmentation import create_augmentation_pipeline
 from src.web.app import app
 ```
 
-## Performance Optimization Structure
+## Model Optimization Structure
 
 ### Model Optimization Pipeline
 
 ```
-Original Model (*.keras)
+Original Model (quickdraw_model.h5)
     ↓
 TFLite Conversion (convert_to_tflite.py)
     ↓
@@ -256,26 +238,31 @@ INT8 Quantization (quantize_int8.py)
     ↓
 Benchmarking (benchmark_tflite.py)
     ↓
-Production Model (*_int8.tflite)
+Production Model (quickdraw_model_int8.tflite)
 ```
 
 ### Inference Pipeline Architecture
 
 **Single Image (Current):**
 ```
-Canvas → Preprocess → Model → Result (78-85ms)
+Canvas → Preprocess → Model → Result
 ```
 
-**Multi-Region (Planned):**
+**Region-Based (Basic Implementation):**
 ```
-Canvas → Extract Patches (9-16) → Batch Preprocess
+Canvas → Extract Contours → Individual Contour Classification
     ↓
-Batch Inference (single forward pass)
-    ↓
-Aggregate Results → Final Decision (<200ms target)
+Aggregate Results → Final Decision
 ```
 
-### Key Performance Components
+**Tile-Based (Experimental):**
+```
+Canvas → Tile Grid (8x8) → Batch Inference
+    ↓
+Aggregate Results → Final Decision
+```
+
+### Key Components
 
 **`src/core/batch_inference.py`** - Core batch processing
 - Batch patch extraction
@@ -289,17 +276,20 @@ Aggregate Results → Final Decision (<200ms target)
 - Knowledge distillation
 - Graph optimization
 
-**`src/utils/profiling.py`** - Performance monitoring
-- Latency tracking
-- Memory profiling
-- Throughput measurement
-- Bottleneck identification
+**`src/core/patch_extraction.py`** - Region-based detection
+- Sliding window detection
+- Contour-based shape extraction
+- Aggregation strategies (MAX, MEAN, etc.)
 
-**`scripts/benchmark_performance.py`** - Comprehensive benchmarking
-- Single vs batch inference comparison
-- Memory usage analysis
-- Latency distribution (p50, p95, p99)
-- GPU utilization metrics
+## Missing Components
+
+**NOTE:** The following directories/files are referenced in documentation but may be missing:
+- `src/web/templates/` - HTML templates for web interface
+- `src/web/static/` - CSS, JS, images for web interface
+- Comprehensive test suite in `tests/`
+- Some scripts in `scripts/training/` and `scripts/demos/`
+
+These may need to be created or the documentation needs updating to reflect actual structure.
 
 ## Nix Integration
 
@@ -318,4 +308,4 @@ See [Nix Usage Guide](nix-usage.md) for details.
 - [Style Guide](../STYLE_GUIDE.md) - Code conventions
 - [README](../README.md) - Project overview
 
-*Project structure documentation for DoodleHunter v1.0*
+*Project structure documentation for DoodleHunter v1.0 - Updated Nov 2024*
