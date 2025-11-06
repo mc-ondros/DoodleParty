@@ -168,9 +168,11 @@ class TestErrorHandlingIntegration:
         )
         assert response.status_code == 400
     
+    @patch('src.web.app.is_tflite', False)
     @patch('src.web.app.model')
-    def test_model_error_handling(self, mock_model, client, canvas_drawing):
-        """Test handling of model errors."""
+    @patch('src.web.app.tflite_interpreter')
+    def test_model_error_handling(self, mock_tflite_interpreter, mock_model, client, canvas_drawing):
+        """Test error handling when model fails."""
         # Simulate model error
         mock_model.predict = Mock(side_effect=Exception("Model crashed"))
         
@@ -218,6 +220,7 @@ class TestModelLoadingIntegration:
         pass
     
     @patch('src.web.app.model', None)
+    @patch('src.web.app.tflite_interpreter', None)
     def test_prediction_without_model(self, client, canvas_drawing):
         """Test prediction when model is not loaded."""
         response = client.post(
@@ -235,6 +238,7 @@ class TestModelLoadingIntegration:
 class TestConcurrency:
     """Test concurrent request handling."""
     
+    @patch('src.web.app.is_tflite', False)
     @patch('src.web.app.model')
     def test_concurrent_predictions(self, mock_model, client, canvas_drawing):
         """Test handling of concurrent prediction requests."""
@@ -295,6 +299,7 @@ class TestResponseFormat:
         assert isinstance(data['raw_probability'], (int, float))
         assert isinstance(data['drawing_statistics'], dict)
     
+    @patch('src.web.app.is_tflite', False)
     @patch('src.web.app.model')
     def test_error_response_structure(self, mock_model, client, canvas_drawing):
         """Test error response structure."""

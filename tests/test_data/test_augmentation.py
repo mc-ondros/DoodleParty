@@ -2,6 +2,7 @@
 
 import pytest
 import numpy as np
+from collections.abc import Iterator
 from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 from src.data.augmentation import (
@@ -114,7 +115,7 @@ class TestAugmentation:
         
         assert len(result) == 3
         X_norm, generator, augmentation = result
-        assert isinstance(generator, type(iter([])))  # Check it's an iterator
+        assert isinstance(generator, Iterator)  # Check it's an iterator
         assert isinstance(augmentation, ImageDataGenerator)
     
     def test_get_augmentation_generator_normalizes_data(self, sample_data):
@@ -176,7 +177,7 @@ class TestAugmentation:
         assert augmentation.rotation_range == 30
         assert augmentation.width_shift_range == 0.2
         assert augmentation.height_shift_range == 0.2
-        assert augmentation.zoom_range == 0.25
+        assert augmentation.zoom_range == [0.75, 1.25]
     
     def test_prepare_test_data(self):
         """Test test data preparation."""

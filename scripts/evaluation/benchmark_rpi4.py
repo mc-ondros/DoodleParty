@@ -114,7 +114,7 @@ class RPi4Benchmark:
     
     def _check_hardware(self) -> None:
         """Check and log hardware information."""
-        logger.info("\n=== Hardware Information ===")
+        logger.info("\nHardware Information")
         
         # CPU info
         cpu_count = psutil.cpu_count(logical=False)
@@ -154,7 +154,7 @@ class RPi4Benchmark:
     
     def benchmark_cold_start(self) -> Dict[str, Any]:
         """Benchmark model cold start time."""
-        logger.info("\n=== Cold Start Benchmark ===")
+        logger.info("\nCold Start Benchmark")
         
         # Reload model to simulate cold start
         start_time = time.time()
@@ -178,7 +178,7 @@ class RPi4Benchmark:
     
     def benchmark_single_inference(self, num_iterations: int = 100) -> Dict[str, Any]:
         """Benchmark single image inference latency."""
-        logger.info(f"\n=== Single Inference Benchmark ({num_iterations} iterations) ===")
+        logger.info(f"\nSingle Inference Benchmark ({num_iterations} iterations)")
         
         input_details = self.interpreter.get_input_details()
         output_details = self.interpreter.get_output_details()
@@ -224,7 +224,7 @@ class RPi4Benchmark:
     
     def benchmark_batch_inference(self, batch_sizes: List[int] = [4, 8, 16, 32, 64]) -> Dict[str, Any]:
         """Benchmark batch inference throughput."""
-        logger.info(f"\n=== Batch Inference Benchmark ===")
+        logger.info(f"\nBatch Inference Benchmark")
         
         results = {}
         
@@ -273,7 +273,7 @@ class RPi4Benchmark:
     
     def benchmark_memory(self) -> Dict[str, Any]:
         """Benchmark memory usage."""
-        logger.info("\n=== Memory Usage Benchmark ===")
+        logger.info("\nMemory Usage Benchmark")
         
         baseline_memory = self._get_memory_usage()
         logger.info(f"Baseline memory: {baseline_memory:.2f} MB")
@@ -307,7 +307,7 @@ class RPi4Benchmark:
     
     def benchmark_thermal(self, duration_seconds: int = 60) -> Dict[str, Any]:
         """Benchmark thermal behavior under sustained load."""
-        logger.info(f"\n=== Thermal Benchmark ({duration_seconds}s sustained load) ===")
+        logger.info(f"\nThermal Benchmark ({duration_seconds}s sustained load)")
         
         start_temp = self._get_temperature()
         if start_temp is None:

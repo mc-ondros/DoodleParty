@@ -14,6 +14,7 @@ Exports:
 """
 
 import numpy as np
+# Use legacy ImageDataGenerator from keras for compatibility
 from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 
@@ -84,6 +85,7 @@ def get_augmentation_generator(X_train, y_train, batch_size=32,
         zoom_range=zoom_range,
         fill_mode='constant',
         cval=0.5,  # Use middle gray for padding
+        rescale=None  # No rescaling since we already normalized
     )
     
     # Create batch generator

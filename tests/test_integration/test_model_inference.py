@@ -7,6 +7,10 @@ import pickle
 from pathlib import Path
 from PIL import Image
 from unittest.mock import Mock, patch
+try:
+    import keras
+except ImportError:
+    from tensorflow import keras
 
 from src.core.models import build_custom_cnn
 from src.core.inference import predict_image, evaluate_model, predict_batch
@@ -63,7 +67,6 @@ class TestInferenceWithRealModel:
         img.save(temp_img.name)
         
         # Load model and predict
-        from tensorflow import keras
         model = keras.models.load_model(model_path)
         idx_to_class = {0: 'negative', 1: 'positive'}
         

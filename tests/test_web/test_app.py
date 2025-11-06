@@ -162,43 +162,50 @@ class TestPredict:
         assert 'drawing_statistics' in result
     
     @patch('src.web.app.model', None)
+    @patch('src.web.app.tflite_interpreter', None)
     def test_predict_no_model(self, sample_canvas_data):
         """Test prediction when model is not loaded."""
         result = predict(sample_canvas_data)
-        
+
         assert result['success'] is False
         assert 'error' in result
         assert 'Model not loaded' in result['error']
     
+    @patch('src.web.app.is_tflite', False)
+    @patch('src.web.app.tflite_interpreter', None)
     @patch('src.web.app.model')
     def test_predict_positive_class(self, mock_model, sample_canvas_data):
         """Test prediction for positive class."""
         mock_model.predict = Mock(return_value=np.array([[0.8]]))
-        
+
         result = predict(sample_canvas_data)
-        
+
         assert result['success'] is True
         assert result['verdict'] == 'PENIS'
         assert result['confidence'] >= 0.5
     
+    @patch('src.web.app.is_tflite', False)
+    @patch('src.web.app.tflite_interpreter', None)
     @patch('src.web.app.model')
     def test_predict_negative_class(self, mock_model, sample_canvas_data):
         """Test prediction for negative class."""
         mock_model.predict = Mock(return_value=np.array([[0.3]]))
-        
+
         result = predict(sample_canvas_data)
-        
+
         assert result['success'] is True
         assert result['verdict'] == 'OTHER_SHAPE'
         assert result['confidence'] >= 0.5
     
+    @patch('src.web.app.is_tflite', False)
+    @patch('src.web.app.tflite_interpreter', None)
     @patch('src.web.app.model')
     def test_predict_timing_info(self, mock_model, sample_canvas_data):
         """Test that prediction includes timing information."""
         mock_model.predict = Mock(return_value=np.array([[0.7]]))
-        
+
         result = predict(sample_canvas_data)
-        
+
         assert 'drawing_statistics' in result
         stats = result['drawing_statistics']
         assert 'response_time_ms' in stats
@@ -206,25 +213,29 @@ class TestPredict:
         assert 'inference_time_ms' in stats
         assert stats['response_time_ms'] > 0
     
+    @patch('src.web.app.is_tflite', False)
+    @patch('src.web.app.tflite_interpreter', None)
     @patch('src.web.app.model')
     def test_predict_threshold_boundary(self, mock_model, sample_canvas_data):
         """Test prediction at threshold boundary."""
         # Test exactly at threshold
         mock_model.predict = Mock(return_value=np.array([[0.5]]))
-        
+
         result = predict(sample_canvas_data)
-        
+
         assert result['success'] is True
         # At threshold, should be positive
         assert result['verdict'] == 'PENIS'
     
+    @patch('src.web.app.is_tflite', False)
+    @patch('src.web.app.tflite_interpreter', None)
     @patch('src.web.app.model')
     def test_predict_error_handling(self, mock_model, sample_canvas_data):
         """Test error handling in prediction."""
         mock_model.predict = Mock(side_effect=Exception("Model error"))
-        
+
         result = predict(sample_canvas_data)
-        
+
         assert result['success'] is False
         assert 'error' in result
 
@@ -234,37 +245,78 @@ class TestLoadModelAndMapping:
     
     @patch('src.web.app.keras.models.load_model')
     @patch('src.web.app.Path')
-    def test_load_model_finds_h5_file(self, mock_path, mock_load_model):
+    def test_load_model_finds_h5_file(self, mock_path_class, mock_load_model):
         """Test that model loading finds .h5 files."""
-        # Mock file system
+        # Create mock Path instances
+        mock_h5_file = Mock()
+        mock_h5_file.stat = Mock(return_value=Mock(st_mtime=1000, st_size=1024*1024))
+        mock_h5_file.exists = Mock(return_value=True)
+        
         mock_models_dir = Mock()
+        mock_models_dir.exists = Mock(return_value=True)
         mock_models_dir.glob = Mock(side_effect=[
-            [Mock(stat=Mock(return_value=Mock(st_mtime=1000)))],  # .h5 files
-            []  # .keras files
+            [],  # *_int8.tflite files
+            [],  # *.tflite files
+            [mock_h5_file],  # *.h5 files
+            []  # *.keras files
         ])
-        mock_path.return_value.parent.parent.parent.__truediv__ = Mock(return_value=mock_models_dir)
+        
+        # Mock for "data" / "processed" chain
+        mock_data_processed = Mock()
+        mock_data_processed.exists = Mock(return_value=False)
+        
+        mock_data_dir = Mock()
+        mock_data_dir.__truediv__ = Mock(return_value=mock_data_processed)
+        
+        # Mock Path(__file__).parent.parent.parent
+        mock_root = Mock()
+        mock_root.__truediv__ = Mock(side_effect=lambda x: mock_models_dir if x == "models" else mock_data_dir)
+        
+        mock_file_path = Mock()
+        mock_file_path.parent.parent.parent = mock_root
+        
+        # Configure Path class to return our mock when called
+        mock_path_class.return_value = mock_file_path
         
         mock_model = Mock()
+        mock_model.input_shape = (None, 128, 128, 1)
+        mock_model.output_shape = (None, 1)
+        mock_model.count_params = Mock(return_value=1000)
         mock_load_model.return_value = mock_model
-        
+
         # Should not raise error
-        with patch('builtins.open', create=True):
-            with patch('src.web.app.pickle.load', return_value={'negative': 0, 'positive': 1}):
-                try:
-                    load_model_and_mapping()
-                except FileNotFoundError:
-                    pass  # Expected if mocking is incomplete
+        load_model_and_mapping()
+        
+        # Verify model was loaded
+        assert mock_load_model.called
     
     @patch('src.web.app.keras.models.load_model')
     @patch('src.web.app.Path')
-    def test_load_model_no_files(self, mock_path, mock_load_model):
+    def test_load_model_no_files(self, mock_path_class, mock_load_model):
         """Test error when no model files found."""
-        # Mock empty directory
+        # Create mock Path instances
         mock_models_dir = Mock()
-        mock_models_dir.glob = Mock(return_value=[])
-        mock_path.return_value.parent.parent.parent.__truediv__ = Mock(return_value=mock_models_dir)
+        mock_models_dir.exists = Mock(return_value=True)
+        mock_models_dir.glob = Mock(return_value=[])  # No files
         
-        with pytest.raises(FileNotFoundError, match = 'No model files found'):
+        # Mock for "data" / "processed" chain
+        mock_data_processed = Mock()
+        mock_data_processed.exists = Mock(return_value=True)
+        
+        mock_data_dir = Mock()
+        mock_data_dir.__truediv__ = Mock(return_value=mock_data_processed)
+        
+        # Mock Path(__file__).parent.parent.parent
+        mock_root = Mock()
+        mock_root.__truediv__ = Mock(side_effect=lambda x: mock_models_dir if x == "models" else mock_data_dir)
+        
+        mock_file_path = Mock()
+        mock_file_path.parent.parent.parent = mock_root
+        
+        # Configure Path class to return our mock when called
+        mock_path_class.return_value = mock_file_path
+
+        with pytest.raises(FileNotFoundError, match='No model files found'):
             load_model_and_mapping()
 
 

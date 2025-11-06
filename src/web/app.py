@@ -41,7 +41,8 @@ import base64
 from io import BytesIO
 from PIL import Image, ImageFilter
 import tensorflow as tf
-from tensorflow import keras
+# Use standalone Keras for compatibility
+import keras
 import pickle
 from pathlib import Path
 import time
@@ -105,7 +106,7 @@ def load_model_and_mapping() -> None:
     """
     global model, tflite_interpreter, is_tflite, model_name, idx_to_class
 
-    logger.info("=== Starting model and mapping initialization ===")
+    logger.info("Starting model and mapping initialization")
 
     models_dir = Path(__file__).parent.parent.parent / "models"
     data_dir = Path(__file__).parent.parent.parent / "data" / "processed"
@@ -252,7 +253,7 @@ def load_model_and_mapping() -> None:
 
     logger.info(f"Model '{model_name}' loaded successfully with mapping: {idx_to_class}")
 
-    logger.info("=== Model and mapping initialization complete ===")
+    logger.info("Model and mapping initialization complete")
 
 
 def preprocess_image(image_data: str) -> np.ndarray:
@@ -272,7 +273,7 @@ def preprocess_image(image_data: str) -> np.ndarray:
     Raises:
         ValueError: If image data is invalid or cannot be decoded
     """
-    logger.debug("=== Starting image preprocessing ===")
+    logger.debug("Starting image preprocessing")
     logger.debug(f"Input image_data length: {len(image_data)}")
 
     # Validate input
@@ -364,7 +365,7 @@ def preprocess_image(image_data: str) -> np.ndarray:
     img_array = img_array.reshape(1, 128, 128, 1)
     logger.debug(f"Final output shape: {img_array.shape}")
 
-    logger.debug("=== Image preprocessing complete ===")
+    logger.debug("Image preprocessing complete")
     return img_array
 
 
@@ -392,7 +393,7 @@ def predict(image_data: str) -> Dict[str, Any]:
     Raises:
         Exception: Propagates from preprocessing or inference errors
     """
-    logger.info("=== Starting predict() function ===")
+    logger.info("Starting predict() function")
     logger.debug(f"predict() input: image_data length={len(image_data)}")
 
     try:
@@ -498,7 +499,7 @@ def predict(image_data: str) -> Dict[str, Any]:
 
         logger.debug(f"predict() - Returning result: success={result['success']}, verdict={result['verdict']}")
         logger.debug(f"predict() - Drawing statistics: {result['drawing_statistics']}")
-        logger.info("=== predict() function completed successfully ===")
+        logger.info("predict() function completed successfully")
 
         return result
     except Exception as e:

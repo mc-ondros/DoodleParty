@@ -24,14 +24,21 @@ class TestCustomCNN:
         
         assert isinstance(model, Model)
         assert model.input_shape == (None, 28, 28, 1)
-        assert model.output_shape == (None, 1)
+        # Model is built, check output shape through forward pass
+        dummy_input = np.random.rand(1, 28, 28, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_custom_cnn_custom_input_shape(self):
         """Test custom CNN with different input shape."""
         model = build_custom_cnn(input_shape=(128, 128, 1))
-        
+
         assert model.input_shape == (None, 128, 128, 1)
-        assert model.output_shape == (None, 1)
+        # Model is built, check output shape through forward pass
+        # Use correct input shape that matches the model's input_shape
+        dummy_input = np.random.rand(1, 128, 128, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_custom_cnn_has_required_layers(self):
         """Test that custom CNN has expected layer types."""
@@ -81,10 +88,14 @@ class TestTransferLearningModels:
     def test_build_resnet50_default(self):
         """Test building ResNet50 with default parameters."""
         model, base_model = build_transfer_learning_resnet50()
-        
+
         assert isinstance(model, Model)
         assert isinstance(base_model, Model)
-        assert model.output_shape == (None, 1)
+        # Model is built, check output shape through forward pass
+        import numpy as np
+        dummy_input = np.random.rand(1, 28, 28, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_resnet50_freeze_base(self):
         """Test that base model is frozen when specified."""
@@ -117,7 +128,11 @@ class TestTransferLearningModels:
         
         assert isinstance(model, Model)
         assert isinstance(base_model, Model)
-        assert model.output_shape == (None, 1)
+        # Model is built, check output shape through forward pass
+        import numpy as np
+        dummy_input = np.random.rand(1, 28, 28, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_mobilenetv3_freeze_base(self):
         """Test that MobileNetV3 base is frozen when specified."""
@@ -142,7 +157,11 @@ class TestTransferLearningModels:
         
         assert isinstance(model, Model)
         assert isinstance(base_model, Model)
-        assert model.output_shape == (None, 1)
+        # Model is built, check output shape through forward pass
+        import numpy as np
+        dummy_input = np.random.rand(1, 28, 28, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_efficientnet_freeze_base(self):
         """Test that EfficientNet base is frozen when specified."""
