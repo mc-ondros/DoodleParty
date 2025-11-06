@@ -21,12 +21,12 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 import tensorflow as tf
-import keras
+from tensorflow import keras
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 
-# Import normalization from data pipeline
-from data_pipeline import normalize_image, normalize_batch
+# Import normalization from data augmentation module
+from src.data.augmentation import normalize_image, normalize_batch
 
 # Import region-based detection
 from src.core.patch_extraction import (

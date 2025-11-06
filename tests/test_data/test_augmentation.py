@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-from keras.preprocessing.image import ImageDataGenerator
+from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 from src.data.augmentation import (
     normalize_image,

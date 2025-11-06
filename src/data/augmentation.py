@@ -14,7 +14,7 @@ Exports:
 """
 
 import numpy as np
-from keras.preprocessing.image import ImageDataGenerator
+from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 
 def normalize_image(img):

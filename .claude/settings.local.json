@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Read(//home/diatom/Documents/UNIHACK-PROJECT/**)"
+      "Read(//home/diatom/Documents/UNIHACK-PROJECT/**)",
+      "Bash(tree -L 3 -I '__pycache__|*.pyc|.pytest_cache|.venv|logs|models' /home/diatom/Documents/DoodleHunter)"
     ],
     "deny": [],
     "ask": []

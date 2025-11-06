@@ -72,10 +72,6 @@ from src.core.patch_extraction import (
     SlidingWindowDetector,
     AggregationStrategy
 )
-from src.core.tile_detection import (
-    TileDetector,
-    TileGridConfig
-)
 
 if TYPE_CHECKING:
     from tensorflow.keras import Model
@@ -89,7 +85,6 @@ is_tflite: bool = False
 model_name: str = 'Unknown'
 idx_to_class: Optional[Dict[int, str]] = None
 THRESHOLD: float = 0.5
-tile_detector: Optional[TileDetector] = None
 
 
 def load_model_and_mapping() -> None:
@@ -256,52 +251,7 @@ def load_model_and_mapping() -> None:
         logger.info(f"Using default mapping: {idx_to_class}")
 
     logger.info(f"Model '{model_name}' loaded successfully with mapping: {idx_to_class}")
-    
-    # Initialize tile detector with loaded model
-    global tile_detector
-    try:
-        logger.info("Initializing tile detector...")
-        
-        # Create model wrapper for tile detector
-        if is_tflite:
-            # Wrap TFLite interpreter for tile detector
-            class TFLiteModelWrapper:
-                def __init__(self, interpreter):
-                    self.interpreter = interpreter
-                    self.input_details = interpreter.get_input_details()
-                    self.output_details = interpreter.get_output_details()
-                
-                def predict(self, x: np.ndarray, verbose: int = 0) -> np.ndarray:
-                    """Batch predict for tile detector."""
-                    batch_size = x.shape[0]
-                    results = []
-                    
-                    for i in range(batch_size):
-                        single_input = np.expand_dims(x[i], axis=0).astype(np.float32)
-                        self.interpreter.set_tensor(self.input_details[0]['index'], single_input)
-                        self.interpreter.invoke()
-                        output = self.interpreter.get_tensor(self.output_details[0]['index'])
-                        results.append(output[0])
-                    
-                    return np.array(results)
-            
-            model_wrapper = TFLiteModelWrapper(tflite_interpreter)
-        else:
-            model_wrapper = model
-        
-        # Initialize tile detector with 8x8 grid (64 tiles)
-        tile_config = TileGridConfig(
-            canvas_width=512,
-            canvas_height=512,
-            grid_size=8,  # 8x8 = 64 tiles
-            tile_size=128  # Model input size
-        )
-        tile_detector = TileDetector(model_wrapper, tile_config)
-        logger.info(f"✓ Tile detector initialized with {tile_config.grid_size}x{tile_config.grid_size} grid")
-    except Exception as e:
-        logger.warning(f"Failed to initialize tile detector: {e}")
-        tile_detector = None
-    
+
     logger.info("=== Model and mapping initialization complete ===")
 
 
@@ -560,6 +510,17 @@ def predict(image_data: str) -> Dict[str, Any]:
         }
 
 
+@app.route('/')
+def index() -> str:
+    """
+    Serve the main web interface.
+
+    Returns:
+        HTML content for the drawing canvas interface
+    """
+    logger.debug("index() - Serving web interface")
+    return render_template('index.html')
+
 
 @app.route('/api/predict', methods=['POST'])
 def api_predict() -> Tuple[Union[Dict[str, Any], Any], int]:
@@ -614,154 +575,6 @@ def api_predict() -> Tuple[Union[Dict[str, Any], Any], int]:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/api/predict/tile', methods=['POST'])
-def api_predict_tile() -> Tuple[Union[Dict[str, Any], Any], int]:
-    """
-    REST API endpoint for tile-based detection (optimized for RPi4).
-    
-    Uses fixed tile grid with dirty tracking for efficient incremental updates.
-    Only analyzes tiles that have been modified since last analysis.
-    
-    Expects JSON payload with:
-    - 'image': base64 encoded drawing
-    - 'strokes' (optional): array of stroke data for dirty tracking
-    
-    Returns:
-        Tuple of (response_dict, status_code)
-        - 200: Success with tile-based analysis results
-        - 400: Bad request (missing or invalid image data)
-        - 500: Internal server error
-    """
-    request_id = f"req_{int(time.time() * 1000000)}"
-    logger.info(f"api_predict_tile() - {request_id} - Received POST request to /api/predict/tile")
-    
-    try:
-        # Check if tile detector is available
-        if tile_detector is None:
-            logger.error(f"api_predict_tile() - {request_id} - Tile detector not initialized")
-            return jsonify({
-                'success': False,
-                'error': 'Tile detector not available. Please check server logs.'
-            }), 500
-        
-        # Get JSON payload
-        data = request.get_json()
-        if not data:
-            logger.warning(f"api_predict_tile() - {request_id} - No JSON data provided")
-            return jsonify({'success': False, 'error': 'No image data provided'}), 400
-        
-        # Extract image data
-        image_data = data.get('image')
-        if not image_data:
-            logger.warning(f"api_predict_tile() - {request_id} - Missing 'image' field")
-            return jsonify({'success': False, 'error': 'No image data provided'}), 400
-        
-        logger.info(f"api_predict_tile() - {request_id} - Starting tile-based prediction")
-        start_time = time.time()
-        
-        # Preprocess image
-        image_data_clean = image_data.split(',')[1] if ',' in image_data else image_data
-        image = Image.open(BytesIO(base64.b64decode(image_data_clean)))
-        image = image.convert('L')
-        
-        # Convert to numpy array
-        img_array = np.array(image, dtype=np.uint8)
-        
-        # Invert colors (canvas is black on white, model expects white on black)
-        img_array = 255 - img_array
-        
-        # Apply morphological dilation
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        img_array = cv2.dilate(img_array, kernel, iterations=1)
-        
-        # Normalize
-        img_array = img_array.astype(np.float32) / 255.0
-        
-        # Ensure channel dimension
-        if len(img_array.shape) == 2:
-            img_array = np.expand_dims(img_array, axis=-1)
-        
-        preprocess_time = (time.time() - start_time) * 1000
-        
-        # Mark dirty tiles if stroke data provided
-        strokes = data.get('strokes', [])
-        if strokes:
-            logger.info(f"api_predict_tile() - {request_id} - Processing {len(strokes)} strokes for dirty tracking")
-            for stroke in strokes:
-                if 'points' in stroke:
-                    points = [(p['x'], p['y']) for p in stroke['points']]
-                    tile_detector.mark_dirty_by_stroke(points)
-        else:
-            # No stroke data, mark all tiles as dirty
-            logger.info(f"api_predict_tile() - {request_id} - No stroke data, analyzing full canvas")
-            tile_detector.grid.mark_dirty_by_bbox(0, 0, 512, 512)
-        
-        # Run tile-based analysis
-        result = tile_detector.analyze_canvas(img_array, threshold=THRESHOLD)
-        
-        total_time = (time.time() - start_time) * 1000
-        
-        # Format response
-        if result['success']:
-            is_positive = result['is_positive']
-            verdict = 'PENIS' if is_positive else 'OTHER_SHAPE'
-            verdict_text = ('Drawing looks like a penis! ✓ (Tile-based detection)' if is_positive 
-                          else 'Drawing looks like a common shape (not penis). (Tile-based detection)')
-            
-            response = {
-                'success': True,
-                'verdict': verdict,
-                'verdict_text': verdict_text,
-                'confidence': round(result['confidence'], 4),
-                'raw_probability': round(result['final_prediction'], 4),
-                'threshold': THRESHOLD,
-                'model_info': f'Binary classifier with tile-based detection ({model_name})',
-                'detection_details': {
-                    'num_tiles_analyzed': result['num_tiles_analyzed'],
-                    'total_tiles': result['total_tiles'],
-                    'grid_size': result['grid_size'],
-                    'cached': result.get('cached', False),
-                    'aggregation_strategy': 'tile_max'
-                },
-                'drawing_statistics': {
-                    'response_time_ms': round(total_time, 2),
-                    'preprocess_time_ms': round(preprocess_time, 2),
-                    'inference_time_ms': round(result['inference_time_ms'], 2)
-                }
-            }
-            
-            logger.info(f"api_predict_tile() - {request_id} - Analysis complete: "
-                       f"verdict={verdict}, tiles_analyzed={result['num_tiles_analyzed']}/{result['total_tiles']}, "
-                       f"time={total_time:.2f}ms")
-            
-            return jsonify(response), 200
-        else:
-            logger.error(f"api_predict_tile() - {request_id} - Analysis failed")
-            return jsonify(result), 500
-            
-    except Exception as e:
-        logger.error(f"api_predict_tile() - {request_id} - Exception: {type(e).__name__}: {e}")
-        logger.error(f"api_predict_tile() - {request_id} - Traceback: {traceback.format_exc()}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/tile/reset', methods=['POST'])
-def api_tile_reset() -> Tuple[Union[Dict[str, Any], Any], int]:
-    """Reset tile detector state (clear all cached predictions)."""
-    request_id = f"req_{int(time.time() * 1000000)}"
-    logger.info(f"api_tile_reset() - {request_id} - Received POST request to /api/tile/reset")
-    
-    try:
-        if tile_detector is None:
-            return jsonify({'success': False, 'error': 'Tile detector not available'}), 500
-        
-        tile_detector.reset()
-        logger.info(f"api_tile_reset() - {request_id} - Tile detector reset successfully")
-        
-        return jsonify({'success': True, 'message': 'Tile detector reset'}), 200
-    except Exception as e:
-        logger.error(f"api_tile_reset() - {request_id} - Exception: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/health', methods=['GET'])
@@ -791,7 +604,7 @@ def health() -> Dict[str, Any]:
         'model_name': model_name,
         'model_type': 'TFLite' if is_tflite else 'Keras',
         'threshold': THRESHOLD,
-        'region_detection_available': True
+        'simple_detection': True
     }
 
     logger.info(f"health() - {request_id} - Returning health status: {health_response['status']}")

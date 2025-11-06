@@ -96,14 +96,19 @@
 
                     <!-- Result State -->
                     <div id="resultBox" class="result-box glass-panel hidden">
-                        <div class="result-status">
-                            <div id="statusIcon" class="status-icon"></div>
-                            <h2 id="verdict" class="result-verdict">Verdict</h2>
+                        <div class="card-header">
+                            <h2 class="card-title">Analysis Results</h2>
                         </div>
 
                         <div class="result-metrics">
+                            <!-- Match Result (Full Width) -->
+                            <div class="match-result">
+                                <label class="metric-label">Match Result</label>
+                                <div class="match-verdict" id="matchVerdict">-</div>
+                            </div>
+
                             <!-- Confidence Meter (Full Width) -->
-                            <div class="confidence-full-row">
+                            <div class="confidence-compact">
                                 <label class="metric-label">Confidence</label>
                                 <div class="metric-item-value-large" id="confidence">0%</div>
                                 <div class="confidence-bar">

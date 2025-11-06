@@ -18,8 +18,12 @@ Exports:
 """
 
 import tensorflow as tf
-import keras
+from tensorflow import keras
 from keras import layers, models
+from keras.applications import ResNet50, MobileNetV3Large, EfficientNetB0
+from keras.applications.resnet50 import preprocess_input as resnet50_preprocess
+from keras.applications.mobilenet_v3 import preprocess_input as mobilenet_v3_preprocess
+from keras.applications.efficientnet import preprocess_input as efficientnet_preprocess
 
 
 def build_custom_cnn(num_classes=2, input_shape=(28, 28, 1)):
@@ -76,7 +80,7 @@ def build_transfer_learning_resnet50(num_classes=2, freeze_base=True):
         Compiled Keras model
     """
     # Load pre-trained ResNet50
-    base_model = keras.applications.ResNet50(
+    base_model = ResNet50(
         input_shape=(224, 224, 3),  # ResNet50 expects 224x224 RGB
         include_top=False,  # Remove classification head
         weights='imagenet'
@@ -93,7 +97,7 @@ def build_transfer_learning_resnet50(num_classes=2, freeze_base=True):
         layers.Lambda(lambda x: tf.repeat(x, 3, axis=-1)),  # Grayscale to RGB
         
         # Normalize for ImageNet
-        layers.Lambda(lambda x: keras.applications.resnet50.preprocess_input(x)),
+        layers.Lambda(lambda x: resnet50_preprocess(x)),
         
         # Base model
         base_model,
@@ -133,7 +137,7 @@ def build_transfer_learning_mobilenetv3(num_classes=2, freeze_base=True):
         Compiled Keras model
     """
     # Load pre-trained MobileNetV3
-    base_model = keras.applications.MobileNetV3Large(
+    base_model = MobileNetV3Large(
         input_shape=(224, 224, 3),
         include_top=False,
         weights='imagenet'
@@ -146,7 +150,7 @@ def build_transfer_learning_mobilenetv3(num_classes=2, freeze_base=True):
         # Resize and normalize
         layers.Lambda(lambda x: tf.image.resize(x, (224, 224))),
         layers.Lambda(lambda x: tf.repeat(x, 3, axis=-1)),
-        layers.Lambda(lambda x: keras.applications.mobilenet_v3.preprocess_input(x)),
+        layers.Lambda(lambda x: mobilenet_v3_preprocess(x)),
         
         base_model,
         layers.GlobalAveragePooling2D(),
@@ -176,7 +180,7 @@ def build_transfer_learning_efficientnet(num_classes=2, freeze_base=True):
     Returns:
         Compiled Keras model
     """
-    base_model = keras.applications.EfficientNetB0(
+    base_model = EfficientNetB0(
         input_shape=(224, 224, 3),
         include_top=False,
         weights='imagenet'
@@ -188,7 +192,7 @@ def build_transfer_learning_efficientnet(num_classes=2, freeze_base=True):
     model = models.Sequential([
         layers.Lambda(lambda x: tf.image.resize(x, (224, 224))),
         layers.Lambda(lambda x: tf.repeat(x, 3, axis=-1)),
-        layers.Lambda(lambda x: keras.applications.efficientnet.preprocess_input(x)),
+        layers.Lambda(lambda x: efficientnet_preprocess(x)),
         
         base_model,
         layers.GlobalAveragePooling2D(),

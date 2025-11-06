@@ -7,8 +7,8 @@ at the cost of inference time.
 """
 
 import numpy as np
-from keras.preprocessing.image import ImageDataGenerator
-from data_pipeline import normalize_image
+from keras.src.legacy.preprocessing.image import ImageDataGenerator
+from src.data.augmentation import normalize_image
 
 
 def predict_with_tta(model, image, n_augmentations=10, threshold=0.5):

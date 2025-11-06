@@ -376,17 +376,14 @@ function showError(message) {
 function showResult(data) {
     hideAllResults();
 
-    // Update verdict
-    const verdict = document.getElementById('verdict');
+    // Determine if positive match
     const isPositive = data.verdict === 'PENIS';
-    verdict.textContent = isPositive ? 'Positive Match' : 'Negative Match';
-    
-    // Update result box class for styling
-    resultBox.classList.remove('in-distribution', 'out-of-distribution');
-    if (isPositive) {
-        resultBox.classList.add('in-distribution');
-    } else {
-        resultBox.classList.add('out-of-distribution');
+
+    // Update match verdict
+    const matchVerdictElement = document.getElementById('matchVerdict');
+    if (matchVerdictElement) {
+        matchVerdictElement.textContent = isPositive ? 'Positive Match' : 'Negative Match';
+        matchVerdictElement.className = 'match-verdict ' + (isPositive ? 'match-positive' : 'match-negative');
     }
 
     // Update confidence
@@ -557,6 +554,10 @@ realTimeBtn.addEventListener('click', () => {
         // Clear any pending analysis
         if (realTimeAnalysisTimer) {
             clearTimeout(realTimeAnalysisTimer);
+        }
+    }
+});
+
 // Initialize toggle button states
 autoEraseBtn.classList.add('active');
 realTimeBtn.classList.remove('active');

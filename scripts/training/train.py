@@ -21,14 +21,14 @@ from pathlib import Path
 import pickle
 
 import tensorflow as tf
-import keras
+from tensorflow import keras
 from keras import layers, models
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.preprocessing.image import ImageDataGenerator
+from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 # Import from models.py and data_pipeline.py
-from models import get_model
-from data_pipeline import prepare_test_data
+from src.core.models import get_model
+from src.data.augmentation import prepare_test_data
 
 
 def build_model(num_classes=2, enhanced=False):

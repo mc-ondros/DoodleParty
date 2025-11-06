@@ -45,7 +45,6 @@ except ImportError:
     print("Error: TensorFlow not installed")
     sys.exit(1)
 
-from src.core.tile_detection import TileDetector, TileGridConfig
 
 logging.basicConfig(
     level=logging.INFO,
@@ -67,7 +66,6 @@ class RPi4Benchmark:
         self.model_path = Path(model_path)
         self.num_threads = num_threads
         self.interpreter = None
-        self.tile_detector = None
         self.results = {}
         
         logger.info(f"Initializing benchmark for: {model_path}")
@@ -109,28 +107,6 @@ class RPi4Benchmark:
             logger.info(f"Input dtype: {input_details[0]['dtype']}")
             logger.info(f"Output shape: {output_details[0]['shape']}")
             
-            # Initialize tile detector
-            class TFLiteWrapper:
-                def __init__(self, interpreter):
-                    self.interpreter = interpreter
-                    self.input_details = interpreter.get_input_details()
-                    self.output_details = interpreter.get_output_details()
-                
-                def predict(self, x: np.ndarray, verbose: int = 0) -> np.ndarray:
-                    batch_size = x.shape[0]
-                    results = []
-                    for i in range(batch_size):
-                        single_input = np.expand_dims(x[i], axis=0).astype(np.float32)
-                        self.interpreter.set_tensor(self.input_details[0]['index'], single_input)
-                        self.interpreter.invoke()
-                        output = self.interpreter.get_tensor(self.output_details[0]['index'])
-                        results.append(output[0])
-                    return np.array(results)
-            
-            wrapper = TFLiteWrapper(self.interpreter)
-            tile_config = TileGridConfig(canvas_width=512, canvas_height=512, grid_size=8)
-            self.tile_detector = TileDetector(wrapper, tile_config)
-            logger.info("✓ Tile detector initialized")
             
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
@@ -294,66 +270,6 @@ class RPi4Benchmark:
         self.results['batch_inference'] = results
         return results
     
-    def benchmark_tile_detection(self, num_iterations: int = 20) -> Dict[str, Any]:
-        """Benchmark tile-based detection."""
-        logger.info(f"\n=== Tile-Based Detection Benchmark ({num_iterations} iterations) ===")
-        
-        # Create dummy canvas
-        canvas = np.random.rand(512, 512, 1).astype(np.float32)
-        
-        # Test 1: Full grid (all 64 tiles dirty)
-        logger.info("\nScenario 1: Full grid (64 tiles)")
-        self.tile_detector.reset()
-        self.tile_detector.grid.mark_dirty_by_bbox(0, 0, 512, 512)
-        
-        latencies_full = []
-        for _ in range(num_iterations):
-            self.tile_detector.reset()
-            self.tile_detector.grid.mark_dirty_by_bbox(0, 0, 512, 512)
-            start = time.time()
-            result = self.tile_detector.analyze_canvas(canvas, threshold=0.5)
-            latency = (time.time() - start) * 1000
-            latencies_full.append(latency)
-        
-        # Test 2: Incremental update (4 tiles)
-        logger.info("\nScenario 2: Incremental update (4 tiles)")
-        latencies_incremental = []
-        for _ in range(num_iterations):
-            self.tile_detector.reset()
-            # Mark only 4 tiles as dirty
-            self.tile_detector.grid.mark_dirty_by_bbox(0, 0, 128, 128)
-            start = time.time()
-            result = self.tile_detector.analyze_canvas(canvas, threshold=0.5)
-            latency = (time.time() - start) * 1000
-            latencies_incremental.append(latency)
-        
-        result = {
-            'full_grid': {
-                'mean_ms': round(np.mean(latencies_full), 2),
-                'median_ms': round(np.median(latencies_full), 2),
-                'p95_ms': round(np.percentile(latencies_full, 95), 2),
-                'target_ms': 200,
-                'passed': np.mean(latencies_full) < 200
-            },
-            'incremental_4_tiles': {
-                'mean_ms': round(np.mean(latencies_incremental), 2),
-                'median_ms': round(np.median(latencies_incremental), 2),
-                'p95_ms': round(np.percentile(latencies_incremental, 95), 2),
-                'target_ms': 50,
-                'passed': np.mean(latencies_incremental) < 50
-            }
-        }
-        
-        logger.info(f"\nFull grid (64 tiles):")
-        logger.info(f"  Mean: {result['full_grid']['mean_ms']}ms")
-        logger.info(f"  Target: <200ms - {'PASS' if result['full_grid']['passed'] else 'FAIL'}")
-        
-        logger.info(f"\nIncremental (4 tiles):")
-        logger.info(f"  Mean: {result['incremental_4_tiles']['mean_ms']}ms")
-        logger.info(f"  Target: <50ms - {'PASS' if result['incremental_4_tiles']['passed'] else 'FAIL'}")
-        
-        self.results['tile_detection'] = result
-        return result
     
     def benchmark_memory(self) -> Dict[str, Any]:
         """Benchmark memory usage."""
@@ -451,7 +367,6 @@ class RPi4Benchmark:
         self.benchmark_cold_start()
         self.benchmark_single_inference()
         self.benchmark_batch_inference()
-        self.benchmark_tile_detection()
         self.benchmark_memory()
         self.benchmark_thermal(duration_seconds=30)  # Shorter for quick test
         
@@ -500,8 +415,6 @@ def main():
                        help='Benchmark single inference')
     parser.add_argument('--batch', action='store_true',
                        help='Benchmark batch inference')
-    parser.add_argument('--tile', action='store_true',
-                       help='Benchmark tile detection')
     parser.add_argument('--memory', action='store_true',
                        help='Benchmark memory usage')
     parser.add_argument('--thermal', action='store_true',
@@ -522,15 +435,13 @@ def main():
             benchmark.benchmark_single_inference()
         if args.batch:
             benchmark.benchmark_batch_inference()
-        if args.tile:
-            benchmark.benchmark_tile_detection()
         if args.memory:
             benchmark.benchmark_memory()
         if args.thermal:
             benchmark.benchmark_thermal()
         
         # If no specific benchmark selected, run single inference
-        if not any([args.cold_start, args.single, args.batch, args.tile, args.memory, args.thermal]):
+        if not any([args.cold_start, args.single, args.batch, args.memory, args.thermal]):
             benchmark.benchmark_single_inference()
     
     # Save results

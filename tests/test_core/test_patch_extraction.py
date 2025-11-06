@@ -174,7 +174,7 @@ class TestAggregationStrategies:
             threshold=0.5
         )
         
-        assert confidence == 0.4
+        assert confidence == pytest.approx(0.4)
         assert is_positive is False
     
     def test_aggregation_voting(self):
