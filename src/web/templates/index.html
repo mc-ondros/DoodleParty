@@ -82,10 +82,10 @@
                             <div id="statusIcon" class="status-icon"></div>
                             <h2 id="verdict" class="result-verdict">Verdict</h2>
                         </div>
-                        <p id="verdictText" class="result-description"></p>
                         
                         <div class="result-metrics">
-                            <div class="metric-card glass-panel">
+                            <!-- Confidence Section -->
+                            <div class="confidence-section">
                                 <label class="metric-label">Confidence</label>
                                 <div class="metric-value" id="confidence">0%</div>
                                 <div class="confidence-bar">
@@ -93,14 +93,50 @@
                                 </div>
                             </div>
                             
-                            <div class="metric-details">
-                                <div class="detail-row">
-                                    <span class="detail-label">Raw Probability</span>
-                                    <code id="rawProb" class="detail-value">0.0000</code>
+                            <!-- Metrics Grid -->
+                            <div class="metrics-grid">
+                                <div class="metric-item">
+                                    <label class="metric-item-label">Raw Probability</label>
+                                    <div class="metric-item-value" id="rawProb">0.0000</div>
                                 </div>
-                                <div class="detail-row">
-                                    <span class="detail-label">Threshold</span>
-                                    <code id="thresholdVal" class="detail-value">0.5</code>
+                                <div class="metric-item">
+                                    <label class="metric-item-label">Threshold</label>
+                                    <div class="metric-item-value" id="thresholdVal">0.5</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Detection Details -->
+                            <div id="regionDetails" class="region-section hidden">
+                                <label class="metric-label">Detection Details</label>
+                                <div class="metrics-grid">
+                                    <div class="metric-item">
+                                        <label class="metric-item-label">Patches</label>
+                                        <div class="metric-item-value" id="patchesAnalyzed">0</div>
+                                    </div>
+                                    <div class="metric-item">
+                                        <label class="metric-item-label">Early Stop</label>
+                                        <div class="metric-item-value" id="earlyStopped">No</div>
+                                    </div>
+                                    <div class="metric-item">
+                                        <label class="metric-item-label">Strategy</label>
+                                        <div class="metric-item-value" id="aggregationStrategy">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Info Row -->
+                            <div class="metrics-grid" style="margin-top: 16px;">
+                                <div class="metric-item">
+                                    <label class="metric-item-label">Model</label>
+                                    <div class="metric-item-value metric-item-value-small" id="modelType">-</div>
+                                </div>
+                                <div class="metric-item">
+                                    <label class="metric-item-label">Total Time</label>
+                                    <div class="metric-item-value" id="totalTimeResult">-</div>
+                                </div>
+                                <div class="metric-item">
+                                    <label class="metric-item-label">Canvas Size</label>
+                                    <div class="metric-item-value metric-item-value-small" id="canvasSize">512×512</div>
                                 </div>
                             </div>
                         </div>
@@ -147,11 +183,6 @@
                         <div class="stat-item">
                             <label class="stat-label">Response Time</label>
                             <div class="stat-value" id="responseTime">-</div>
-                        </div>
-                        
-                        <div class="stat-item">
-                            <label class="stat-label">Preprocess Time</label>
-                            <div class="stat-value" id="preprocessTime">-</div>
                         </div>
                         
                         <div class="stat-item">

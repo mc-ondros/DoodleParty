@@ -234,9 +234,6 @@ function showResult(data) {
         resultBox.classList.add('out-of-distribution');
     }
 
-    // Update verdict text
-    document.getElementById('verdictText').textContent = data.verdict_text;
-
     // Update confidence
     const confidencePercent = (data.confidence * 100).toFixed(1);
     document.getElementById('confidence').textContent = confidencePercent + '%';
@@ -252,8 +249,31 @@ function showResult(data) {
     if (data.drawing_statistics) {
         const stats = data.drawing_statistics;
         document.getElementById('responseTime').textContent = stats.response_time_ms + ' ms';
-        document.getElementById('preprocessTime').textContent = stats.preprocess_time_ms + ' ms';
         document.getElementById('inferenceTime').textContent = stats.inference_time_ms + ' ms';
+    }
+
+    // Update region detection details if available
+    const regionDetails = document.getElementById('regionDetails');
+    if (data.detection_details) {
+        const details = data.detection_details;
+        document.getElementById('patchesAnalyzed').textContent = details.num_patches_analyzed;
+        document.getElementById('earlyStopped').textContent = details.early_stopped ? 'Yes' : 'No';
+        document.getElementById('aggregationStrategy').textContent = details.aggregation_strategy;
+        regionDetails.classList.remove('hidden');
+    } else {
+        regionDetails.classList.add('hidden');
+    }
+
+    // Update additional info row
+    if (data.drawing_statistics) {
+        document.getElementById('totalTimeResult').textContent = data.drawing_statistics.response_time_ms.toFixed(0) + 'ms';
+    }
+    
+    if (data.model_info) {
+        const modelMatch = data.model_info.match(/\((.*?)\)/);
+        if (modelMatch) {
+            document.getElementById('modelType').textContent = modelMatch[1];
+        }
     }
 
     // Show result box
@@ -293,8 +313,11 @@ async function makePrediction() {
         // Get canvas as base64 image
         const imageData64 = canvas.toDataURL('image/png');
 
+        // Use multi-scale region-based detection for robustness
+        const endpoint = '/api/predict/region';
+
         // Send to backend
-        const response = await fetch('/api/predict', {
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

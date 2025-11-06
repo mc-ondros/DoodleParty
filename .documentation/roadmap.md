@@ -156,15 +156,16 @@
   - `[ ]` SSL/TLS configuration
   - `[ ]` Environment configuration
 
-- `[x]` **Model Optimization**
+- `[ ]` **Model Optimization (RPi4 Target)**
   - `[x]` Convert to TensorFlow Lite
   - `[x]` Model quantization (INT8)
   - `[x]` Benchmark quantized model performance (target: <20ms per inference)
-  - `[x]` Reduce model size (<5MB for TFLite)
-  - `[x]` Optimize inference speed
-  - `[x]` Knowledge distillation (train smaller student model)
-  - `[x]` Prune unnecessary weights
-  - `[x]` Optimize model architecture for edge devices
+  - `[x]` Reduce model size (<25MB for TFLite)
+  - `[ ]` Knowledge distillation (train smaller student model from teacher)
+  - `[ ]` Model pruning (target 30-50% sparsity)
+  - `[ ]` Architecture simplification for edge deployment
+  - `[ ]` Representative dataset for INT8 calibration
+  - `[ ]` Validate accuracy retention (>88% post-quantization)
 
 - `[x]` **Robustness Improvements**
   - `[x]` Region-based detection (sliding window)
@@ -175,17 +176,30 @@
   - `[x]` Aggregation strategy for patch predictions
   - `[x]` Prevent content dilution attacks
 
-- `[ ]` **Inference Optimization**
-  - `[ ]` Batch inference API (process multiple patches together)
-  - `[ ]` Model caching and warm-up on startup
+- `[ ]` **Inference Optimization (RPi4 ARM)**
+  - `[x]` Batch inference API (process multiple patches together)
+  - `[ ]` TFLite runtime with XNNPACK delegate (ARM NEON SIMD)
+  - `[ ]` Configure 4-thread inference (all RPi4 cores)
+  - `[ ]` Model memory mapping (mmap for faster loading)
+  - `[ ]` Model warm-up on startup
   - `[ ]` TensorFlow graph optimization
-  - `[ ]` ONNX Runtime for faster inference
+  - `[ ]` ONNX Runtime evaluation (alternative to TFLite)
   - `[ ]` Thread pool for parallel preprocessing
   - `[ ]` Async inference pipeline
   - `[ ]` Result caching for identical inputs
 
+- `[ ]` **RPi4 System Optimization**
+  - `[ ]` CPU governor set to 'performance' mode
+  - `[ ]` Active cooling setup (heatsink + fan)
+  - `[ ]` Thermal monitoring and throttling detection
+  - `[ ]` Disable swap or minimize swappiness
+  - `[ ]` Process priority configuration
+  - `[ ]` Minimal OS (Raspberry Pi OS Lite)
+  - `[ ]` Garbage collection tuning
+  - `[ ]` Memory usage profiling (<500MB target)
+
 - `[ ]` **Infrastructure Optimization**
-  - `[ ]` Gunicorn with multiple workers
+  - `[ ]` Gunicorn with multiple workers (limited on RPi4)
   - `[ ]` Load balancing across workers
   - `[ ]` Redis for prediction caching
   - `[ ]` CDN for static assets
@@ -212,15 +226,17 @@
   - `[x]` Model inference tests
   - `[x]` Error handling tests
 
-- `[ ]` **Performance Tests**
-  - `[ ]` Load testing (1000+ requests/sec)
-  - `[ ]` Latency benchmarks (p50, p95, p99)
-  - `[ ]` Single inference latency (<20ms target)
-  - `[ ]` Multi-region inference latency (<200ms target)
-  - `[ ]` Batch inference throughput
-  - `[ ]` Memory usage profiling
-  - `[ ]` Concurrent request handling
-  - `[ ]` GPU utilization metrics
+- `[ ]` **Performance Tests (RPi4 Hardware)**
+  - `[ ]` Single inference latency on RPi4 (<50ms target)
+  - `[ ]` Multi-region inference latency (<200ms for 9-16 patches)
+  - `[ ]` Batch inference throughput (16 patches in ~2x single time)
+  - `[ ]` Memory usage profiling (<500MB target)
+  - `[ ]` Thermal throttling tests (sustained load)
+  - `[ ]` CPU temperature monitoring (<75°C target)
+  - `[ ]` Accuracy validation post-quantization (>88%)
+  - `[ ]` Cold start time (<3s model loading)
+  - `[ ]` Concurrent request handling (limited on RPi4)
+  - `[ ]` Load testing (realistic RPi4 throughput)
 
 ### 3.3 Documentation
 
@@ -290,13 +306,14 @@
 - `[x]` Web interface responsive on mobile
 - `[x]` Hard negative mining improves accuracy
 
-### Phase 3 (Planned)
-- `[ ]` Model accuracy >95% on test set
-- `[ ]` Single inference <20ms (INT8 quantized TFLite)
-- `[ ]` Multi-region inference <200ms (9-16 patches)
-- `[ ]` Model size <5MB (TFLite)
+### Phase 3 (Planned - RPi4 Deployment)
+- `[ ]` Model accuracy >88% post-quantization (RPi4)
+- `[ ]` Single inference <50ms on RPi4 (INT8 TFLite + XNNPACK)
+- `[ ]` Multi-region inference <200ms (9-16 patches batched)
+- `[ ]` Model size <5MB (TFLite INT8)
+- `[ ]` Memory usage <500MB on RPi4
 - `[ ]` Robust against content dilution attacks
-- `[ ]` Production deployment successful
+- `[ ]` RPi4 deployment successful with active cooling
 - `[ ]` Comprehensive test coverage (>80%)
 - `[ ]` Complete user and developer documentation
 
@@ -313,48 +330,9 @@
 - Data quality improvements completed
 
 **Phase 3:** Planned
-- Production deployment
-- Comprehensive testing
+- RPi4 deployment optimization
+- Comprehensive testing on target hardware
 - Full documentation
-
-## Performance Optimization Strategy
-
-### Multi-Stage Optimization Approach
-
-**Stage 1: Model-Level (Target: 78ms → 20ms)**
-1. **INT8 Quantization** - 2-4x speedup, minimal accuracy loss
-2. **TensorFlow Lite** - Optimized runtime, reduced overhead
-3. **Model Pruning** - Remove redundant weights
-4. **Knowledge Distillation** - Train smaller student model
-
-**Stage 2: Inference-Level (Target: Enable batch processing)**
-1. **Batch Inference** - Process all patches in single forward pass
-2. **Graph Optimization** - TF graph compilation and optimization
-3. **ONNX Runtime** - Alternative runtime for faster inference
-4. **GPU Acceleration** - Leverage GPU for batch processing
-
-**Stage 3: System-Level (Target: <200ms end-to-end)**
-1. **Adaptive Patch Selection** - Skip empty/white regions
-2. **Early Stopping** - Stop on first positive detection
-3. **Parallel Preprocessing** - Multi-threaded patch extraction
-4. **Async Pipeline** - Non-blocking inference queue
-
-**Stage 4: Infrastructure-Level (Target: High throughput)**
-1. **Multi-Worker Deployment** - Gunicorn with 4-8 workers
-2. **Load Balancing** - Distribute requests across workers
-3. **Result Caching** - Redis for identical drawings
-4. **Progressive Results** - WebSocket for real-time feedback
-
-### Expected Performance Gains
-
-| Optimization | Current | Target | Speedup |
-|--------------|---------|--------|---------|
-| Single inference | 78-85ms | 15-20ms | 4-5x |
-| 9-patch (naive) | 700-765ms | 180ms | 4x |
-| 9-patch (batch) | 700-765ms | 60-80ms | 9-10x |
-| 16-patch (batch) | 1.2-1.4s | 100-120ms | 12x |
-
-**Key Insight:** Batch inference is critical - processing 16 patches together should take only ~2x single inference time, not 16x.
 
 ## Dependencies
 

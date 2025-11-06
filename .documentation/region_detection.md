@@ -30,27 +30,19 @@ Traditional single-image classification can be fooled by content dilution:
 
 ```mermaid
 graph TB
-    subgraph "Content Dilution Attack"
-        A[Canvas Image 512x512]
-        B[Small Suspicious Region<br/>5% of image]
-        C[Large Innocent Content<br/>95% of image]
-        A --> B
-        A --> C
-    end
+    Input[Canvas Image<br/>512×512] --> Suspicious[Suspicious Region<br/>5% of canvas]
+    Input --> Innocent[Innocent Content<br/>95% of canvas]
     
-    subgraph "Classification Results"
-        D[Single-Image<br/>Classification]
-        E[Region-Based<br/>Detection]
-        A --> D
-        A --> E
-        D --> F[NEGATIVE<br/>diluted confidence]
-        E --> G[POSITIVE<br/>detects suspicious patch]
-    end
+    Input --> SingleImage[Single-Image<br/>Classification]
+    Input --> RegionBased[Region-Based<br/>Detection]
     
-    style B fill:#ff9999
-    style C fill:#99ff99
-    style F fill:#ff9999
-    style G fill:#99ff99
+    SingleImage --> Negative[Result: NEGATIVE<br/>Confidence diluted by innocent content]
+    RegionBased --> Positive[Result: POSITIVE<br/>Detects suspicious patch independently]
+    
+    style Suspicious fill:#ffcccc
+    style Innocent fill:#ccffcc
+    style Negative fill:#ffcccc
+    style Positive fill:#ccffcc
 ```
 
 ### Why Patch-Based Detection?

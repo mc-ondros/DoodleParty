@@ -28,12 +28,9 @@ DoodleHunter/
 │       ├── templates/
 │       └── static/
 ├── scripts/               # Executable scripts
-│   ├── train.py
-│   ├── evaluate.py
-│   ├── ensemble_model.py
-│   ├── optimize_threshold.py
-│   ├── test_time_augmentation.py
-│   ├── generate_hard_negatives.py
+│   ├── training/          # Training scripts
+│   ├── evaluation/        # Evaluation & testing scripts
+│   ├── demos/             # Demo & utility scripts
 │   ├── data_processing/   # Data download & processing
 │   ├── visualization/     # Visualization scripts
 │   └── convert/           # Model conversion scripts
@@ -59,7 +56,8 @@ DoodleHunter/
 │   ├── roadmap.md
 │   ├── structure.md
 │   ├── troubleshooting.md
-│   └── model_improvements.md
+│   ├── model_improvements.md
+│   └── region_detection.md
 ├── .github/               # GitHub workflows
 │   └── workflows/
 ├── pyproject.toml         # Modern Python packaging
@@ -109,27 +107,42 @@ DoodleHunter/
 
 ### Scripts Directory
 
-Executable scripts that use the package:
+Executable scripts organized by purpose:
+
+**Training Scripts (`scripts/training/`):**
 - `train.py` - CLI for training models
-- `evaluate.py` - CLI for evaluation
+- `train_ensemble.py` - Train ensemble models
 - `ensemble_model.py` - Ensemble model creation
+- `generate_hard_negatives.py` - Hard negative mining
+- `generate_negatives.py` - Generate negative samples
+
+**Evaluation Scripts (`scripts/evaluation/`):**
+- `evaluate.py` - CLI for evaluation
 - `optimize_threshold.py` - Threshold optimization
 - `test_time_augmentation.py` - TTA implementation
-- `generate_hard_negatives.py` - Hard negative mining
-- `test_region_detection.py` - Test region-based detection robustness
-- `benchmark_performance.py` - Comprehensive performance benchmarking
-- `profile_inference.py` - Profile inference pipeline
-- `data_processing/` - Data download and processing scripts
-- `visualization/` - Visualization utilities
-- `convert/` - Model conversion tools
+- `test_model_improvements.py` - Test model improvements
+
+**Demo Scripts (`scripts/demos/`):**
+- `demo_region_detection.py` - Demo region-based detection
+- `run_interface.sh` - Start web interface
+- `test_model.sh` - Quick model testing
+- `train_max_accuracy.sh` - Train for maximum accuracy
 
 **Data Processing Scripts (`scripts/data_processing/`):**
 - `download_quickdraw_ndjson.py` - Download QuickDraw NDJSON files
+- `download_quickdraw.py` - Download QuickDraw data
+- `download_quickdraw_gcs.py` - Download from Google Cloud Storage
+- `download_quickdraw_npy.py` - Download NumPy format data
 - `process_all_data_128x128.py` - Process data to 128x128 format
 - `fix_data_quality.py` - Data quality improvements
+- `regenerate_data_simple_norm.py` - Regenerate with simple normalization
+- `regenerate_training_data.py` - Regenerate training data
+- `reprocess_penis_ndjson.py` - Reprocess specific category
 
 **Visualization Scripts (`scripts/visualization/`):**
 - `visualize_training_batches.py` - Visualize training data
+- `visualize_training_data.py` - Visualize training dataset
+- `visualize_fixed_data.py` - Visualize fixed data
 - `diagnose_data_issues.py` - Data quality diagnostics
 
 **Conversion Scripts (`scripts/convert/`):**
@@ -166,6 +179,7 @@ Currently `.documentation/` (hidden directory):
 - `structure.md` - This file
 - `troubleshooting.md` - Common issues
 - `model_improvements.md` - Model enhancement docs
+- `region_detection.md` - Region-based detection guide
 
 ## Benefits of Current Structure
 

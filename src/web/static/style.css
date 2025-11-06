@@ -98,7 +98,7 @@ body {
 /* Main Grid Layout */
 .main-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.5fr 1fr;
     gap: 24px;
     padding: 0;
 }
@@ -373,7 +373,7 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 24px;
 }
 
 .status-icon {
@@ -420,22 +420,17 @@ body {
     color: #ef4444;
 }
 
-.result-description {
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin: 0 0 20px 0;
-}
-
 /* Result Metrics */
 .result-metrics {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
 }
 
-.metric-card {
-    padding: 16px;
+.confidence-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .metric-label {
@@ -445,14 +440,13 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     display: block;
-    margin-bottom: 8px;
 }
 
 .metric-value {
     font-size: 32px;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 12px;
+    line-height: 1;
 }
 
 .confidence-bar {
@@ -461,6 +455,7 @@ body {
     background: rgba(0, 0, 0, 0.1);
     border-radius: 4px;
     overflow: hidden;
+    margin-top: 4px;
 }
 
 .confidence-fill {
@@ -470,38 +465,44 @@ body {
     border-radius: 4px;
 }
 
-.metric-details {
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.metric-item {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.detail-row:last-child {
-    border-bottom: none;
-}
-
-.detail-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-.detail-value {
-    background: rgba(255, 255, 255, 0.3);
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-family: 'Courier New', monospace;
-    color: var(--text-primary);
+.metric-item-label {
+    font-size: 11px;
     font-weight: 600;
-    font-size: 13px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-item-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.metric-item-value-small {
+    font-size: 18px !important;
+}
+
+.region-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Loading Box */
