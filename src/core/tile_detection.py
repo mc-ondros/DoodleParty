@@ -316,7 +316,7 @@ class TileDetector:
         self,
         image: np.ndarray,
         coord: TileCoordinate,
-        target_size: Tuple[int, int] = (28, 28)
+        target_size: Tuple[int, int] = (128, 128)
     ) -> np.ndarray:
         """
         Extract and preprocess a tile from the image.
@@ -338,14 +338,25 @@ class TileDetector:
         else:
             tile = image[y:y+h, x:x+w]
         
+        # Validate tile is not empty before resizing
+        if tile.size == 0 or h == 0 or w == 0:
+            # Return empty tile filled with zeros
+            tile = np.zeros((target_size[1], target_size[0]), dtype=np.float32)
+            tile = np.expand_dims(tile, axis=-1)
+            return tile
+        
         # Pad if necessary (for edge tiles)
         if w < self.grid.tile_size or h < self.grid.tile_size:
             padded = np.zeros((self.grid.tile_size, self.grid.tile_size), dtype=tile.dtype)
             padded[:h, :w] = tile
             tile = padded
         
-        # Resize to target size
-        tile = cv2.resize(tile, target_size, interpolation=cv2.INTER_AREA)
+        # Resize to target size (only if tile is valid)
+        if tile.shape[0] > 0 and tile.shape[1] > 0:
+            tile = cv2.resize(tile, target_size, interpolation=cv2.INTER_AREA)
+        else:
+            # Fallback to zeros if still invalid
+            tile = np.zeros((target_size[1], target_size[0]), dtype=np.uint8)
         
         # Normalize to [0, 1]
         tile = tile.astype(np.float32) / 255.0

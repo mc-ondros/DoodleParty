@@ -9,6 +9,15 @@ const sizeDisplay = document.getElementById('sizeDisplay');
 // Toggle Buttons
 const autoEraseBtn = document.getElementById('autoEraseBtn');
 const realTimeBtn = document.getElementById('realTimeBtn');
+const visualDebugBtn = document.getElementById('visualDebugBtn');
+
+// Content Removal Elements
+const removalControls = document.getElementById('removalControls');
+const highlightBtn = document.getElementById('highlightBtn');
+const removeBtn = document.getElementById('removeBtn');
+const removalStrategy = document.getElementById('removalStrategy');
+const removalStatus = document.getElementById('removalStatus');
+const falsePositiveBtn = document.getElementById('falsePositiveBtn');
 
 // Result Elements
 const emptyState = document.getElementById('emptyState');
@@ -29,6 +38,16 @@ const REALTIME_DEBOUNCE_MS = 500;  // Wait 500ms after last stroke before analyz
 // Toggle States
 let autoEraseEnabled = true;
 let realTimeEnabled = false;
+let visualDebugEnabled = false;
+
+// Content Removal State
+let lastDetectionResult = null;
+let lastDetectionMethod = 'simple';
+let lastImageData = null;
+
+// Early detection settings
+const EARLY_DETECTION_STROKE_COUNT = 5;  // Analyze after 5 strokes
+let earlyDetectionEnabled = true;
 
 // Statistics tracking
 let strokeCount = 0;
@@ -54,6 +73,12 @@ function safeSetTextContent(id, text) {
 function scheduleRealTimeAnalysis() {
     // Only schedule if real-time mode is enabled
     if (!realTimeEnabled) return;
+    
+    // Check if canvas has content before scheduling
+    if (strokeCount === 0) {
+        console.log('Real-time analysis skipped - canvas is empty');
+        return;
+    }
     
     // Clear any existing timer
     if (realTimeAnalysisTimer) {
@@ -307,6 +332,17 @@ function stopDrawing() {
         // Update statistics after stroke is complete
         updateStatistics();
 
+        // Redraw tile grid if visual debug is enabled
+        if (visualDebugEnabled) {
+            drawTileGrid();
+        }
+
+        // Early detection: analyze after first few strokes
+        if (earlyDetectionEnabled && strokeCount === EARLY_DETECTION_STROKE_COUNT && !realTimeEnabled) {
+            console.log(`Early detection triggered after ${EARLY_DETECTION_STROKE_COUNT} strokes`);
+            makePrediction();
+        }
+
         // Schedule real-time analysis if enabled
         scheduleRealTimeAnalysis();
     }
@@ -376,6 +412,9 @@ function showError(message) {
 function showResult(data) {
     hideAllResults();
 
+    // Store detection results for content removal
+    lastDetectionResult = data;
+
     // Determine if positive match
     const isPositive = data.verdict === 'PENIS';
 
@@ -408,16 +447,15 @@ function showResult(data) {
     const regionDetails = document.getElementById('regionDetails');
     if (data.detection_details) {
         const details = data.detection_details;
-        safeSetTextContent('patchesAnalyzed', details.num_patches_analyzed);
+        safeSetTextContent('patchesAnalyzed', details.num_patches_analyzed || details.num_contours_analyzed || details.num_tiles_analyzed || 0);
         safeSetTextContent('earlyStopped', details.early_stopped ? 'Yes' : 'No');
-        safeSetTextContent('aggregationStrategy', details.aggregation_strategy);
+        safeSetTextContent('aggregationStrategy', details.aggregation_strategy || details.retrieval_mode || 'N/A');
         regionDetails.classList.remove('hidden');
     } else {
         regionDetails.classList.add('hidden');
     }
 
     // Update additional info row
-    // Note: Total Time removed from UI, only show model info now
     if (data.model_info) {
         const modelMatch = data.model_info.match(/\((.*?)\)/);
         if (modelMatch) {
@@ -427,6 +465,21 @@ function showResult(data) {
 
     // Show result box
     resultBox.classList.remove('hidden');
+
+    // Show/hide content removal controls based on detection
+    if (isPositive && !autoEraseEnabled) {
+        removalControls.classList.remove('hidden');
+        removalStatus.textContent = 'Offensive content detected. Use controls to remove.';
+        removalStatus.style.color = '#ef4444';
+    } else {
+        removalControls.classList.add('hidden');
+    }
+
+    // Visual debug: show shape bounding boxes if using shape detection
+    if (visualDebugEnabled && data.detection_details && data.detection_details.shape_predictions) {
+        console.log('Visual debug: highlighting detected shapes');
+        highlightDetectedShapes(data.detection_details.shape_predictions);
+    }
 
     // Handle auto-erasing of inappropriate content (if toggle is enabled)
     if (autoEraseEnabled && isPositive) {
@@ -490,15 +543,25 @@ async function makePrediction() {
     try {
         // Get canvas as base64 image
         const imageData64 = canvas.toDataURL('image/png');
+        
+        // Store image data for content removal
+        lastImageData = imageData64;
 
-        // Always use simple detection endpoint
-        const endpoint = '/api/predict';
-        const detectionMode = 'simple';
+        // Use shape detection if visual debug enabled, otherwise simple detection
+        const endpoint = visualDebugEnabled ? '/api/predict/shape' : '/api/predict';
+        lastDetectionMethod = visualDebugEnabled ? 'shape' : 'simple';
 
         // Prepare request body
         const requestBody = {
             image: imageData64
         };
+        
+        // Add shape-specific parameters if using shape detection
+        if (visualDebugEnabled) {
+            requestBody.min_shape_area = 100;
+            requestBody.stroke_history = strokeHistory;  // Send stroke coordinates
+            console.log(`Using shape-based detection with ${strokeHistory.length} strokes`);
+        }
 
         // Send to backend
         const response = await fetch(endpoint, {
@@ -558,9 +621,162 @@ realTimeBtn.addEventListener('click', () => {
     }
 });
 
+visualDebugBtn.addEventListener('click', () => {
+    visualDebugEnabled = !visualDebugEnabled;
+    visualDebugBtn.classList.toggle('active', visualDebugEnabled);
+    
+    if (visualDebugEnabled) {
+        console.log('Visual debug enabled - tile grid overlay active');
+        // Draw grid immediately
+        drawTileGrid();
+    } else {
+        console.log('Visual debug disabled');
+        // Redraw canvas without grid
+        // Note: Grid will be cleared on next draw or clear
+    }
+});
+
+// Visual Debug Functions
+function drawTileGrid() {
+    if (!visualDebugEnabled) return;
+    
+    const tileSize = 64;  // Default tile size
+    const cols = Math.ceil(canvas.width / tileSize);
+    const rows = Math.ceil(canvas.height / tileSize);
+    
+    // Save current context state
+    ctx.save();
+    
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';  // Blue
+    ctx.lineWidth = 1;
+    
+    // Vertical lines
+    for (let col = 0; col <= cols; col++) {
+        const x = col * tileSize;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    
+    // Horizontal lines
+    for (let row = 0; row <= rows; row++) {
+        const y = row * tileSize;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    
+    // Draw tile coordinates
+    ctx.font = '10px monospace';
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const x = col * tileSize + 2;
+            const y = row * tileSize + 2;
+            ctx.fillText(`${row},${col}`, x, y);
+        }
+    }
+    
+    // Restore context state
+    ctx.restore();
+}
+
+function highlightAnalyzedTiles(tileData) {
+    if (!visualDebugEnabled || !tileData) return;
+    
+    ctx.save();
+    
+    for (const tile of tileData) {
+        const { x, y, width, height, is_positive, confidence } = tile;
+        
+        // Color based on prediction
+        if (is_positive) {
+            // Red for positive detections
+            ctx.fillStyle = `rgba(239, 68, 68, ${confidence * 0.3})`;
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+        } else {
+            // Green for negative
+            ctx.fillStyle = `rgba(16, 185, 129, ${(1 - confidence) * 0.2})`;
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.5)';
+        }
+        
+        ctx.lineWidth = 2;
+        
+        // Fill tile
+        ctx.fillRect(x, y, width, height);
+        
+        // Draw border
+        ctx.strokeRect(x, y, width, height);
+        
+        // Draw confidence
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = is_positive ? '#dc2626' : '#059669';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            `${(confidence * 100).toFixed(0)}%`,
+            x + width / 2,
+            y + height / 2
+        );
+    }
+    
+    ctx.restore();
+}
+
+function highlightDetectedShapes(shapeData) {
+    if (!visualDebugEnabled || !shapeData) return;
+    
+    ctx.save();
+    
+    for (const shape of shapeData) {
+        const { x, y, width, height, is_positive, confidence, shape_id } = shape;
+        
+        // Color based on prediction
+        if (is_positive) {
+            // Red for positive detections
+            ctx.fillStyle = `rgba(239, 68, 68, ${confidence * 0.2})`;
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
+        } else {
+            // Green for negative
+            ctx.fillStyle = `rgba(16, 185, 129, ${(1 - confidence) * 0.15})`;
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
+        }
+        
+        ctx.lineWidth = 3;
+        
+        // Fill shape bounding box
+        ctx.fillRect(x, y, width, height);
+        
+        // Draw border
+        ctx.strokeRect(x, y, width, height);
+        
+        // Draw shape ID and confidence
+        ctx.font = 'bold 14px monospace';
+        ctx.fillStyle = is_positive ? '#dc2626' : '#059669';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        const label = `#${shape_id}: ${(confidence * 100).toFixed(0)}%`;
+        ctx.fillText(
+            label,
+            x + width / 2,
+            y + height / 2
+        );
+    }
+    
+    ctx.restore();
+}
+
 // Initialize toggle button states
 autoEraseBtn.classList.add('active');
 realTimeBtn.classList.remove('active');
+visualDebugBtn.classList.remove('active');
 
 // Check server health on load
 window.addEventListener('load', async () => {
@@ -585,3 +801,169 @@ document.addEventListener('keypress', (e) => {
         makePrediction();
     }
 });
+
+// Content Removal Functions
+async function highlightFlaggedRegions() {
+    if (!lastDetectionResult || !lastImageData) {
+        removalStatus.textContent = 'No detection results available. Run analysis first.';
+        removalStatus.style.color = '#ef4444';
+        return;
+    }
+
+    if (lastDetectionResult.verdict !== 'PENIS') {
+        removalStatus.textContent = 'No offensive content detected.';
+        removalStatus.style.color = '#10b981';
+        return;
+    }
+
+    highlightBtn.disabled = true;
+    removalStatus.textContent = 'Highlighting regions...';
+    removalStatus.style.color = '#3b82f6';
+
+    try {
+        const response = await fetch('/api/content/highlight', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                image: lastImageData,
+                detection_method: lastDetectionMethod,
+                detection_results: lastDetectionResult.detection_details || {}
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Display highlighted image on canvas
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                removalStatus.textContent = `${result.num_regions_highlighted} region(s) highlighted`;
+                removalStatus.style.color = '#f59e0b';
+            };
+            img.src = result.highlighted_image;
+        } else {
+            throw new Error(result.error || 'Failed to highlight regions');
+        }
+    } catch (error) {
+        console.error('Error highlighting regions:', error);
+        removalStatus.textContent = 'Error: ' + error.message;
+        removalStatus.style.color = '#ef4444';
+    } finally {
+        highlightBtn.disabled = false;
+    }
+}
+
+async function removeContent() {
+    if (!lastDetectionResult || !lastImageData) {
+        removalStatus.textContent = 'No detection results available. Run analysis first.';
+        removalStatus.style.color = '#ef4444';
+        return;
+    }
+
+    if (lastDetectionResult.verdict !== 'PENIS') {
+        removalStatus.textContent = 'No offensive content detected.';
+        removalStatus.style.color = '#10b981';
+        return;
+    }
+
+    const strategy = removalStrategy.value;
+    removeBtn.disabled = true;
+    removalStatus.textContent = `Removing content using ${strategy}...`;
+    removalStatus.style.color = '#3b82f6';
+
+    try {
+        const response = await fetch('/api/content/remove', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                image: lastImageData,
+                detection_method: lastDetectionMethod,
+                detection_results: lastDetectionResult.detection_details || {},
+                strategy: strategy
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Display modified image on canvas
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                removalStatus.textContent = `${result.regions_removed} region(s) removed using ${result.strategy_used}`;
+                removalStatus.style.color = '#10b981';
+                
+                // Hide removal controls after successful removal
+                setTimeout(() => {
+                    removalControls.classList.add('hidden');
+                    lastDetectionResult = null;
+                }, 2000);
+            };
+            img.src = result.modified_image;
+        } else {
+            throw new Error(result.error || 'Failed to remove content');
+        }
+    } catch (error) {
+        console.error('Error removing content:', error);
+        removalStatus.textContent = 'Error: ' + error.message;
+        removalStatus.style.color = '#ef4444';
+    } finally {
+        removeBtn.disabled = false;
+    }
+}
+
+// False positive reporting
+async function reportFalsePositive() {
+    if (!lastDetectionResult || !lastImageData) {
+        removalStatus.textContent = 'No detection results available.';
+        removalStatus.style.color = '#ef4444';
+        return;
+    }
+
+    falsePositiveBtn.disabled = true;
+    removalStatus.textContent = 'Reporting false positive...';
+    removalStatus.style.color = '#3b82f6';
+
+    try {
+        // In a real implementation, this would send data to a server
+        // For now, we'll just log it and provide feedback
+        console.log('False positive reported:', {
+            confidence: lastDetectionResult.confidence,
+            detection_method: lastDetectionMethod,
+            timestamp: new Date().toISOString()
+        });
+
+        removalStatus.textContent = 'Thank you! False positive reported. This helps improve the model.';
+        removalStatus.style.color = '#10b981';
+
+        // Hide removal controls after reporting
+        setTimeout(() => {
+            removalControls.classList.add('hidden');
+            lastDetectionResult = null;
+        }, 3000);
+    } catch (error) {
+        console.error('Error reporting false positive:', error);
+        removalStatus.textContent = 'Error reporting false positive';
+        removalStatus.style.color = '#ef4444';
+    } finally {
+        falsePositiveBtn.disabled = false;
+    }
+}
+
+// Event listeners for content removal
+highlightBtn.addEventListener('click', highlightFlaggedRegions);
+removeBtn.addEventListener('click', removeContent);
+falsePositiveBtn.addEventListener('click', reportFalsePositive);

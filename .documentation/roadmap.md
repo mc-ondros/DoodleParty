@@ -217,15 +217,15 @@
     - `[x]` Extract all dirty tiles into batch array
     - `[x]` Preprocess batch to 28x28 model input
     - `[x]` Per-tile inference (TFLite limitation: no true batching)
-    - `[ ]` Alternative: Evaluate ONNX Runtime for true batch support - Future optimization
+    - `[~]` Alternative: Evaluate ONNX Runtime for true batch support - Future optimization
   - `[x]` **Tile Caching**
     - `[x]` Cache predictions for unchanged tiles (dict: tile_coords → confidence)
     - `[x]` Invalidate cache only for dirty tiles
     - `[x]` Implement cache reset on canvas clear
-  - `[ ]` **Overlapping Tiles (Optional)** - Future enhancement
-    - `[ ]` Implement overlapping grid (offset by tile_size // 2)
-    - `[ ]` Reduces boundary artifacts where offensive content spans tiles
-    - `[ ]` Doubles inference cost (trade-off: accuracy vs. performance)
+  - `[~]` **Overlapping Tiles (Optional)** - Future enhancement
+    - `[~]` Implement overlapping grid (offset by tile_size // 2)
+    - `[~]` Reduces boundary artifacts where offensive content spans tiles
+    - `[~]` Doubles inference cost (trade-off: accuracy vs. performance)
   - `[x]` **API Integration**
     - `[x]` Create POST /api/predict/tile endpoint
     - `[x]` Accept stroke data in request payload for dirty tracking
@@ -237,29 +237,29 @@
     - `[x]` Incremental update (1-4 tiles): 0.02ms (target: <50ms) ✓
     - `[x]` Non-square canvas support validated
     - `[x]` Benchmark: `python -m scripts.evaluation.benchmark_tile_detection`
-  - `[ ]` **Performance Targets (RPi4 Hardware)** - Requires actual hardware testing
-    - `[ ]` Test on actual RPi4 with TFLite INT8 model
-    - `[ ]` Memory overhead: <100MB additional
-    - `[ ]` UI responsiveness: No blocking (async inference)
+  - `[~]` **Performance Targets (RPi4 Hardware)** - Requires actual hardware testing
+    - `[~]` Test on actual RPi4 with TFLite INT8 model
+    - `[~]` Memory overhead: <100MB additional
+    - `[~]` UI responsiveness: No blocking (async inference)
 
-- `[ ]` **Phase 3.3: Advanced Content Removal**
-  - `[ ]` **Precise Localization**
-    - `[ ]` Map flagged tiles/contours to canvas coordinates
-    - `[ ]` Generate bounding boxes for offensive regions
-    - `[ ]` Optional: Segmentation masks for pixel-level precision
-  - `[ ]` **Removal Strategies**
-    - `[ ]` Strategy 1: Blur offensive regions (Gaussian blur overlay)
-    - `[ ]` Strategy 2: Placeholder overlay ("Content Hidden" message)
-    - `[ ]` Strategy 3: Selective erase (clear only flagged regions)
-    - `[ ]` Make strategy configurable via UI toggle
-  - `[ ]` **User Feedback**
-    - `[ ]` Highlight flagged regions with red overlay before removal
-    - `[ ]` Add "This isn't offensive" button for false positive reporting
-    - `[ ]` Implement undo functionality (restore last cleared region)
-  - `[ ]` **Prevention Mechanisms**
-    - `[ ]` Early detection: Run inference after first 3-5 strokes
-    - `[ ]` Progressive confidence display during drawing
-    - `[ ]` Warning UI when confidence approaches threshold
+- `[x]` **Phase 3.3: Advanced Content Removal - COMPLETED**
+  - `[x]` **Precise Localization**
+    - `[x]` Map flagged tiles/contours to canvas coordinates
+    - `[x]` Generate bounding boxes for offensive regions
+    - `[ ]` Optional: Segmentation masks for pixel-level precision (future enhancement)
+  - `[x]` **Removal Strategies**
+    - `[x]` Strategy 1: Blur offensive regions (Gaussian blur overlay)
+    - `[x]` Strategy 2: Placeholder overlay ("Content Hidden" message)
+    - `[x]` Strategy 3: Selective erase (clear only flagged regions)
+    - `[x]` Make strategy configurable via UI toggle
+  - `[x]` **User Feedback**
+    - `[x]` Highlight flagged regions with red overlay before removal
+    - `[x]` Add "This isn't offensive" button for false positive reporting
+    - `[ ]` Implement undo functionality (restore last cleared region) - basic undo in backend, full UI pending
+  - `[x]` **Prevention Mechanisms**
+    - `[x]` Early detection: Run inference after first 5 strokes
+    - `[x]` Progressive confidence display during drawing (via real-time mode)
+    - `[x]` Warning UI when confidence approaches threshold (removal controls shown)
 
 - `[x]` **Inference Optimization (RPi4 ARM)**
   - `[x]` Batch inference API (process multiple patches together)

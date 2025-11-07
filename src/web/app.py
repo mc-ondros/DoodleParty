@@ -81,6 +81,13 @@ from src.core.tile_detection import (
     TileDetector,
     TileSize
 )
+from src.core.content_removal import (
+    ContentRemover,
+    RemovalStrategy
+)
+from src.core.shape_detection import (
+    ShapeDetector
+)
 
 if TYPE_CHECKING:
     from tensorflow.keras import Model
@@ -142,21 +149,22 @@ def load_model_and_mapping() -> None:
     model_path: Optional[Path] = None
 
     # Select best model based on priority
-    if tflite_int8_files:
-        model_path = max(tflite_int8_files, key=lambda p: p.stat().st_mtime)
-        is_tflite = True
-        model_name = 'TFLite INT8 (Optimized)'
-        logger.info(f"Selected INT8 TFLite model: {model_path}")
+    # Prioritize full Keras model for web interface (better accuracy)
+    if model_files:
+        model_path = max(model_files, key=lambda p: p.stat().st_mtime)
+        is_tflite = False
+        model_name = 'Keras/TensorFlow (Full Model)'
+        logger.info(f"Selected Keras model: {model_path}")
     elif tflite_files:
         model_path = max(tflite_files, key=lambda p: p.stat().st_mtime)
         is_tflite = True
         model_name = 'TFLite Float32'
         logger.info(f"Selected TFLite model: {model_path}")
-    elif model_files:
-        model_path = max(model_files, key=lambda p: p.stat().st_mtime)
-        is_tflite = False
-        model_name = 'Keras/TensorFlow'
-        logger.info(f"Selected Keras model: {model_path}")
+    elif tflite_int8_files:
+        model_path = max(tflite_int8_files, key=lambda p: p.stat().st_mtime)
+        is_tflite = True
+        model_name = 'TFLite INT8 (Optimized)'
+        logger.info(f"Selected INT8 TFLite model: {model_path}")
     else:
         logger.error(f"No model files found in {models_dir}")
         raise FileNotFoundError(f"No model files found in {models_dir}")
@@ -326,12 +334,48 @@ def preprocess_image(image_data: str) -> np.ndarray:
     img_array = 255 - img_array
     logger.debug(f"After inversion - value range: [{img_array.min()}, {img_array.max()}]")
 
-    # Apply morphological dilation to thicken strokes
-    # Prevents thin lines from disappearing during resizing
-    logger.debug("Applying morphological dilation...")
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    img_array = cv2.dilate(img_array, kernel, iterations=1)
-    logger.debug(f"After dilation - value range: [{img_array.min()}, {img_array.max()}]")
+    # Normalize stroke width to ~20px standard by analyzing current thickness
+    # Thin strokes get thickened, thick strokes get thinned
+    logger.debug("Normalizing stroke width to 20px standard...")
+    
+    # Estimate average stroke width using distance transform
+    _, binary = cv2.threshold(img_array, 127, 255, cv2.THRESH_BINARY)
+    
+    # Calculate distance transform to find stroke thickness
+    dist_transform = cv2.distanceTransform(binary, cv2.DIST_L2, 5)
+    
+    # Average distance gives us approximate stroke radius
+    if dist_transform.max() > 0:
+        # Get non-zero distances (actual stroke pixels)
+        stroke_distances = dist_transform[dist_transform > 0]
+        avg_radius = np.mean(stroke_distances)
+        current_stroke_width = avg_radius * 2  # Diameter from radius
+        
+        logger.debug(f"Estimated stroke width: {current_stroke_width:.2f}px")
+        
+        # Target is 20px at 512x512 resolution
+        target_width = 20.0
+        
+        if current_stroke_width < target_width * 0.8:
+            # Strokes too thin - apply dilation
+            iterations = min(3, max(1, int((target_width - current_stroke_width) / 5)))
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            img_array = cv2.dilate(img_array, kernel, iterations=iterations)
+            logger.debug(f"Thickened thin strokes: {iterations} dilation iterations")
+        elif current_stroke_width > target_width * 1.3:
+            # Strokes too thick - apply erosion
+            iterations = min(3, max(1, int((current_stroke_width - target_width) / 8)))
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+            img_array = cv2.erode(img_array, kernel, iterations=iterations)
+            logger.debug(f"Thinned thick strokes: {iterations} erosion iterations")
+        else:
+            # Stroke width is acceptable, minimal processing
+            logger.debug("Stroke width acceptable, no adjustment needed")
+    else:
+        # Empty or nearly empty image, skip normalization
+        logger.debug("No strokes detected, skipping normalization")
+    
+    logger.debug(f"After stroke normalization - value range: [{img_array.min()}, {img_array.max()}]")
 
     # Convert back to PIL for high-quality resize
     logger.debug("Converting to PIL for resize...")
@@ -911,6 +955,480 @@ def api_tile_reset() -> Tuple[Union[Dict[str, Any], Any], int]:
     except Exception as e:
         logger.error(f"api_tile_reset() - {request_id} - Exception occurred: {type(e).__name__}: {e}")
         logger.error(f"api_tile_reset() - {request_id} - Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/predict/shape', methods=['POST'])
+def api_predict_shape() -> Tuple[Union[Dict[str, Any], Any], int]:
+    """
+    REST API endpoint for shape-based detection.
+    
+    Detects individual shapes/objects, normalizes each to 128x128,
+    and runs ML inference. Provides precise localization.
+    
+    Request Body:
+    {
+      "image": "data:image/png;base64,...",
+      "stroke_history": [...],  // Optional, array of stroke objects
+      "min_shape_area": 100  // Optional, minimum shape size
+    }
+    
+    Returns:
+        Tuple of (response_dict, status_code)
+    """
+    request_id = f"req_{int(time.time() * 1000000)}"
+    logger.info(f"api_predict_shape() - {request_id} - Received POST request")
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        image_data = data.get('image')
+        stroke_history = data.get('stroke_history', [])
+        min_shape_area = data.get('min_shape_area', 100)
+        
+        if not image_data:
+            return jsonify({'success': False, 'error': 'No image data provided'}), 400
+        
+        logger.info(f"api_predict_shape() - {request_id} - Starting shape-based prediction")
+        logger.info(f"api_predict_shape() - {request_id} - Stroke history: {len(stroke_history)} strokes")
+        prediction_start = time.time()
+        
+        # Preprocess image
+        preprocess_start = time.time()
+        img_array = preprocess_image(image_data)
+        preprocess_time = time.time() - preprocess_start
+        logger.info(f"api_predict_shape() - {request_id} - Preprocessing completed in {preprocess_time*1000:.2f}ms")
+        
+        # Initialize shape detector
+        inference_start = time.time()
+        
+        shape_detector = ShapeDetector(
+            model=model if model is not None else None,
+            tflite_interpreter=tflite_interpreter if tflite_interpreter is not None else None,
+            is_tflite=is_tflite,
+            classification_threshold=THRESHOLD,
+            min_shape_area=min_shape_area
+        )
+        
+        # Run detection using stroke history if available, otherwise use image
+        if stroke_history:
+            logger.info(f"api_predict_shape() - {request_id} - Using stroke-based detection")
+            # Get shapes from stroke history
+            shapes = shape_detector.extract_shapes_from_strokes(stroke_history)
+            
+            # Analyze each shape
+            shape_predictions = []
+            max_confidence = 0.0
+            overall_positive = False
+            
+            # Get original image for extracting shape regions
+            img_uint8 = (img_array[0, :, :, 0] * 255).astype(np.uint8)
+            canvas_h, canvas_w = img_uint8.shape[:2]
+            
+            for idx, (points, bbox) in enumerate(shapes):
+                # Normalize shape to 128x128
+                normalized = shape_detector.normalize_shape(img_uint8, bbox)
+                
+                # Run inference
+                confidence = shape_detector.predict_shape(normalized)
+                is_positive = confidence >= shape_detector.classification_threshold
+                
+                if confidence > max_confidence:
+                    max_confidence = confidence
+                
+                if is_positive:
+                    overall_positive = True
+                
+                # Create shape info
+                from src.core.shape_detection import ShapeInfo
+                shape_info = ShapeInfo(
+                    contour=points,
+                    bounding_box=bbox,
+                    normalized_image=normalized,
+                    confidence=confidence,
+                    is_positive=is_positive,
+                    area=bbox[2] * bbox[3],  # width * height as approximation
+                    shape_id=idx
+                )
+                
+                shape_predictions.append(shape_info)
+            
+            # Create result
+            from src.core.shape_detection import ShapeDetectionResult
+            result = ShapeDetectionResult(
+                is_positive=overall_positive,
+                confidence=max_confidence,
+                shape_predictions=shape_predictions,
+                num_shapes_analyzed=len(shapes),
+                canvas_dimensions=(canvas_w, canvas_h)
+            )
+        else:
+            logger.info(f"api_predict_shape() - {request_id} - Using contour-based detection")
+            # Run detection on preprocessed image (convert back to uint8 for contour detection)
+            img_uint8 = (img_array[0, :, :, 0] * 255).astype(np.uint8)
+            result = shape_detector.detect(img_uint8)
+        inference_time = time.time() - inference_start
+        logger.info(f"api_predict_shape() - {request_id} - Shape detection completed in {inference_time*1000:.2f}ms")
+        
+        prediction_time = time.time() - prediction_start
+        logger.info(f"api_predict_shape() - {request_id} - Shape-based prediction completed in {prediction_time*1000:.2f}ms")
+        
+        # Format response
+        verdict = 'PENIS' if result.is_positive else 'OTHER_SHAPE'
+        verdict_text = f"Drawing looks like a {verdict.lower()}! {'✓' if result.is_positive else ''}"
+        verdict_text += f" (Detected via shape analysis: {result.num_shapes_analyzed} shapes)"
+        
+        # Prepare shape details
+        shape_details = []
+        for shape_info in result.shape_predictions:
+            x, y, w, h = shape_info.bounding_box
+            shape_details.append({
+                'shape_id': shape_info.shape_id,
+                'x': x,
+                'y': y,
+                'width': w,
+                'height': h,
+                'confidence': round(shape_info.confidence, 4),
+                'is_positive': shape_info.is_positive,
+                'area': shape_info.area
+            })
+        
+        response = {
+            'success': True,
+            'verdict': verdict,
+            'verdict_text': verdict_text,
+            'confidence': round(result.confidence, 4),
+            'raw_probability': round(result.confidence, 4),
+            'threshold': THRESHOLD,
+            'model_info': f"Binary classifier with shape-based detection ({'TFLite INT8' if is_tflite else 'Keras'})",
+            'detection_details': {
+                'num_shapes_analyzed': result.num_shapes_analyzed,
+                'canvas_dimensions': result.canvas_dimensions,
+                'shape_predictions': shape_details
+            },
+            'drawing_statistics': {
+                'response_time_ms': round(prediction_time * 1000, 2),
+                'preprocess_time_ms': round(preprocess_time * 1000, 2),
+                'inference_time_ms': round(inference_time * 1000, 2)
+            },
+            'request_id': request_id
+        }
+        
+        logger.info(f"api_predict_shape() - {request_id} - Response: verdict={verdict}, confidence={result.confidence:.4f}")
+        logger.info(f"api_predict_shape() - {request_id} - Shapes: {result.num_shapes_analyzed} analyzed")
+        logger.info(f"api_predict_shape() - {request_id} - Returning 200 OK")
+        return jsonify(response), 200
+    
+    except Exception as e:
+        logger.error(f"api_predict_shape() - {request_id} - Exception occurred: {type(e).__name__}: {e}")
+        logger.error(f"api_predict_shape() - {request_id} - Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/content/highlight', methods=['POST'])
+def api_content_highlight() -> Tuple[Union[Dict[str, Any], Any], int]:
+    """
+    REST API endpoint to highlight flagged regions.
+    
+    Takes detection results and returns image with highlighted regions.
+    Useful for showing users what content was flagged before removal.
+    
+    Request Body:
+    {
+      "image": "data:image/png;base64,...",
+      "detection_method": "tile" | "contour",
+      "detection_results": {...}  // Results from predict/tile or predict/region
+    }
+    
+    Returns:
+        Tuple of (response_dict, status_code)
+    """
+    request_id = f"req_{int(time.time() * 1000000)}"
+    logger.info(f"api_content_highlight() - {request_id} - Received POST request")
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        image_data = data.get('image')
+        detection_method = data.get('detection_method', 'tile')
+        detection_results = data.get('detection_results')
+        
+        if not image_data or not detection_results:
+            return jsonify({
+                'success': False,
+                'error': 'Missing image or detection_results'
+            }), 400
+        
+        # Preprocess image
+        img_array = preprocess_image(image_data)
+        
+        # Convert to uint8 for OpenCV
+        img_uint8 = (img_array[0] * 255).astype(np.uint8)
+        
+        # Create content remover
+        remover = ContentRemover()
+        
+        # Create localization based on detection method
+        if detection_method == 'tile':
+            # Reconstruct tile result for localization
+            from src.core.tile_detection import TileDetectionResult, TileInfo, TileCoordinate
+            
+            tile_predictions = []
+            for tile_data in detection_results.get('tile_predictions', []):
+                coord = TileCoordinate(
+                    row=tile_data['row'],
+                    col=tile_data['col']
+                )
+                tile_info = TileInfo(
+                    coordinate=coord,
+                    bounding_box=(
+                        tile_data['x'],
+                        tile_data['y'],
+                        tile_data['width'],
+                        tile_data['height']
+                    ),
+                    confidence=tile_data['confidence'],
+                    is_positive=tile_data['is_positive']
+                )
+                tile_predictions.append(tile_info)
+            
+            # Create mock tile result
+            class MockTileResult:
+                def __init__(self, predictions, conf, dims):
+                    self.tile_predictions = predictions
+                    self.confidence = conf
+                    self.canvas_dimensions = dims
+            
+            mock_result = MockTileResult(
+                tile_predictions,
+                detection_results.get('confidence', 0.0),
+                detection_results.get('canvas_dimensions', (512, 512))
+            )
+            
+            localization = remover.localize_from_tiles(mock_result)
+        
+        else:  # contour method
+            # Reconstruct contour result for localization
+            from src.core.contour_detection import ContourDetectionResult, ContourInfo
+            
+            contour_predictions = []
+            for contour_data in detection_results.get('contour_predictions', []):
+                contour_info = ContourInfo(
+                    contour=np.array([]),  # Not needed for localization
+                    bounding_box=(
+                        contour_data['x'],
+                        contour_data['y'],
+                        contour_data['width'],
+                        contour_data['height']
+                    ),
+                    area=0,
+                    hierarchy_level=contour_data.get('hierarchy_level', 0),
+                    parent_id=None,
+                    confidence=contour_data['confidence'],
+                    is_positive=contour_data['is_positive']
+                )
+                contour_predictions.append(contour_info)
+            
+            # Create mock contour result
+            class MockContourResult:
+                def __init__(self, predictions, conf):
+                    self.contour_predictions = predictions
+                    self.confidence = conf
+            
+            mock_result = MockContourResult(
+                contour_predictions,
+                detection_results.get('confidence', 0.0)
+            )
+            
+            localization = remover.localize_from_contours(mock_result)
+        
+        # Highlight regions
+        highlighted = remover.highlight_regions(img_uint8, localization)
+        
+        # Convert back to base64
+        highlighted_pil = Image.fromarray(highlighted)
+        buffered = BytesIO()
+        highlighted_pil.save(buffered, format="PNG")
+        highlighted_b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        
+        response = {
+            'success': True,
+            'highlighted_image': f'data:image/png;base64,{highlighted_b64}',
+            'num_regions_highlighted': len(localization.flagged_regions),
+            'request_id': request_id
+        }
+        
+        logger.info(f"api_content_highlight() - {request_id} - Highlighted {len(localization.flagged_regions)} regions")
+        return jsonify(response), 200
+    
+    except Exception as e:
+        logger.error(f"api_content_highlight() - {request_id} - Exception: {e}")
+        logger.error(f"api_content_highlight() - {request_id} - Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/content/remove', methods=['POST'])
+def api_content_remove() -> Tuple[Union[Dict[str, Any], Any], int]:
+    """
+    REST API endpoint to remove flagged content.
+    
+    Applies specified removal strategy to flagged regions.
+    
+    Request Body:
+    {
+      "image": "data:image/png;base64,...",
+      "detection_method": "tile" | "contour",
+      "detection_results": {...},
+      "strategy": "blur" | "placeholder" | "erase"
+    }
+    
+    Returns:
+        Tuple of (response_dict, status_code)
+    """
+    request_id = f"req_{int(time.time() * 1000000)}"
+    logger.info(f"api_content_remove() - {request_id} - Received POST request")
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        image_data = data.get('image')
+        detection_method = data.get('detection_method', 'tile')
+        detection_results = data.get('detection_results')
+        strategy_str = data.get('strategy', 'blur')
+        
+        if not image_data or not detection_results:
+            return jsonify({
+                'success': False,
+                'error': 'Missing image or detection_results'
+            }), 400
+        
+        # Parse strategy
+        try:
+            strategy = RemovalStrategy(strategy_str)
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid strategy: {strategy_str}. Must be blur, placeholder, or erase'
+            }), 400
+        
+        # Preprocess image
+        img_array = preprocess_image(image_data)
+        
+        # Convert to uint8 for OpenCV
+        img_uint8 = (img_array[0] * 255).astype(np.uint8)
+        
+        # Create content remover
+        remover = ContentRemover()
+        
+        # Create localization (same as highlight endpoint)
+        if detection_method == 'tile':
+            from src.core.tile_detection import TileDetectionResult, TileInfo, TileCoordinate
+            
+            tile_predictions = []
+            for tile_data in detection_results.get('tile_predictions', []):
+                coord = TileCoordinate(
+                    row=tile_data['row'],
+                    col=tile_data['col']
+                )
+                tile_info = TileInfo(
+                    coordinate=coord,
+                    bounding_box=(
+                        tile_data['x'],
+                        tile_data['y'],
+                        tile_data['width'],
+                        tile_data['height']
+                    ),
+                    confidence=tile_data['confidence'],
+                    is_positive=tile_data['is_positive']
+                )
+                tile_predictions.append(tile_info)
+            
+            class MockTileResult:
+                def __init__(self, predictions, conf, dims):
+                    self.tile_predictions = predictions
+                    self.confidence = conf
+                    self.canvas_dimensions = dims
+            
+            mock_result = MockTileResult(
+                tile_predictions,
+                detection_results.get('confidence', 0.0),
+                detection_results.get('canvas_dimensions', (512, 512))
+            )
+            
+            localization = remover.localize_from_tiles(mock_result)
+        
+        else:  # contour method
+            from src.core.contour_detection import ContourDetectionResult, ContourInfo
+            
+            contour_predictions = []
+            for contour_data in detection_results.get('contour_predictions', []):
+                contour_info = ContourInfo(
+                    contour=np.array([]),
+                    bounding_box=(
+                        contour_data['x'],
+                        contour_data['y'],
+                        contour_data['width'],
+                        contour_data['height']
+                    ),
+                    area=0,
+                    hierarchy_level=contour_data.get('hierarchy_level', 0),
+                    parent_id=None,
+                    confidence=contour_data['confidence'],
+                    is_positive=contour_data['is_positive']
+                )
+                contour_predictions.append(contour_info)
+            
+            class MockContourResult:
+                def __init__(self, predictions, conf):
+                    self.contour_predictions = predictions
+                    self.confidence = conf
+            
+            mock_result = MockContourResult(
+                contour_predictions,
+                detection_results.get('confidence', 0.0)
+            )
+            
+            localization = remover.localize_from_contours(mock_result)
+        
+        # Apply removal
+        removal_result = remover.remove_content(img_uint8, localization, strategy)
+        
+        if not removal_result.success:
+            return jsonify({
+                'success': False,
+                'error': removal_result.error
+            }), 500
+        
+        # Convert back to base64
+        modified_pil = Image.fromarray(removal_result.modified_image)
+        buffered = BytesIO()
+        modified_pil.save(buffered, format="PNG")
+        modified_b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        
+        response = {
+            'success': True,
+            'modified_image': f'data:image/png;base64,{modified_b64}',
+            'regions_removed': removal_result.regions_removed,
+            'strategy_used': removal_result.strategy_used,
+            'can_undo': removal_result.can_undo,
+            'request_id': request_id
+        }
+        
+        logger.info(f"api_content_remove() - {request_id} - Removed {removal_result.regions_removed} regions using {strategy.value}")
+        return jsonify(response), 200
+    
+    except Exception as e:
+        logger.error(f"api_content_remove() - {request_id} - Exception: {e}")
+        logger.error(f"api_content_remove() - {request_id} - Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
