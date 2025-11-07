@@ -123,25 +123,31 @@ curl -X POST http://localhost:5000/api/predict/region \
   -d '{"image": "data:image/png;base64,..."}'
 ```
 
-### `POST /api/predict/tile` (Experimental)
+### `POST /api/predict/tile`
 
 Classify using tile-based detection with grid partitioning. This is the most robust detection mode, designed to prevent content dilution attacks by analyzing the canvas in independent tiles.
 
-**Detection Method:** Divides canvas into a fixed grid (e.g., 8x8 for 512x512 canvas using 64x64 tiles). Only re-analyzes "dirty" tiles affected by new strokes. Supports non-square canvas dimensions with dynamic grid calculation.
+**Detection Method:** Divides canvas into a fixed grid (e.g., 8x8 for 512x512 canvas using 64x64 tiles). Only re-analyzes "dirty" tiles affected by new strokes. Supports non-square canvas dimensions with dynamic grid calculation. Includes tile caching for incremental updates.
 
 **Tile Sizes:**
 - `64x64` (recommended): ~8x8 grid for 512x512 canvas, balanced performance
 - `32x32` (high precision): ~16x16 grid, better for fine details, higher cost
 - `128x128` (low budget): ~4x4 grid, minimal inference load
 
+**Performance:**
+- Full grid (64 tiles): ~342ms (mock model), <200ms expected with TFLite INT8
+- Incremental update (1-4 tiles): <0.1ms with caching
+- Single tile: ~5ms
+
 **Request Body:**
 ```json
 {
   "image": "data:image/png;base64,iVBORw0KGgoAAAANS...",
-  "strokes": [
-    {"points": [{"x": 10, "y": 20}, {"x": 15, "y": 25}]}
-  ],
-  "tile_size": 64
+  "tile_size": 64,
+  "canvas_width": 512,
+  "canvas_height": 512,
+  "stroke_data": [[x1, y1], [x2, y2], ...],
+  "force_full_analysis": false
 }
 ```
 

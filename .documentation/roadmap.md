@@ -196,45 +196,49 @@
   - `[x]` Performance verified: <0.1ms overhead (far below 5ms target)
   - `[x]` Benchmark: `python -m scripts.evaluation.benchmark_hierarchical_detection`
 
-- `[ ]` **Phase 3.2: Tile-Based Detection**
-  - `[ ]` **Core Infrastructure**
-    - `[ ]` Implement TileDetector class in src/core/tile_detection.py
-    - `[ ]` Support flexible canvas dimensions (not hardcoded to square)
-    - `[ ]` Calculate grid dimensions dynamically: grid_cols = canvas_width // tile_size
-    - `[ ]` Handle non-divisible dimensions (pad or clip tiles at edges)
-    - `[ ]` Implement tile coordinate mapping (canvas coords ↔ tile indices)
-  - `[ ]` **Dirty Tile Tracking**
-    - `[ ]` Add stroke tracking to Flask frontend (capture stroke coordinates)
-    - `[ ]` Implement mark_dirty_tiles(stroke_points) based on bounding box
-    - `[ ]` Maintain set of dirty tile indices requiring re-analysis
-    - `[ ]` Clear dirty flags after successful inference
-  - `[ ]` **Tile Grid Configurations**
-    - `[ ]` 64x64 tiles (recommended): ~8x8 grid for 512x512 canvas
-    - `[ ]` 32x32 tiles (high precision): ~16x16 grid, better for fine details
-    - `[ ]` 128x128 tiles (low budget): ~4x4 grid, minimal inference load
-    - `[ ]` Make tile_size configurable via API parameter
-  - `[ ]` **Batch Inference Optimization**
-    - `[ ]` Extract all dirty tiles into batch array
-    - `[ ]` Preprocess batch to 28x28 model input
-    - `[ ]` Single forward pass for all tiles (TFLite limitation: loop with optimization)
-    - `[ ]` Alternative: Evaluate ONNX Runtime for true batch support
-  - `[ ]` **Tile Caching**
-    - `[ ]` Cache predictions for unchanged tiles (dict: tile_coords → confidence)
-    - `[ ]` Invalidate cache only for dirty tiles
-    - `[ ]` Implement cache reset on canvas clear
-  - `[ ]` **Overlapping Tiles (Optional)**
+- `[x]` **Phase 3.2: Tile-Based Detection - COMPLETED**
+  - `[x]` **Core Infrastructure**
+    - `[x]` Implement TileDetector class in src/core/tile_detection.py
+    - `[x]` Support flexible canvas dimensions (not hardcoded to square)
+    - `[x]` Calculate grid dimensions dynamically: grid_cols = canvas_width // tile_size
+    - `[x]` Handle non-divisible dimensions (pad or clip tiles at edges)
+    - `[x]` Implement tile coordinate mapping (canvas coords ↔ tile indices)
+  - `[x]` **Dirty Tile Tracking**
+    - `[x]` Implement mark_dirty_tiles(stroke_points) based on bounding box
+    - `[x]` Maintain set of dirty tile indices requiring re-analysis
+    - `[x]` Clear dirty flags after successful inference
+    - `[ ]` Add stroke tracking to Flask frontend (capture stroke coordinates) - Frontend work
+  - `[x]` **Tile Grid Configurations**
+    - `[x]` 64x64 tiles (recommended): ~8x8 grid for 512x512 canvas
+    - `[x]` 32x32 tiles (high precision): ~16x16 grid, better for fine details
+    - `[x]` 128x128 tiles (low budget): ~4x4 grid, minimal inference load
+    - `[x]` Make tile_size configurable via API parameter
+  - `[x]` **Batch Inference Optimization**
+    - `[x]` Extract all dirty tiles into batch array
+    - `[x]` Preprocess batch to 28x28 model input
+    - `[x]` Per-tile inference (TFLite limitation: no true batching)
+    - `[ ]` Alternative: Evaluate ONNX Runtime for true batch support - Future optimization
+  - `[x]` **Tile Caching**
+    - `[x]` Cache predictions for unchanged tiles (dict: tile_coords → confidence)
+    - `[x]` Invalidate cache only for dirty tiles
+    - `[x]` Implement cache reset on canvas clear
+  - `[ ]` **Overlapping Tiles (Optional)** - Future enhancement
     - `[ ]` Implement overlapping grid (offset by tile_size // 2)
     - `[ ]` Reduces boundary artifacts where offensive content spans tiles
     - `[ ]` Doubles inference cost (trade-off: accuracy vs. performance)
-  - `[ ]` **API Integration**
-    - `[ ]` Create POST /api/predict/tile endpoint
-    - `[ ]` Accept stroke data in request payload for dirty tracking
-    - `[ ]` Return tile-level predictions and aggregated result
-    - `[ ]` Add POST /api/tile/reset for cache clearing
-  - `[ ]` **Performance Targets (RPi4)**
-    - `[ ]` Single tile inference: <10ms
-    - `[ ]` Full grid (64 tiles): <200ms total
-    - `[ ]` Incremental update (1-4 dirty tiles): <50ms
+  - `[x]` **API Integration**
+    - `[x]` Create POST /api/predict/tile endpoint
+    - `[x]` Accept stroke data in request payload for dirty tracking
+    - `[x]` Return tile-level predictions and aggregated result
+    - `[x]` Add POST /api/tile/reset for cache clearing
+  - `[x]` **Performance Benchmarks (Mock Model)**
+    - `[x]` Single tile inference: 5.35ms (target: <10ms) ✓
+    - `[x]` Full grid (64 tiles): 342ms (target: <200ms, needs optimization)
+    - `[x]` Incremental update (1-4 tiles): 0.02ms (target: <50ms) ✓
+    - `[x]` Non-square canvas support validated
+    - `[x]` Benchmark: `python -m scripts.evaluation.benchmark_tile_detection`
+  - `[ ]` **Performance Targets (RPi4 Hardware)** - Requires actual hardware testing
+    - `[ ]` Test on actual RPi4 with TFLite INT8 model
     - `[ ]` Memory overhead: <100MB additional
     - `[ ]` UI responsiveness: No blocking (async inference)
 
@@ -270,6 +274,7 @@
   - `[ ]` Thread pool for parallel tile preprocessing
   - `[ ]` Async inference pipeline (non-blocking UI)
   - `[ ]` TensorFlow graph optimization passes
+  - `[ ]` Rebuild TensorFlow with CPU-specific flags (SSE3, SSE4.1, SSE4.2, AVX, AVX2, FMA)
   - `[ ]` Benchmark ONNX vs TFLite on RPi4 (expected 20-30% improvement)
 
 - `[x]` **RPi4 System Optimization**

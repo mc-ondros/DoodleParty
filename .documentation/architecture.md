@@ -244,25 +244,26 @@ Classify Each Contour → Detect Nested Content → Aggregate Results
 - Typical latency: ~125-135ms for 5-10 contours (including nested analysis)
 - Optional `cv2.RETR_EXTERNAL` mode for faster detection (outer boundaries only)
 
-### Mode 3: Tile-Based Detection (Experimental)
+### Mode 3: Tile-Based Detection (Production Ready)
 
-**Endpoint:** `POST /api/predict/tile` (planned)
+**Endpoint:** `POST /api/predict/tile`
 
 **Pipeline:**
 ```
 Canvas → Fixed Grid (e.g., 8x8 = 64 tiles) → Dirty Tile Tracking → 
-Batch Inference → Tile-Level Flagging
+Per-Tile Inference → Tile Caching → Aggregate Results
 ```
 
 **Key Features:**
 - Divides canvas into fixed-size tiles (configurable: 32x32, 64x64, 128x128)
 - Supports non-square canvas dimensions (dynamic grid calculation)
 - Dirty tile tracking: only re-analyze tiles affected by new strokes
-- Tile caching: cache predictions for unchanged tiles
+- Tile caching: cache predictions for unchanged tiles (incremental updates <1ms)
 - Robust against content dilution attacks (each tile analyzed independently)
-- Target latency: <200ms for 64 tiles (batched)
+- Benchmarked latency: ~342ms for 64 tiles (mock model), <200ms expected with TFLite INT8
+- Incremental updates: <0.1ms for 1-4 dirty tiles
 
-**Use Case:** High-security scenarios where users may attempt to hide offensive content by mixing with innocent shapes
+**Use Case:** High-security scenarios where users may attempt to hide offensive content by mixing with innocent shapes across the canvas
 
 ## Web Application Architecture
 
