@@ -73,6 +73,10 @@ from src.core.patch_extraction import (
     SlidingWindowDetector,
     AggregationStrategy
 )
+from src.core.contour_detection import (
+    ContourDetector,
+    ContourRetrievalMode
+)
 
 if TYPE_CHECKING:
     from tensorflow.keras import Model
@@ -521,6 +525,151 @@ def index() -> str:
     """
     logger.debug("index() - Serving web interface")
     return render_template('index.html')
+
+
+@app.route('/api/predict/region', methods=['POST'])
+def api_predict_region() -> Tuple[Union[Dict[str, Any], Any], int]:
+    """
+    REST API endpoint for contour-based region classification.
+
+    This endpoint uses OpenCV findContours to detect individual shapes in drawings,
+    then classifies each contour independently. This prevents content dilution attacks
+    where offensive content is mixed with innocent shapes.
+
+    Current Implementation:
+    - Uses RETR_TREE by default (full hierarchy including nested content)
+    - Supports optional RETR_EXTERNAL for faster detection (outer boundaries only)
+
+    Request Body:
+    {
+      "image": "data:image/png;base64,...",
+      "mode": "tree" | "external",  # Optional: tree (default) or external
+      "min_contour_area": 100,       # Optional: minimum contour area
+      "early_stopping": true         # Optional: stop on first detection
+    }
+
+    Returns:
+        Tuple of (response_dict, status_code)
+    """
+    request_id = f"req_{int(time.time() * 1000000)}"
+    logger.info(f"api_predict_region() - {request_id} - Received POST request")
+
+    try:
+        data = request.get_json()
+        logger.debug(f"api_predict_region() - {request_id} - Request content-type: {request.content_type}")
+
+        if not data:
+            logger.warning(f"api_predict_region() - {request_id} - No JSON data provided")
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+        image_data = data.get('image')
+        logger.debug(f"api_predict_region() - {request_id} - Image data present: {image_data is not None}")
+
+        if not image_data:
+            logger.warning(f"api_predict_region() - {request_id} - Missing 'image' field in request")
+            return jsonify({'success': False, 'error': 'No image data provided'}), 400
+
+        # Parse optional parameters
+        mode = data.get('mode', 'tree')
+        min_contour_area = data.get('min_contour_area', 100)
+        early_stopping = data.get('early_stopping', True)
+
+        # Validate mode
+        if mode not in ['external', 'tree']:
+            logger.warning(f"api_predict_region() - {request_id} - Invalid mode: {mode}")
+            return jsonify({'success': False, 'error': 'Mode must be "external" or "tree"'}), 400
+
+        # Check model state
+        if model is None and tflite_interpreter is None:
+            logger.error(f"api_predict_region() - {request_id} - Model not loaded")
+            return jsonify({'success': False, 'error': 'Model not loaded'}), 500
+
+        logger.info(f"api_predict_region() - {request_id} - Starting region-based prediction")
+        prediction_start = time.time()
+
+        # Preprocess image
+        preprocess_start = time.time()
+        img_array = preprocess_image(image_data)
+        preprocess_time = time.time() - preprocess_start
+        logger.info(f"api_predict_region() - {request_id} - Preprocessing completed in {preprocess_time*1000:.2f}ms")
+
+        # Run contour-based detection
+        inference_start = time.time()
+
+        # Initialize contour detector
+        retrieval_mode = (
+            ContourRetrievalMode.EXTERNAL if mode == 'external'
+            else ContourRetrievalMode.TREE
+        )
+
+        contour_detector = ContourDetector(
+            model=model if model is not None else None,
+            tflite_interpreter=tflite_interpreter if tflite_interpreter is not None else None,
+            retrieval_mode=retrieval_mode,
+            min_contour_area=min_contour_area,
+            early_stopping=early_stopping,
+            is_tflite=is_tflite
+        )
+
+        # Run detection
+        result = contour_detector.detect(img_array[0])  # Remove batch dimension
+        inference_time = time.time() - inference_start
+        logger.info(f"api_predict_region() - {request_id} - Contour detection completed in {inference_time*1000:.2f}ms")
+
+        prediction_time = time.time() - prediction_start
+        logger.info(f"api_predict_region() - {request_id} - Region-based prediction completed in {prediction_time*1000:.2f}ms")
+
+        # Format response
+        verdict = 'PENIS' if result.is_positive else 'OTHER_SHAPE'
+        verdict_text = f"Drawing looks like a {verdict.lower()}! {'✓' if result.is_positive else ''}"
+
+        if mode == 'tree':
+            verdict_text += " (Detected via hierarchical contour analysis)"
+        else:
+            verdict_text += " (Detected via contour analysis)"
+
+        # Prepare detection details
+        contour_details = []
+        for contour in result.contour_predictions:
+            x, y, w, h = contour.bounding_box
+            contour_details.append({
+                'x': x,
+                'y': y,
+                'width': w,
+                'height': h,
+                'confidence': round(contour.confidence, 4) if contour.confidence else 0.0,
+                'is_positive': contour.is_positive,
+                'hierarchy_level': contour.hierarchy_level
+            })
+
+        response = {
+            'success': True,
+            'verdict': verdict,
+            'verdict_text': verdict_text,
+            'confidence': round(result.confidence, 4),
+            'threshold': THRESHOLD,
+            'model_info': f'Binary classifier with contour-based detection ({model_name})',
+            'detection_details': {
+                'num_contours_analyzed': result.num_contours_analyzed,
+                'early_stopped': result.early_stopped,
+                'retrieval_mode': result.retrieval_mode,
+                'contour_predictions': contour_details
+            },
+            'drawing_statistics': {
+                'response_time_ms': round(prediction_time * 1000, 2),
+                'preprocess_time_ms': round(preprocess_time * 1000, 2),
+                'inference_time_ms': round(inference_time * 1000, 2)
+            }
+        }
+
+        logger.info(f"api_predict_region() - {request_id} - Response: verdict={verdict}, confidence={result.confidence:.4f}")
+        logger.info(f"api_predict_region() - {request_id} - Returning 200 OK")
+        return jsonify(response), 200
+
+    except Exception as e:
+        logger.error(f"api_predict_region() - {request_id} - Exception occurred: {type(e).__name__}: {e}")
+        logger.error(f"api_predict_region() - {request_id} - Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/predict', methods=['POST'])

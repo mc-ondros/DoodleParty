@@ -205,20 +205,82 @@ def preprocess_image(image):
     return img_array
 ```
 
+## Detection Strategies
+
+DoodleHunter implements three detection modes to address different security and performance requirements:
+
+### Mode 1: Standard Single-Image Classification
+
+**Endpoint:** `POST /api/predict`
+
+**Pipeline:**
+```
+Canvas (512x512) → Preprocess → Resize to 28x28 → TFLite INT8 Model → Binary Classification
+```
+
+**Characteristics:**
+- Fastest inference (<30ms on RPi4)
+- Simplest implementation
+- Vulnerable to content dilution attacks (offensive content mixed with innocent shapes)
+- Best for: Quick validation, low-risk scenarios
+
+### Mode 2: Contour-Based Detection (Current Production)
+
+**Endpoint:** `POST /api/predict/region`
+
+**Pipeline:**
+```
+Canvas → OpenCV findContours(RETR_TREE) → Extract Hierarchical Contours → 
+Classify Each Contour → Detect Nested Content → Aggregate Results
+```
+
+**Key Features:**
+- Isolates individual shapes for independent classification
+- Uses `cv2.RETR_TREE` by default for full hierarchical detection
+- Detects nested content (e.g., offensive drawing inside a benign circle)
+- Filters small contours (noise reduction)
+- Supports multiple aggregation strategies: MAX, MEAN, WEIGHTED_MEAN, VOTING, ANY_POSITIVE
+- Early stopping on first positive detection
+- Typical latency: ~125-135ms for 5-10 contours (including nested analysis)
+- Optional `cv2.RETR_EXTERNAL` mode for faster detection (outer boundaries only)
+
+### Mode 3: Tile-Based Detection (Experimental)
+
+**Endpoint:** `POST /api/predict/tile` (planned)
+
+**Pipeline:**
+```
+Canvas → Fixed Grid (e.g., 8x8 = 64 tiles) → Dirty Tile Tracking → 
+Batch Inference → Tile-Level Flagging
+```
+
+**Key Features:**
+- Divides canvas into fixed-size tiles (configurable: 32x32, 64x64, 128x128)
+- Supports non-square canvas dimensions (dynamic grid calculation)
+- Dirty tile tracking: only re-analyze tiles affected by new strokes
+- Tile caching: cache predictions for unchanged tiles
+- Robust against content dilution attacks (each tile analyzed independently)
+- Target latency: <200ms for 64 tiles (batched)
+
+**Use Case:** High-security scenarios where users may attempt to hide offensive content by mixing with innocent shapes
+
 ## Web Application Architecture
 
 ### Flask Application Structure
 
 **Directory Layout:**
-- `src/web/app.py` - Flask server
+- `src/web/app.py` - Flask server with multiple detection modes
 - `src/web/templates/index.html` - Drawing interface
-- `src/web/static/css/style.css` - Styles
-- `src/web/static/js/canvas.js` - Canvas drawing logic
+- `src/web/static/style.css` - Styles
+- `src/web/static/script.js` - Canvas drawing logic
 
 **Flask Routes:**
 - `GET /` - Serve drawing interface
-- `POST /predict` - Classify drawing
-- `GET /health` - Health check
+- `POST /api/predict` - Standard single-image classification
+- `POST /api/predict/region` - Contour-based detection
+- `POST /api/predict/tile` - Tile-based detection (experimental)
+- `POST /api/tile/reset` - Reset tile detector cache
+- `GET /api/health` - Health check with model status
 
 **Request/Response Flow:**
 

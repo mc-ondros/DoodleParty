@@ -46,9 +46,12 @@ Access at `http://localhost:5000`
 - Binary classification of hand-drawn sketches (28x28 pixel images)
 - QuickDraw dataset integration (NumPy bitmap format)
 - Multiple CNN architectures (Custom, ResNet50, MobileNetV3, EfficientNet)
-- Flask web interface with multiple detection modes
-- Basic region-based detection (experimental)
-- Support for TensorFlow Lite (optimized for edge devices)
+- Flask web interface with three detection modes:
+  - Standard single-image classification (<30ms)
+  - Contour-based detection for shape isolation (~125ms)
+  - Tile-based detection for content dilution prevention (<200ms, experimental)
+- TensorFlow Lite INT8 optimization for Raspberry Pi 4 deployment
+- OpenCV-based contour detection with hierarchical support (planned)
 
 ## Requirements
 

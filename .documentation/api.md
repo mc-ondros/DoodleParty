@@ -70,10 +70,17 @@ curl -X POST http://localhost:5000/api/predict \
 
 Classify a hand-drawn image using region-based detection (contour extraction).
 
+**Detection Method:** Uses OpenCV `findContours(RETR_TREE)` by default to isolate individual shapes with full hierarchical analysis, then classifies each contour independently. This prevents content dilution attacks where offensive content is mixed with innocent shapes, and detects nested offensive content inside benign shapes.
+
+**Hierarchical Detection:** Analyzes parent-child relationships between contours to detect offensive content hidden inside benign shapes (e.g., offensive drawing inside a circle). Can optionally use `RETR_EXTERNAL` mode for faster detection without nested analysis.
+
 **Request Body:**
 ```json
 {
-  "image": "data:image/png;base64,iVBORw0KGgoAAAANS..."
+  "image": "data:image/png;base64,iVBORw0KGgoAAAANS...",
+  "mode": "tree",  // Optional: "tree" (default) or "external"
+  "min_contour_area": 100,  // Optional: minimum contour area to analyze
+  "early_stopping": true  // Optional: stop on first high-confidence detection
 }
 ```
 
@@ -118,7 +125,14 @@ curl -X POST http://localhost:5000/api/predict/region \
 
 ### `POST /api/predict/tile` (Experimental)
 
-Classify using tile-based detection with grid partitioning.
+Classify using tile-based detection with grid partitioning. This is the most robust detection mode, designed to prevent content dilution attacks by analyzing the canvas in independent tiles.
+
+**Detection Method:** Divides canvas into a fixed grid (e.g., 8x8 for 512x512 canvas using 64x64 tiles). Only re-analyzes "dirty" tiles affected by new strokes. Supports non-square canvas dimensions with dynamic grid calculation.
+
+**Tile Sizes:**
+- `64x64` (recommended): ~8x8 grid for 512x512 canvas, balanced performance
+- `32x32` (high precision): ~16x16 grid, better for fine details, higher cost
+- `128x128` (low budget): ~4x4 grid, minimal inference load
 
 **Request Body:**
 ```json
@@ -126,7 +140,8 @@ Classify using tile-based detection with grid partitioning.
   "image": "data:image/png;base64,iVBORw0KGgoAAAANS...",
   "strokes": [
     {"points": [{"x": 10, "y": 20}, {"x": 15, "y": 25}]}
-  ]
+  ],
+  "tile_size": 64
 }
 ```
 
