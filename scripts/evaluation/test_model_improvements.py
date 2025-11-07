@@ -73,8 +73,8 @@ def test_class_weighting():
     # Compare performance
     print('\n1.3 Comparing performance...')
     
-    X_test = np.load(Path("data/processed") / "X_test.npy")
-    y_test = np.load(Path("data/processed") / "y_test.npy")
+    X_test = np.load(Path("data/processed") / 'X_test.npy')
+    y_test = np.load(Path("data/processed") / 'y_test.npy')
     
     # Load models
     import tensorflow as tf
@@ -147,8 +147,8 @@ def test_ensemble():
     # Evaluate ensemble
     print('\n2.3 Evaluating ensemble...')
     
-    X_test = np.load(Path("data/processed") / "X_test.npy")
-    y_test = np.load(Path("data/processed") / "y_test.npy")
+    X_test = np.load(Path("data/processed") / 'X_test.npy')
+    y_test = np.load(Path("data/processed") / 'y_test.npy')
     
     try:
         ensemble_results = evaluate_ensemble(ensemble, X_test, y_test)
@@ -213,8 +213,8 @@ def test_integration():
         ensemble = create_ensemble(model_paths, method='weighted')
         
         # Evaluate
-        X_test = np.load(Path("data/processed") / "X_test.npy")
-        y_test = np.load(Path("data/processed") / "y_test.npy")
+        X_test = np.load(Path("data/processed") / 'X_test.npy')
+        y_test = np.load(Path("data/processed") / 'y_test.npy')
         
         ensemble_results = evaluate_ensemble(ensemble, X_test, y_test)
         print('✓ Integration test successful')
@@ -251,7 +251,7 @@ def main():
         print('    python scripts/process_all_data_128x128.py')
         return False
     
-    required_files = ["X_test.npy", "y_test.npy"]
+    required_files = ['X_test.npy', 'y_test.npy']
     for file in required_files:
         if not (data_dir / file).exists():
             print(f"\n✗ Required file not found: {data_dir / file}")

@@ -106,7 +106,7 @@ def load_model_and_mapping(model_path, data_dir = 'data/processed'):
     """
     model = keras.models.load_model(model_path)
     
-    with open(Path(data_dir) / "class_mapping.pkl", 'rb') as f:
+    with open(Path(data_dir) / 'class_mapping.pkl', 'rb') as f:
         class_mapping = pickle.load(f)
     
     idx_to_class = {v: k for k, v in class_mapping.items()}
@@ -232,8 +232,8 @@ def evaluate_model(model_path, data_dir = 'data/processed'):
     model, idx_to_class = load_model_and_mapping(model_path, data_dir)
     
     # Load test data
-    X_test = np.load(Path(data_dir) / "X_test.npy")
-    y_test = np.load(Path(data_dir) / "y_test.npy")
+    X_test = np.load(Path(data_dir) / 'X_test.npy')
+    y_test = np.load(Path(data_dir) / 'y_test.npy')
     
     print(f"Test set size: {len(X_test)}")
     print(f"Positive samples: {(y_test==1).sum()}, Negative samples: {(y_test==0).sum()}")
@@ -275,7 +275,7 @@ def evaluate_model(model_path, data_dir = 'data/processed'):
     plt.xlabel('Predicted Label')
     plt.tight_layout()
     
-    output_path = Path(model_path).parent / "confusion_matrix.png"
+    output_path = Path(model_path).parent / 'confusion_matrix.png'
     plt.savefig(output_path, dpi=100)
     print(f"✓ Confusion matrix saved to {output_path}")
 
@@ -330,7 +330,7 @@ def predict_batch(model_path, image_dir, data_dir = 'data/processed'):
     model, idx_to_class = load_model_and_mapping(model_path, data_dir)
     
     image_dir = Path(image_dir)
-    image_files = list(image_dir.glob("*.png")) + list(image_dir.glob("*.jpg"))
+    image_files = list(image_dir.glob('*.png')) + list(image_dir.glob('*.jpg'))
     
     print(f"Found {len(image_files)} images\n")
     
@@ -553,7 +553,7 @@ def predict_batch_region_based(
     model, idx_to_class = load_model_and_mapping(model_path, data_dir)
     
     image_dir = Path(image_dir)
-    image_files = list(image_dir.glob("*.png")) + list(image_dir.glob("*.jpg"))
+    image_files = list(image_dir.glob('*.png')) + list(image_dir.glob('*.jpg'))
     
     print(f"Found {len(image_files)} images")
     print(f"Using region-based detection with patch_size={patch_size}, strategy={aggregation_strategy.value}\n")

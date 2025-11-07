@@ -153,9 +153,7 @@ def demo_aggregation_strategies(model, idx_to_class, image, image_name):
         image: Input image
         image_name: Name of the image for display
     """
-    print(f"\n{'='*70}")
-    print(f"Testing Aggregation Strategies on: {image_name}")
-    print(f"{'='*70}")
+    print(f"\nTesting Aggregation Strategies on: {image_name}")
     
     strategies = {
         'MAX': AggregationStrategy.MAX,
@@ -167,7 +165,7 @@ def demo_aggregation_strategies(model, idx_to_class, image, image_name):
     results = {}
     
     for strategy_name, strategy in strategies.items():
-        print(f"\n--- {strategy_name} Strategy ---")
+        print(f"\n{strategy_name} Strategy:")
         
         from src.core.patch_extraction import SlidingWindowDetector
         
@@ -206,9 +204,7 @@ def demo_aggregation_strategies(model, idx_to_class, image, image_name):
 
 def demo_early_stopping(model, idx_to_class):
     """Demonstrate early stopping feature."""
-    print(f"\n{'='*70}")
-    print('Demonstrating Early Stopping')
-    print(f"{'='*70}")
+    print('\nDemonstrating Early Stopping')
     
     # Create image with suspicious content in first patch
     image = np.zeros((512, 512))
@@ -222,7 +218,7 @@ def demo_early_stopping(model, idx_to_class):
         image_3d = image
     
     # Without early stopping
-    print('\n--- Without Early Stopping ---')
+    print('\nWithout Early Stopping:')
     detector_no_early = SlidingWindowDetector(
         model=model,
         patch_size=(128, 128),
@@ -233,7 +229,7 @@ def demo_early_stopping(model, idx_to_class):
     print(f"  Patches analyzed: {result_no_early.num_patches_analyzed}")
     
     # With early stopping
-    print('\n--- With Early Stopping ---')
+    print('\nWith Early Stopping:')
     detector_early = SlidingWindowDetector(
         model=model,
         patch_size=(128, 128),
@@ -274,9 +270,7 @@ def main():
     
     args = parser.parse_args()
     
-    print("="*70)
     print('Region-Based Detection Demonstration')
-    print("="*70)
     print(f"\nModel: {args.model}")
     
     # Load model
@@ -291,9 +285,7 @@ def main():
     
     # Test each demo image
     for image_name, image_data in demo_images.items():
-        print(f"\n{'='*70}")
-        print(f"Testing: {image_data['description']}")
-        print(f"{'='*70}")
+        print(f"\nTesting: {image_data['description']}")
         
         image = image_data['image']
         

@@ -461,8 +461,8 @@ def main():
 
     # Load test data
     print('Loading test data...')
-    X_test = np.load(Path(args.data_dir) / "X_test.npy")
-    y_test = np.load(Path(args.data_dir) / "y_test.npy")
+    X_test = np.load(Path(args.data_dir) / 'X_test.npy')
+    y_test = np.load(Path(args.data_dir) / 'y_test.npy')
 
     # Normalize if needed
     if X_test.max() > 1.0:
@@ -476,8 +476,8 @@ def main():
 
     if args.cross_validate:
         # Cross-validation
-        all_data = np.concatenate([X_test, np.load(Path(args.data_dir) / "X_train.npy")])
-        all_labels = np.concatenate([y_test, np.load(Path(args.data_dir) / "y_train.npy")])
+        all_data = np.concatenate([X_test, np.load(Path(args.data_dir) / 'X_train.npy')])
+        all_labels = np.concatenate([y_test, np.load(Path(args.data_dir) / 'y_train.npy')])
 
         # Normalize combined data
         if all_data.max() > 1.0:

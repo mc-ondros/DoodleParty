@@ -25,16 +25,16 @@ sleep 2
 cd /home/mcvaj/ML
 
 /home/mcvaj/ML/.venv/bin/python src/train.py \
-    --data-dir data/processed \
-    --epochs 200 \
-    --batch-size 32 \
-    --model-output models/quickdraw_model_enhanced.h5 \
-    --learning-rate 0.0005 \
-    --label-smoothing 0.1 \
-    --architecture custom \
-    --enhanced \
-    --aggressive-aug \
-    2>&1 | tee training_run_enhanced.log
+  --data-dir data/processed \
+  --epochs 200 \
+  --batch-size 32 \
+  --model-output models/quickdraw_model_enhanced.h5 \
+  --learning-rate 0.0005 \
+  --label-smoothing 0.1 \
+  --architecture custom \
+  --enhanced \
+  --aggressive-aug \
+  2>&1 | tee training_run_enhanced.log
 
 echo ""
 echo "✅ Training complete!"

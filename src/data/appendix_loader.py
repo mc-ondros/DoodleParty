@@ -422,10 +422,10 @@ def prepare_multi_class_dataset(appendix_dir, output_dir = 'data/processed',
     X_test, y_test = X[train_size:], y[train_size:]
     
     # Save
-    np.save(output_dir / "X_train.npy", X_train)
-    np.save(output_dir / "y_train.npy", y_train)
-    np.save(output_dir / "X_test.npy", X_test)
-    np.save(output_dir / "y_test.npy", y_test)
+    np.save(output_dir / 'X_train.npy', X_train)
+    np.save(output_dir / 'y_train.npy', y_train)
+    np.save(output_dir / 'X_test.npy', X_test)
+    np.save(output_dir / 'y_test.npy', y_test)
     
     # Save class mapping
     class_mapping = {
@@ -434,7 +434,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir = 'data/processed',
         'categories': category_to_idx,
         'description': f'Binary classification: positive={len(category_to_idx)} appendix categories, negative=random noise'
     }
-    with open(output_dir / "class_mapping.pkl", 'wb') as f:
+    with open(output_dir / 'class_mapping.pkl', 'wb') as f:
         pickle.dump(class_mapping, f)
     
     print(f"\n✓ Multi-class dataset prepared successfully!")
@@ -498,10 +498,10 @@ def prepare_appendix_dataset(ndjson_file, output_dir = 'data/processed',
     X_test, y_test = X[train_size:], y[train_size:]
     
     # Save
-    np.save(output_dir / "X_train.npy", X_train)
-    np.save(output_dir / "y_train.npy", y_train)
-    np.save(output_dir / "X_test.npy", X_test)
-    np.save(output_dir / "y_test.npy", y_test)
+    np.save(output_dir / 'X_train.npy', X_train)
+    np.save(output_dir / 'y_train.npy', y_train)
+    np.save(output_dir / 'X_test.npy', X_test)
+    np.save(output_dir / 'y_test.npy', y_test)
     
     # Save class mapping
     class_mapping = {
@@ -509,7 +509,7 @@ def prepare_appendix_dataset(ndjson_file, output_dir = 'data/processed',
         'positive': 1,
         'description': 'Binary classification: positive=appendix drawings, negative=random noise'
     }
-    with open(output_dir / "class_mapping.pkl", 'wb') as f:
+    with open(output_dir / 'class_mapping.pkl', 'wb') as f:
         pickle.dump(class_mapping, f)
     
     print(f"\n✓ Binary dataset prepared successfully!")

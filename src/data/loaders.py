@@ -57,8 +57,9 @@ class QuickDrawDataset:
             print(f"✓ {class_name} downloaded successfully")
         except Exception as e:
             print(f"✗ Error downloading {class_name}: {e}")
+            # Clean up partial downloads to avoid corrupted data files
             if filepath.exists():
-                filepath.unlink()  # Clean up partial download
+                filepath.unlink()
     
     def load_class_data(self, class_name, max_samples=None, normalize=True):
         """Load data for a single class."""
@@ -114,11 +115,14 @@ class QuickDrawDataset:
             except Exception as e:
                 print(f"  ✗ Error loading {class_name}: {e}")
         
-        # Generate negative examples (out-of-distribution random noise)
+        # Generate negative examples using random noise
+        # WHY random noise: Creates strong distribution separation so model learns
+        # to distinguish structured drawings from random patterns. This makes the
+        # binary classifier robust to non-drawing inputs.
         print('\nGenerating negative examples (out-of-distribution)...')
         num_positive = sum(len(img) for img in all_images)
         negative_images = np.random.randint(0, 256, (num_positive, 28, 28), dtype=np.uint8)
-        negative_labels = np.zeros(num_positive, dtype=np.int32)  # Label 0 for out-of-distribution
+        negative_labels = np.zeros(num_positive, dtype=np.int32)
         
         all_images.append(negative_images.astype(np.float32) / 255.0)
         all_labels.append(negative_labels)
@@ -136,7 +140,9 @@ class QuickDrawDataset:
         if X.max() > 1.0:
             X = X / 255.0
         
-        # Shuffle data
+        # Shuffle to prevent class clustering
+        # WHY shuffle: Ensures batches contain mix of both classes during training,
+        # preventing gradient updates biased towards one class
         indices = np.random.permutation(len(X))
         X = X[indices]
         y = y[indices]
@@ -150,14 +156,14 @@ class QuickDrawDataset:
         X_test, y_test = X[train_size:], y[train_size:]
         
         # Save datasets
-        np.save(output_dir / "X_train.npy", X_train)
-        np.save(output_dir / "y_train.npy", y_train)
-        np.save(output_dir / "X_test.npy", X_test)
-        np.save(output_dir / "y_test.npy", y_test)
+        np.save(output_dir / 'X_train.npy', X_train)
+        np.save(output_dir / 'y_train.npy', y_train)
+        np.save(output_dir / 'X_test.npy', X_test)
+        np.save(output_dir / 'y_test.npy', y_test)
         
         # Save class mapping (binary: 0=negative, 1=positive)
         class_mapping = {'negative': 0, 'positive': 1, 'positive_classes': classes}
-        with open(output_dir / "class_mapping.pkl", 'wb') as f:
+        with open(output_dir / 'class_mapping.pkl', 'wb') as f:
             pickle.dump(class_mapping, f)
         
         print(f"\n✓ Binary dataset prepared successfully!")

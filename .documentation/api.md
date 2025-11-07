@@ -123,6 +123,143 @@ curl -X POST http://localhost:5000/api/predict/region \
   -d '{"image": "data:image/png;base64,..."}'
 ```
 
+### `POST /api/predict/shape`
+
+Shape-based detection with stroke-aware grouping and multi-part penis heuristics.
+
+**Purpose:** Detect coherent offensive objects (especially multi-part penis drawings) by:
+- using stroke history (order, timing, coordinates) when available,
+- extracting intent-aware shapes from strokes,
+- classifying each shape independently,
+- merging nearby high-confidence or near-positive shapes into a single object.
+
+**Detection Method:**
+- If `stroke_history` is provided:
+  - Uses [`ShapeDetector.extract_shapes_from_strokes()`](src/core/shape_detection.py:117) to:
+    - cluster strokes whose endpoints are spatially close (default ≤32px),
+    - or drawn within a short time window (default ≤900ms),
+    - each cluster → one candidate shape with its own bounding box.
+- If `stroke_history` is empty or clustering yields nothing:
+  - Falls back to robust contour-based extraction via
+    [`ShapeDetector.extract_shapes()`](src/core/shape_detection.py:243):
+    - grayscale + Otsu/adaptive thresholding,
+    - light morphological closing,
+    - area and aspect-ratio filters to remove noise.
+- For each candidate shape:
+  - Normalizes region (with margin) to the model’s input size.
+  - Runs [`ShapeDetector.predict_shape()`](src/core/shape_detection.py:434) to obtain a stable [0,1] offensive score.
+  - Wraps results into [`ShapeInfo`](src/core/shape_detection.py:31).
+
+**Grouping & Heuristics:**
+- After per-shape scoring, [`ShapeDetector.detect()`](src/core/shape_detection.py:600):
+  - Calls [`_merge_positive_shapes()`](src/core/shape_detection.py:488) on shapes marked `is_positive` (>= global threshold):
+    - merges shapes whose boxes are close (center distance ≤80px) or overlapping (IoU ≥0.05),
+    - each merged group gets:
+      - a combined bounding box,
+      - a group score (max member confidence).
+    - If any such group exists:
+      - overall verdict is positive,
+      - overall confidence is the best group score.
+  - If no strict-positive group exists:
+    - Applies a clustered near-positive heuristic:
+      - identifies shapes with confidence close to threshold (default ≥0.45),
+      - if 3 or more such shapes form a single merged cluster via `_merge_positive_shapes`:
+        - promote them as one high-confidence offensive object,
+        - set `is_positive = True`,
+        - boost `confidence` to reflect combined evidence (capped below 1.0).
+      - This explicitly targets classic multi-part penis drawings (shaft + two balls) that produce several strong but individually sub-threshold predictions.
+
+**Request Body:**
+```json
+{
+  "image": "data:image/png;base64,iVBORw0KGgoAAAANS...",
+  "stroke_history": [
+    {
+      "points": [
+        {"x": 120, "y": 260, "t": 1730980000000},
+        {"x": 160, "y": 260, "t": 1730980000100}
+      ],
+      "timestamp": 1730980000000
+    }
+  ],
+  "min_shape_area": 100
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "verdict": "PENIS",
+  "verdict_text": "Drawing looks like a penis! ✓ (Detected via shape analysis)",
+  "confidence": 0.93,
+  "raw_probability": 0.93,
+  "threshold": 0.5,
+  "model_info": "Binary classifier with shape-based detection (Keras/TFLite backend)",
+  "detection_details": {
+    "num_shapes_analyzed": 3,
+    "canvas_dimensions": [512, 512],
+    "shape_predictions": [
+      {
+        "shape_id": 0,
+        "x": 180,
+        "y": 260,
+        "width": 80,
+        "height": 160,
+        "confidence": 0.49,
+        "is_positive": false,
+        "area": 12800
+      },
+      {
+        "shape_id": 1,
+        "x": 130,
+        "y": 360,
+        "width": 60,
+        "height": 60,
+        "confidence": 0.48,
+        "is_positive": false,
+        "area": 3600
+      },
+      {
+        "shape_id": 2,
+        "x": 250,
+        "y": 360,
+        "width": 60,
+        "height": 60,
+        "confidence": 0.47,
+        "is_positive": false,
+        "area": 3600
+      }
+    ],
+    "grouped_boxes": [
+      {
+        "group_id": 0,
+        "x": 130,
+        "y": 260,
+        "width": 180,
+        "height": 160,
+        "confidence": 0.93,
+        "is_positive": true
+      }
+    ]
+  },
+  "drawing_statistics": {
+    "response_time_ms": 95.3,
+    "preprocess_time_ms": 20.1,
+    "inference_time_ms": 65.0
+  }
+}
+```
+
+**Notes:**
+- The heuristic is intentionally conservative:
+  - requires multiple high/near-high scores AND tight spatial clustering
+  - avoids promoting random scattered noise.
+- All behavior is implemented in [`ShapeDetector`](src/core/shape_detection.py:57) and used by
+  [`/api/predict/shape`](src/web/app.py:961).
+
+---
+
 ### `POST /api/predict/tile`
 
 Classify using tile-based detection with grid partitioning. This is the most robust detection mode, designed to prevent content dilution attacks by analyzing the canvas in independent tiles.

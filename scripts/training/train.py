@@ -154,13 +154,13 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output = 'models/quick
     
     # Load data
     print('Loading training data...')
-    X_train = np.load(data_dir / "X_train.npy")
-    y_train = np.load(data_dir / "y_train.npy")
-    X_test = np.load(data_dir / "X_test.npy")
-    y_test = np.load(data_dir / "y_test.npy")
+    X_train = np.load(data_dir / 'X_train.npy')
+    y_train = np.load(data_dir / 'y_train.npy')
+    X_test = np.load(data_dir / 'X_test.npy')
+    y_test = np.load(data_dir / 'y_test.npy')
     
     # Load class mapping
-    with open(data_dir / "class_mapping.pkl", 'rb') as f:
+    with open(data_dir / 'class_mapping.pkl', 'rb') as f:
         class_mapping = pickle.load(f)
     
     # For binary classification
@@ -401,7 +401,7 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output = 'models/quick
         print(f"Test Accuracy: {test_accuracy:.4f}")
     
     # Save training history
-    history_file = Path(model_output).parent / "training_history.pkl"
+    history_file = Path(model_output).parent / 'training_history.pkl'
     with open(history_file, 'wb') as f:
         pickle.dump(history.history, f)
     

@@ -26,8 +26,8 @@ def load_model_and_data(model_path, data_dir):
     print('Loading model and data...')
     model = tf.keras.models.load_model(model_path)
     
-    X_test = np.load(Path(data_dir) / "X_test.npy")
-    y_test = np.load(Path(data_dir) / "y_test.npy")
+    X_test = np.load(Path(data_dir) / 'X_test.npy')
+    y_test = np.load(Path(data_dir) / 'y_test.npy')
     
     # Normalize to 0-1 if needed
     if X_test.max() > 1.0:
@@ -268,7 +268,7 @@ def main():
     plot_threshold_analysis(y_test, y_prob, output_dir / "threshold_analysis.png")
     
     # Save metrics
-    metrics_file = output_dir / "evaluation_metrics.pkl"
+    metrics_file = output_dir / 'evaluation_metrics.pkl'
     with open(metrics_file, 'wb') as f:
         pickle.dump({
             'metrics': metrics,

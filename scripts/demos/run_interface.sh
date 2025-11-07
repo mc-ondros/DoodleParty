@@ -7,8 +7,8 @@ echo ""
 
 # Check if virtual environment exists
 if [ ! -d ".venv" ]; then
-    echo "Error: Virtual environment not found. Please run this from the ML project root directory."
-    exit 1
+  echo "Error: Virtual environment not found. Please run this from the ML project root directory."
+  exit 1
 fi
 
 # Activate virtual environment
@@ -17,9 +17,9 @@ source .venv/bin/activate
 echo "Checking dependencies..."
 
 # Install Flask if not already installed
-    if ! python3 -c "import flask" 2>/dev/null; then
-    echo "Installing Flask and dependencies..."
-    pip install -r app/requirements.txt
+  if ! python3 -c "import flask" 2>/dev/null; then
+  echo "Installing Flask and dependencies..."
+  pip install -r app/requirements.txt
 fi
 
 echo ""

@@ -231,8 +231,8 @@ def main():
     # Load model and data
     print('\nLoading model and data...')
     model = tf.keras.models.load_model(args.model)
-    X_test = np.load(Path(args.data_dir) / "X_test.npy")
-    y_test = np.load(Path(args.data_dir) / "y_test.npy")
+    X_test = np.load(Path(args.data_dir) / 'X_test.npy')
+    y_test = np.load(Path(args.data_dir) / 'y_test.npy')
     
     # Normalize
     if X_test.max() > 1.0:
@@ -261,7 +261,7 @@ def main():
         'recommended_threshold': optimal['max_f1']['threshold']
     }
     
-    with open(output_dir / "threshold_optimization.pkl", 'wb') as f:
+    with open(output_dir / 'threshold_optimization.pkl', 'wb') as f:
         pickle.dump(results, f)
     
     print(f"\n✓ Results saved to {output_dir / 'threshold_optimization.pkl'}")

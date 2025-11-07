@@ -207,7 +207,7 @@ def preprocess_image(image):
 
 ## Detection Strategies
 
-DoodleHunter implements three detection modes to address different security and performance requirements:
+DoodleHunter implements multiple detection modes to address different security and performance requirements:
 
 ### Mode 1: Standard Single-Image Classification
 
@@ -264,6 +264,109 @@ Per-Tile Inference → Tile Caching → Aggregate Results
 - Incremental updates: <0.1ms for 1-4 dirty tiles
 
 **Use Case:** High-security scenarios where users may attempt to hide offensive content by mixing with innocent shapes across the canvas
+
+### Mode 4: Shape-Based Detection (Stroke-Aware, Grouping, Heuristic)
+
+**Status:** Advanced / UI-focused, designed for realistic multi-part penis detection and introspection.
+
+**Core Implementation:** [`src/core/shape_detection.py`](src/core/shape_detection.py:1)
+
+**Goals:**
+- Detect coherent offensive objects (especially multi-part penis drawings) instead of treating each sub-shape independently.
+- Use all available signals:
+  - stroke coordinates,
+  - stroke timing / order,
+  - spatial configuration of components,
+  - model confidence scores.
+
+**Pipeline Overview:**
+
+1. Stroke-Aware Shape Proposals
+   - Source: `stroke_history` from the web UI.
+   - [`ShapeDetector.extract_shapes_from_strokes()`](src/core/shape_detection.py:117):
+     - Normalizes each stroke into:
+       - points: [(x, y), ...]
+       - start/end points
+       - timestamp (per stroke or last point)
+     - Clusters strokes via union-find:
+       - Connect strokes if:
+         - endpoints within a spatial radius (default ≤32px),
+         - OR temporal gap ≤900ms.
+     - Each connected component of strokes becomes a candidate shape with its own bounding box.
+   - Rationale:
+     - Captures user intent better than raw pixels.
+     - Ensures related strokes (shaft + balls) are considered together or as tightly related proposals.
+
+2. Robust Contour Fallback
+   - If stroke-based clustering yields no shapes:
+     - [`ShapeDetector.extract_shapes()`](src/core/shape_detection.py:243):
+       - Grayscale + Otsu/adaptive thresholding.
+       - Morphological closing to connect fragmented strokes.
+       - Area and aspect-ratio filters for noise rejection.
+   - This guarantees a reliable fallback even without stroke metadata.
+
+3. Per-Shape Normalization and Scoring
+   - For each candidate shape:
+     - Crop with a margin, preserve aspect ratio, normalize to model input size.
+     - [`ShapeDetector.predict_shape()`](src/core/shape_detection.py:434):
+       - Supports both Keras and TFLite backends.
+       - Converts arbitrary output tensors into a stable scalar offensive score in [0,1].
+   - Results are captured as [`ShapeInfo`](src/core/shape_detection.py:31):
+     - bounding_box, confidence, is_positive, area, shape_id, etc.
+
+4. Grouping Logic (Merging Related Shapes)
+   - [`ShapeDetector._merge_positive_shapes()`](src/core/shape_detection.py:488):
+     - Operates on shapes flagged as positive by the caller (either strict or heuristic).
+     - Builds an undirected graph where shapes are linked if:
+       - center distance ≤80px, OR
+       - IoU ≥0.05.
+     - Each connected component becomes a merged object:
+       - merged bounding box,
+       - group score = max member confidence.
+   - This is used in two phases:
+     - Strict grouping for shapes ≥ global threshold.
+     - Heuristic grouping for “near-positive” shapes.
+
+5. Penis-Specific Cluster Heuristic
+   - Implemented in [`ShapeDetector.detect()`](src/core/shape_detection.py:600).
+   - Logic:
+     - First, try strict grouping:
+       - if any merged group contains shapes ≥ threshold → positive verdict.
+     - If no strict-positive cluster:
+       - identify shapes with confidence close to threshold (e.g. ≥0.45 for threshold 0.5);
+       - if 3 or more such shapes form a single merged cluster under `_merge_positive_shapes`:
+         - treat them as one coherent offensive object (classic shaft + two balls pattern),
+         - promote overall verdict to positive,
+         - boost group confidence (capped below 1.0) to reflect combined evidence.
+   - Intent:
+     - Avoid “three 49% negatives” outcome for clear penis drawings.
+     - Use geometry + stroke intent + multiple strong signals to reach a decisive verdict without globally lowering thresholds.
+
+6. Integration and Exposure
+   - Endpoint: `/api/predict/shape` in [`src/web/app.py`](src/web/app.py:961)
+     - Constructs a `ShapeDetector` with the active model / threshold.
+     - Passes both:
+       - preprocessed image,
+       - stroke_history (if provided by frontend).
+     - Returns:
+       - `verdict` and `confidence` from `ShapeDetectionResult`,
+       - `shape_predictions` for per-shape introspection,
+       - `grouped_boxes` for merged offensive objects (used by visual debug).
+   - Frontend: [`src/web/static/script.js`](src/web/static/script.js:732)
+     - Visual Debug mode:
+       - sends `stroke_history`,
+       - overlays bounding boxes and IDs,
+       - can be extended to highlight merged groups distinctly.
+
+**Why this matters architecturally:**
+- Moves from purely pixel-based classification to behavior-aware detection leveraging:
+  - temporal drawing patterns,
+  - spatial composition,
+  - aggregation of multiple moderately strong cues.
+- Provides a principled way to:
+  - detect multi-part NSFW shapes,
+  - remain robust against noise,
+  - serve interpretable visualizations for debugging and tuning.
 
 ## Web Application Architecture
 

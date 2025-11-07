@@ -731,45 +731,89 @@ function highlightAnalyzedTiles(tileData) {
 
 function highlightDetectedShapes(shapeData) {
     if (!visualDebugEnabled || !shapeData) return;
-    
+
     ctx.save();
-    
-    for (const shape of shapeData) {
+
+    // Predefined color palette for distinct boxes (loops if more shapes)
+    const colors = [
+        '#ef4444', // red
+        '#3b82f6', // blue
+        '#22c55e', // green
+        '#eab308', // yellow
+        '#8b5cf6', // purple
+        '#ec4899', // pink
+        '#14b8a6', // teal
+        '#f97316', // orange
+    ];
+
+    for (let i = 0; i < shapeData.length; i++) {
+        const shape = shapeData[i];
         const { x, y, width, height, is_positive, confidence, shape_id } = shape;
-        
-        // Color based on prediction
-        if (is_positive) {
-            // Red for positive detections
-            ctx.fillStyle = `rgba(239, 68, 68, ${confidence * 0.2})`;
-            ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
+
+        // Pick a distinct base color per shape_id to make them easy to tell apart
+        const baseColor = colors[shape_id % colors.length];
+
+        // Stroke color: solid base color
+        let strokeColor = baseColor;
+        // Fill color: low alpha overlay for visibility without obscuring drawing
+        let fillColor = baseColor.replace('#', 'rgba(');
+
+        // Map hex -> rgba(r,g,b,alpha)
+        // If parsing fails, fallback to generic red/green.
+        const hex = baseColor.replace('#', '');
+        if (hex.length === 6) {
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+
+            const alpha = is_positive
+                ? Math.min(0.15 + confidence * 0.25, 0.4) // stronger for positives
+                : 0.10; // subtle for negatives
+
+            fillColor = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            strokeColor = `rgba(${r}, ${g}, ${b}, 0.95)`;
         } else {
-            // Green for negative
-            ctx.fillStyle = `rgba(16, 185, 129, ${(1 - confidence) * 0.15})`;
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
+            // Fallback colors
+            if (is_positive) {
+                fillColor = `rgba(239, 68, 68, ${Math.min(0.15 + confidence * 0.25, 0.4)})`;
+                strokeColor = 'rgba(239, 68, 68, 0.95)';
+            } else {
+                fillColor = 'rgba(16, 185, 129, 0.10)';
+                strokeColor = 'rgba(16, 185, 129, 0.8)';
+            }
         }
-        
+
         ctx.lineWidth = 3;
-        
-        // Fill shape bounding box
+
+        // Fill bounding box (semi-transparent)
+        ctx.fillStyle = fillColor;
         ctx.fillRect(x, y, width, height);
-        
-        // Draw border
+
+        // Border
+        ctx.strokeStyle = strokeColor;
         ctx.strokeRect(x, y, width, height);
-        
-        // Draw shape ID and confidence
-        ctx.font = 'bold 14px monospace';
-        ctx.fillStyle = is_positive ? '#dc2626' : '#059669';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        const label = `#${shape_id}: ${(confidence * 100).toFixed(0)}%`;
-        ctx.fillText(
-            label,
-            x + width / 2,
-            y + height / 2
-        );
+
+        // Label: shape index + confidence
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        const labelText = `#${shape_id} ${(confidence * 100).toFixed(0)}%${is_positive ? ' ⚠' : ''}`;
+
+        // Label background
+        const padding = 2;
+        const textWidth = ctx.measureText(labelText).width;
+        const labelX = x + 2;
+        const labelY = y + 2;
+
+        ctx.fillStyle = 'rgba(17, 24, 39, 0.85)'; // dark bg for contrast
+        ctx.fillRect(labelX - padding, labelY - padding, textWidth + padding * 2, 14 + padding * 2);
+
+        // Label text (use same per-box color)
+        ctx.fillStyle = strokeColor;
+        ctx.fillText(labelText, labelX, labelY);
     }
-    
+
     ctx.restore();
 }
 

@@ -235,7 +235,7 @@ def load_model_and_mapping() -> None:
     # Load class mapping
     logger.info("Loading class mapping...")
     try:
-        mapping_file = data_dir / "class_mapping.pkl"
+        mapping_file = data_dir / 'class_mapping.pkl'
         if mapping_file.exists():
             logger.debug(f"Reading mapping from: {mapping_file}")
             with open(mapping_file, 'rb') as f:
@@ -1081,7 +1081,7 @@ def api_predict_shape() -> Tuple[Union[Dict[str, Any], Any], int]:
         verdict_text = f"Drawing looks like a {verdict.lower()}! {'✓' if result.is_positive else ''}"
         verdict_text += f" (Detected via shape analysis: {result.num_shapes_analyzed} shapes)"
         
-        # Prepare shape details
+        # Prepare shape details (raw shapes)
         shape_details = []
         for shape_info in result.shape_predictions:
             x, y, w, h = shape_info.bounding_box
@@ -1095,7 +1095,24 @@ def api_predict_shape() -> Tuple[Union[Dict[str, Any], Any], int]:
                 'is_positive': shape_info.is_positive,
                 'area': shape_info.area
             })
-        
+
+        # Prepare grouped detection details (merged positive clusters)
+        grouped_boxes = result.grouped_boxes or []
+        grouped_scores = result.grouped_scores or []
+        grouped_details = []
+        for i, box in enumerate(grouped_boxes):
+            gx, gy, gw, gh = box
+            gconf = grouped_scores[i] if i < len(grouped_scores) else result.confidence
+            grouped_details.append({
+                'group_id': i,
+                'x': gx,
+                'y': gy,
+                'width': gw,
+                'height': gh,
+                'confidence': round(gconf, 4),
+                'is_positive': True  # groups exist only for merged positives
+            })
+
         response = {
             'success': True,
             'verdict': verdict,
@@ -1107,7 +1124,8 @@ def api_predict_shape() -> Tuple[Union[Dict[str, Any], Any], int]:
             'detection_details': {
                 'num_shapes_analyzed': result.num_shapes_analyzed,
                 'canvas_dimensions': result.canvas_dimensions,
-                'shape_predictions': shape_details
+                'shape_predictions': shape_details,
+                'grouped_boxes': grouped_details
             },
             'drawing_statistics': {
                 'response_time_ms': round(prediction_time * 1000, 2),
