@@ -332,11 +332,6 @@ function stopDrawing() {
         // Update statistics after stroke is complete
         updateStatistics();
 
-        // Redraw tile grid if visual debug is enabled
-        if (visualDebugEnabled) {
-            drawTileGrid();
-        }
-
         // Early detection: analyze after first few strokes
         if (earlyDetectionEnabled && strokeCount === EARLY_DETECTION_STROKE_COUNT && !realTimeEnabled) {
             console.log(`Early detection triggered after ${EARLY_DETECTION_STROKE_COUNT} strokes`);
@@ -443,18 +438,6 @@ function showResult(data) {
         safeSetTextContent('inferenceTime', stats.inference_time_ms + ' ms');
     }
 
-    // Update region detection details if available
-    const regionDetails = document.getElementById('regionDetails');
-    if (data.detection_details) {
-        const details = data.detection_details;
-        safeSetTextContent('patchesAnalyzed', details.num_patches_analyzed || details.num_contours_analyzed || details.num_tiles_analyzed || 0);
-        safeSetTextContent('earlyStopped', details.early_stopped ? 'Yes' : 'No');
-        safeSetTextContent('aggregationStrategy', details.aggregation_strategy || details.retrieval_mode || 'N/A');
-        regionDetails.classList.remove('hidden');
-    } else {
-        regionDetails.classList.add('hidden');
-    }
-
     // Update additional info row
     if (data.model_info) {
         const modelMatch = data.model_info.match(/\((.*?)\)/);
@@ -547,21 +530,17 @@ async function makePrediction() {
         // Store image data for content removal
         lastImageData = imageData64;
 
-        // Use shape detection if visual debug enabled, otherwise simple detection
-        const endpoint = visualDebugEnabled ? '/api/predict/shape' : '/api/predict';
-        lastDetectionMethod = visualDebugEnabled ? 'shape' : 'simple';
+        // Always use shape detection (best detection method)
+        const endpoint = '/api/predict';
+        lastDetectionMethod = 'shape';
 
-        // Prepare request body
+        // Prepare request body with stroke history for better shape extraction
         const requestBody = {
-            image: imageData64
+            image: imageData64,
+            stroke_history: strokeHistory
         };
         
-        // Add shape-specific parameters if using shape detection
-        if (visualDebugEnabled) {
-            requestBody.min_shape_area = 100;
-            requestBody.stroke_history = strokeHistory;  // Send stroke coordinates
-            console.log(`Using shape-based detection with ${strokeHistory.length} strokes`);
-        }
+        console.log(`Using shape-based detection with ${strokeHistory.length} strokes`);
 
         // Send to backend
         const response = await fetch(endpoint, {
