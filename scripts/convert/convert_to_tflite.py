@@ -73,17 +73,17 @@ def load_keras_model(model_path: Path):
 
 def convert_to_tflite(model, optimize_size: bool = False):
     """Convert Keras model to TensorFlow Lite format."""
-    print("\nConverting to TensorFlow Lite...")
+    print('\nConverting to TensorFlow Lite...')
     
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     
     if optimize_size:
-        print("  - Applying dynamic range quantization (weights only)")
+        print('  - Applying dynamic range quantization (weights only)')
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
     
     try:
         tflite_model = converter.convert()
-        print("✓ Conversion successful")
+        print('✓ Conversion successful')
         return tflite_model
     except Exception as e:
         print(f"✗ Conversion failed: {e}")
@@ -92,7 +92,7 @@ def convert_to_tflite(model, optimize_size: bool = False):
 
 def validate_tflite_model(tflite_model: bytes, original_model):
     """Validate the TFLite model by running a test inference."""
-    print("\nValidating TFLite model...")
+    print('\nValidating TFLite model...')
     
     try:
         # Create interpreter
@@ -125,9 +125,9 @@ def validate_tflite_model(tflite_model: bytes, original_model):
         print(f"  Mean absolute difference: {diff:.6f}")
         
         if diff < 1e-5:
-            print("✓ Validation passed (outputs match)")
+            print('✓ Validation passed (outputs match)')
         elif diff < 1e-3:
-            print("✓ Validation passed (small difference, acceptable)")
+            print('✓ Validation passed (small difference, acceptable)')
         else:
             print(f"⚠ Warning: Large difference between models ({diff:.6f})")
         
@@ -169,7 +169,7 @@ def main():
         output_path = model_path.with_suffix('.tflite')
     
     print("=" * 70)
-    print("TensorFlow Lite Conversion")
+    print('TensorFlow Lite Conversion')
     print("=" * 70)
     print(f"Input model:  {model_path}")
     print(f"Output model: {output_path}")
@@ -195,7 +195,7 @@ def main():
         reduction = ((original_size_mb - tflite_size_mb) / original_size_mb) * 100
         
         print("\n" + "=" * 70)
-        print("Conversion Summary")
+        print('Conversion Summary')
         print("=" * 70)
         print(f"Original size:  {original_size_mb:.2f} MB")
         print(f"TFLite size:    {tflite_size_mb:.2f} MB")
@@ -203,13 +203,13 @@ def main():
         print("=" * 70)
         
         if args.optimize_size:
-            print("\n✓ Model converted with dynamic range quantization")
-            print("  Note: Weights are quantized, but activations are still float32")
-            print("  For full INT8 quantization, use quantize_int8.py")
+            print('\n✓ Model converted with dynamic range quantization')
+            print('  Note: Weights are quantized, but activations are still float32')
+            print('  For full INT8 quantization, use quantize_int8.py')
         else:
-            print("\n✓ Model converted to TFLite (float32)")
-            print("  For smaller size, re-run with --optimize-size")
-            print("  For INT8 quantization, use quantize_int8.py")
+            print('\n✓ Model converted to TFLite (float32)')
+            print('  For smaller size, re-run with --optimize-size')
+            print('  For INT8 quantization, use quantize_int8.py')
     else:
         sys.exit(3)
 

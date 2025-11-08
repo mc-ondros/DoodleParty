@@ -2,6 +2,8 @@
 
 **Purpose:** Complete installation and setup instructions.
 
+**Status: Updated to match actual implementation** - Nov 2024
+
 ## Prerequisites
 
 - Python 3.9 or higher
@@ -45,10 +47,10 @@ pip install -r requirements.txt
 ### 4. Download QuickDraw Dataset
 
 ```bash
-python scripts/data_processing/download_quickdraw_ndjson.py
+python scripts/data_processing/download_quickdraw_npy.py
 ```
 
-This downloads NDJSON files for selected categories to `data/raw_ndjson/`.
+This downloads NumPy bitmap files (28x28 pre-processed images) for selected categories to `data/raw/`.
 
 ### 5. Verify Installation
 
@@ -64,8 +66,8 @@ python -c "from src.data.loaders import load_data; print('Dataset module OK')"
 Create `.env` file in project root:
 
 ```bash
-MODEL_PATH=models/quickdraw_classifier.keras
-IMAGE_SIZE=128
+MODEL_PATH=models/quickdraw_model.h5
+IMAGE_SIZE=28
 THRESHOLD=0.5
 FLASK_PORT=5000
 FLASK_DEBUG=False
@@ -77,14 +79,16 @@ After installation, your data directory should look like:
 
 ```
 data/
-├── raw_ndjson/
-│   ├── penis-raw.ndjson
-│   ├── circle-raw.ndjson
-│   ├── square-raw.ndjson
+├── raw/
+│   ├── penis.npy
+│   ├── circle.npy
+│   ├── square.npy
 │   └── ...
 └── processed/
     └── class_mapping.pkl
 ```
+
+**Note:** The project uses pre-processed NumPy bitmap format (28x28 grayscale images) from Google's QuickDraw dataset, not raw NDJSON stroke data.
 
 ## Troubleshooting
 
@@ -117,8 +121,8 @@ pip install --user -r requirements.txt
 
 ## Next Steps
 
-1. Train a model: `./scripts/train_max_accuracy.sh`
+1. Train a model: `python scripts/train.py --epochs 50 --batch-size 32`
 2. Start web interface: `python src/web/app.py`
 3. See [API Reference](api.md) for usage details
 
-*Installation guide for DoodleHunter v1.0*
+*Installation guide for DoodleHunter v1.0 - Updated Nov 2024*

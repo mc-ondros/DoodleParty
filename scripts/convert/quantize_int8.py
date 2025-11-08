@@ -92,7 +92,7 @@ def load_calibration_data(data_dir: Path, num_samples: int):
         return X_calibration
     else:
         print(f"✗ Error: Training data not found at {train_data_path}")
-        print("  Please run data processing first or specify --data-dir")
+        print('  Please run data processing first or specify --data-dir')
         sys.exit(1)
 
 
@@ -112,7 +112,7 @@ def representative_dataset_generator(calibration_data):
 
 def quantize_model(model_path: Path, calibration_data, optimize_ops=True):
     """Apply INT8 quantization to model."""
-    print("\nApplying INT8 quantization...")
+    print('\nApplying INT8 quantization...')
     
     # Determine if we need to convert from Keras first
     if model_path.suffix in ['.h5', '.keras']:
@@ -127,23 +127,23 @@ def quantize_model(model_path: Path, calibration_data, optimize_ops=True):
         # For TFLite input, we need to convert via saved model
         # This is a workaround since we can't directly quantize a TFLite model
         interpreter = tf.lite.Interpreter(model_content=tflite_model)
-        print("  Note: Re-conversion may be needed for quantization")
-        print("  Consider using the original Keras model for best results")
+        print('  Note: Re-conversion may be needed for quantization')
+        print('  Consider using the original Keras model for best results')
         
         # We'll need the Keras model for proper quantization
-        print("✗ Error: Cannot quantize from TFLite model directly")
-        print("  Please provide the original Keras model (.h5 or .keras)")
+        print('✗ Error: Cannot quantize from TFLite model directly')
+        print('  Please provide the original Keras model (.h5 or .keras)')
         sys.exit(2)
     
     # Configure quantization
-    print("  - Optimization: DEFAULT (weight + activation quantization)")
+    print('  - Optimization: DEFAULT (weight + activation quantization)')
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     
-    print("  - Setting representative dataset for calibration")
+    print('  - Setting representative dataset for calibration')
     converter.representative_dataset = lambda: representative_dataset_generator(calibration_data)
     
     # Enforce full integer quantization
-    print("  - Target spec: INT8 operations")
+    print('  - Target spec: INT8 operations')
     converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
     
     # Input/output also as INT8 (optional, can keep as float for easier integration)
@@ -153,31 +153,31 @@ def quantize_model(model_path: Path, calibration_data, optimize_ops=True):
     
     try:
         quantized_model = converter.convert()
-        print("✓ Quantization successful")
+        print('✓ Quantization successful')
         return quantized_model
     except Exception as e:
         print(f"✗ Quantization failed: {e}")
-        print("\nTroubleshooting:")
-        print("  1. Ensure you're using a Keras model, not TFLite")
-        print("  2. Check that calibration data is valid")
-        print("  3. Try with a smaller --num-samples")
+        print('\nTroubleshooting:')
+        print('  1. Ensure you are using a Keras model, not TFLite')
+        print('  2. Check that calibration data is valid')
+        print('  3. Try with a smaller --num-samples')
         sys.exit(3)
 
 
 def benchmark_models(original_path: Path, quantized_model: bytes, calibration_data):
     """Compare accuracy of original and quantized models."""
-    print("\nBenchmarking models...")
+    print('\nBenchmarking models...')
     
     # Load original model
     if original_path.suffix in ['.h5', '.keras']:
-        print("  Loading original Keras model...")
+        print('  Loading original Keras model...')
         keras_model = tf.keras.models.load_model(original_path)
         
         # Create float32 TFLite for fair comparison
         converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
         original_tflite = converter.convert()
     else:
-        print("  Using original TFLite model...")
+        print('  Using original TFLite model...')
         with open(original_path, 'rb') as f:
             original_tflite = f.read()
     
@@ -185,7 +185,7 @@ def benchmark_models(original_path: Path, quantized_model: bytes, calibration_da
     test_samples = calibration_data[:100]
     
     # Benchmark original
-    print("  Benchmarking original model...")
+    print('  Benchmarking original model...')
     original_interpreter = tf.lite.Interpreter(model_content=original_tflite)
     original_interpreter.allocate_tensors()
     original_outputs = []
@@ -203,7 +203,7 @@ def benchmark_models(original_path: Path, quantized_model: bytes, calibration_da
         original_outputs.append(output[0])
     
     # Benchmark quantized
-    print("  Benchmarking quantized model...")
+    print('  Benchmarking quantized model...')
     quantized_interpreter = tf.lite.Interpreter(model_content=quantized_model)
     quantized_interpreter.allocate_tensors()
     quantized_outputs = []
@@ -228,7 +228,7 @@ def benchmark_models(original_path: Path, quantized_model: bytes, calibration_da
     max_diff = np.abs(original_outputs - quantized_outputs).max()
     
     print("\n" + "=" * 70)
-    print("Accuracy Comparison")
+    print('Accuracy Comparison')
     print("=" * 70)
     print(f"Mean Absolute Error:   {mae:.6f}")
     print(f"Max Absolute Error:    {max_diff:.6f}")
@@ -242,13 +242,13 @@ def benchmark_models(original_path: Path, quantized_model: bytes, calibration_da
     print("=" * 70)
     
     if agreement > 98:
-        print("✓ Excellent: Minimal accuracy loss")
+        print('✓ Excellent: Minimal accuracy loss')
     elif agreement > 95:
-        print("✓ Good: Acceptable accuracy loss")
+        print('✓ Good: Acceptable accuracy loss')
     elif agreement > 90:
-        print("⚠ Warning: Noticeable accuracy degradation")
+        print('⚠ Warning: Noticeable accuracy degradation')
     else:
-        print("✗ Poor: Significant accuracy loss")
+        print('✗ Poor: Significant accuracy loss')
 
 
 def main():
@@ -269,7 +269,7 @@ def main():
     data_dir = Path(args.data_dir)
     
     print("=" * 70)
-    print("INT8 Post-Training Quantization")
+    print('INT8 Post-Training Quantization')
     print("=" * 70)
     print(f"Input model:       {model_path}")
     print(f"Output model:      {output_path}")
@@ -299,18 +299,18 @@ def main():
     reduction = ((original_size_mb - quantized_size_mb) / original_size_mb) * 100
     
     print("\n" + "=" * 70)
-    print("Quantization Summary")
+    print('Quantization Summary')
     print("=" * 70)
     print(f"Original size:  {original_size_mb:.2f} MB")
     print(f"Quantized size: {quantized_size_mb:.2f} MB")
     print(f"Size reduction: {reduction:.1f}%")
     print(f"Speed improvement: ~2-4x (depending on hardware)")
     print("=" * 70)
-    print("\n✓ INT8 quantization complete")
-    print("  Next steps:")
-    print("  1. Benchmark inference speed with benchmark_tflite.py")
-    print("  2. Test accuracy on full validation set")
-    print("  3. Deploy to production")
+    print('\n✓ INT8 quantization complete')
+    print('  Next steps:')
+    print('  1. Benchmark inference speed with benchmark_tflite.py')
+    print('  2. Test accuracy on full validation set')
+    print('  3. Deploy to production')
 
 
 if __name__ == '__main__':

@@ -108,7 +108,7 @@ def load_training_data(data_dir: Path):
     
     if not all([X_train_path.exists(), y_train_path.exists(),
                 X_val_path.exists(), y_val_path.exists()]):
-        print("✗ Error: Training data not found")
+        print('✗ Error: Training data not found')
         sys.exit(1)
     
     X_train = np.load(X_train_path)
@@ -149,7 +149,7 @@ def create_student_model(input_shape, filters, dense_units):
     model.add(keras.layers.Dropout(0.5, name='dropout'))
     model.add(keras.layers.Dense(1, activation='sigmoid', name='output'))
     
-    print("✓ Student model created")
+    print('✓ Student model created')
     model.summary()
     
     return model
@@ -251,7 +251,7 @@ def count_parameters(model):
 def compare_models(teacher_model, student_model, X_val, y_val):
     """Compare teacher and student model performance."""
     print("\n" + "=" * 70)
-    print("Model Comparison")
+    print('Model Comparison')
     print("=" * 70)
     
     # Evaluate teacher
@@ -276,13 +276,13 @@ def compare_models(teacher_model, student_model, X_val, y_val):
     print("=" * 70)
     
     if acc_diff > -0.01:
-        print("\n✓ Excellent: Student matches teacher performance")
+        print('\n✓ Excellent: Student matches teacher performance')
     elif acc_diff > -0.02:
-        print("\n✓ Good: Minimal accuracy loss")
+        print('\n✓ Good: Minimal accuracy loss')
     elif acc_diff > -0.05:
-        print("\n✓ Acceptable: Small accuracy tradeoff for size reduction")
+        print('\n✓ Acceptable: Small accuracy tradeoff for size reduction')
     else:
-        print("\n⚠ Warning: Significant accuracy loss")
+        print('\n⚠ Warning: Significant accuracy loss')
     
     print(f"\nModel size reduction: {param_reduction:.1f}%")
 
@@ -308,7 +308,7 @@ def main():
     filters = [int(f) for f in args.student_filters.split(',')]
     
     print("=" * 70)
-    print("Knowledge Distillation")
+    print('Knowledge Distillation')
     print("=" * 70)
     print(f"Teacher model:  {teacher_path}")
     print(f"Student model:  {output_path}")
@@ -318,9 +318,9 @@ def main():
     print("=" * 70)
     
     # Load teacher model
-    print("\nLoading teacher model...")
+    print('\nLoading teacher model...')
     teacher_model = keras.models.load_model(teacher_path)
-    print("✓ Teacher model loaded")
+    print('✓ Teacher model loaded')
     
     # Load data
     X_train, y_train, X_val, y_val = load_training_data(data_dir)
@@ -330,7 +330,7 @@ def main():
     student_model = create_student_model(input_shape, filters, args.student_dense)
     
     # Create distiller
-    print("\nInitializing distiller...")
+    print('\nInitializing distiller...')
     distiller = Distiller(
         student=student_model,
         teacher=teacher_model,
@@ -348,7 +348,7 @@ def main():
         ]
     )
     
-    print("✓ Distiller ready")
+    print('✓ Distiller ready')
     
     # Train
     print(f"\nTraining student model for {args.epochs} epochs...")
@@ -373,22 +373,22 @@ def main():
         verbose=1 if args.verbose else 2
     )
     
-    print("✓ Training complete")
+    print('✓ Training complete')
     
     # Save student model
     print(f"\nSaving student model to: {output_path}")
     student_model.save(output_path)
-    print("✓ Student model saved")
+    print('✓ Student model saved')
     
     # Compare models
     compare_models(teacher_model, student_model, X_val, y_val)
     
-    print("\n✓ Distillation complete")
-    print("\nNext steps:")
-    print("  1. Convert to TFLite for deployment")
-    print("  2. Apply INT8 quantization")
-    print("  3. Benchmark inference speed")
-    print("  4. Test on full validation set")
+    print('\n✓ Distillation complete')
+    print('\nNext steps:')
+    print('  1. Convert to TFLite for deployment')
+    print('  2. Apply INT8 quantization')
+    print('  3. Benchmark inference speed')
+    print('  4. Test on full validation set')
 
 
 if __name__ == '__main__':

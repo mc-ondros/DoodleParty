@@ -30,6 +30,9 @@ dependencies = [
     "pillow>=10.0.0",
     "flask>=2.0.0",
     "flask-cors",
+    "tqdm>=4.66.0",
+    "requests>=2.31.0",
+    "seaborn>=0.12.0",
 ]
 
 [project.optional-dependencies]
@@ -62,6 +65,22 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+filterwarnings = [
+    # Ignore all deprecation warnings from TensorFlow and its submodules
+    "ignore::DeprecationWarning:tensorflow",
+    "ignore:The distutils package is deprecated:DeprecationWarning",
+    "ignore:module 'sre_constants' is deprecated:DeprecationWarning",
+    # Ignore Keras warnings about input_shape and PyDataset
+    "ignore:Do not pass an `input_shape`:UserWarning",
+    "ignore:Your `PyDataset` class should call:UserWarning",
+    # Ignore scipy deprecation warnings - both general and specific
+    "ignore::DeprecationWarning:scipy",
+    "ignore:Please import `affine_transform`:DeprecationWarning",
+    # Ignore scikit-learn precision warnings (expected in tests with limited data)
+    "ignore:Precision is ill-defined:UserWarning",
+    # Catch any remaining deprecation warnings from external libraries
+    "ignore::DeprecationWarning:distutils",
+]
 
 [tool.mypy]
 python_version = "3.9"

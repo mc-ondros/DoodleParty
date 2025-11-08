@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from scipy.ndimage import binary_dilation, distance_transform_edt
 
 print("="*70)
-print("FIXING ALL DATA QUALITY ISSUES")
+print('FIXING ALL DATA QUALITY ISSUES')
 print("="*70)
 
 # Paths
@@ -22,7 +22,7 @@ raw_dir = data_dir / 'raw'
 processed_dir = data_dir / 'processed'
 
 # Load penis data and ensure proper inversion to match QuickDraw background convention (black background, white strokes)
-print("\n1. Loading and fixing penis data...")
+print('\n1. Loading and fixing penis data...')
 penis_data = np.load(processed_dir / 'penis_raw_X.npy')
 print(f"   Loaded {len(penis_data):,} samples")
 print(f"   Original range: {penis_data.min()} - {penis_data.max()}")
@@ -30,8 +30,8 @@ print(f"   Original mean: {penis_data.mean():.2f}")
 
 # Detect and correct improper inversion by checking if data appears already inverted or mostly black
 if penis_data.mean() < 128:
-    print("   ⚠️  Data appears to be already inverted or mostly black!")
-    print("   Inverting back first...")
+    print('   ⚠️  Data appears to be already inverted or mostly black!')
+    print('   Inverting back first...')
     penis_data = 255 - penis_data
 
 # Now invert to black background (for consistency with QuickDraw)
@@ -39,7 +39,7 @@ penis_data = 255 - penis_data
 print(f"   After inversion: {penis_data.min()} - {penis_data.max()}, mean: {penis_data.mean():.2f}")
 
 # Load diverse QuickDraw negative classes to provide realistic non-penis examples for balanced training
-print("\n2. Loading QuickDraw negative classes...")
+print('\n2. Loading QuickDraw negative classes...')
 negative_classes = [
     'airplane', 'apple', 'arm', 'banana', 'bird', 'boomerang',
     'cat', 'circle', 'cloud', 'dog', 'drill', 'fish', 'flower',
@@ -67,7 +67,7 @@ negative_data = np.concatenate(negative_data_list, axis=0)
 print(f"\n   Total negatives: {len(negative_data):,}")
 
 # Remove all-white, all-black, and mostly empty images that could cause model shortcuts or training instability
-print("\n3. Filtering problematic images...")
+print('\n3. Filtering problematic images...')
 
 def is_valid_image(img):
     """Check if image is valid (not all-white, all-black, or mostly empty)"""
@@ -92,7 +92,7 @@ negative_data = np.array(valid_negative)
 print(f"   Negative: kept {len(negative_data):,} valid images")
 
 # Normalize stroke widths between classes to prevent the model from using drawing thickness as a shortcut feature
-print("\n4. Normalizing stroke widths...")
+print('\n4. Normalizing stroke widths...')
 
 def normalize_stroke_width(img, target_width=4.5, threshold=127):
     """Normalize stroke width by dilating/eroding"""
@@ -120,7 +120,7 @@ def normalize_stroke_width(img, target_width=4.5, threshold=127):
     result = np.where(binary, 0, 255).astype(np.uint8)
     return result
 
-print("   Normalizing positive class strokes...")
+print('   Normalizing positive class strokes...')
 penis_normalized = []
 for i, img in enumerate(penis_data):
     if i % 1000 == 0:
@@ -130,7 +130,7 @@ for i, img in enumerate(penis_data):
 penis_data = np.array(penis_normalized)
 print(f"     ✓ Normalized {len(penis_data)} positive samples")
 
-print("   Normalizing negative class strokes...")
+print('   Normalizing negative class strokes...')
 negative_normalized = []
 for i, img in enumerate(negative_data):
     if i % 1000 == 0:
@@ -140,7 +140,7 @@ for i, img in enumerate(negative_data):
 negative_data = np.array(negative_normalized)
 print(f"     ✓ Normalized {len(negative_data)} negative samples")
 # Balance positive and negative classes to prevent model bias and ensure fair evaluation metrics
-print("\n5. Balancing dataset...")
+print('\n5. Balancing dataset...')
 n_positive = len(penis_data)
 n_negative = len(negative_data)
 
@@ -155,7 +155,7 @@ elif n_positive > n_negative:
 
 print(f"   Balanced to {len(penis_data):,} samples per class")
 # Combine positive and negative samples with appropriate binary labels for supervised training
-print("\n6. Combining and shuffling...")
+print('\n6. Combining and shuffling...')
 y_positive = np.ones(len(penis_data), dtype=np.float32)
 y_negative = np.zeros(len(negative_data), dtype=np.float32)
 
@@ -171,7 +171,7 @@ y = y[shuffle_idx]
 print(f"   Combined: {len(X):,} samples")
 print(f"   First 10 labels: {y[:10]}")
 # Normalize pixel values to [0,1] range and add channel dimension for compatibility with CNN input requirements
-print("\n7. Normalizing to [0, 1]...")
+print('\n7. Normalizing to [0, 1]...')
 X = X.reshape(-1, 28, 28, 1).astype(np.float32) / 255.0
 print(f"   Shape: {X.shape}")
 print(f"   Range: {X.min():.3f} - {X.max():.3f}")
@@ -184,7 +184,7 @@ print(f"\n   Positive mean: {pos_mean:.4f}")
 print(f"   Negative mean: {neg_mean:.4f}")
 print(f"   Difference: {abs(pos_mean - neg_mean):.4f}")
 # Create stratified train/test split to ensure both sets maintain the same class distribution for valid evaluation
-print("\n8. Splitting into train/test...")
+print('\n8. Splitting into train/test...')
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=123, stratify=y, shuffle=True
 )
@@ -197,7 +197,7 @@ print(f"     - Positive: {(y_test == 1).sum():,}")
 print(f"     - Negative: {(y_test == 0).sum():,}")
 
 # Save processed dataset and class mapping for reproducible training and inference
-print("\n9. Saving fixed dataset...")
+print('\n9. Saving fixed dataset...')
 np.save(processed_dir / 'X_train.npy', X_train)
 np.save(processed_dir / 'y_train.npy', y_train)
 np.save(processed_dir / 'X_test.npy', X_test)
@@ -220,18 +220,18 @@ print(f"   ✓ Saved to {processed_dir}/")
 
 # FINAL SUMMARY
 print("\n" + "="*70)
-print("✅ DATA FIXES COMPLETE")
+print('✅ DATA FIXES COMPLETE')
 print("="*70)
-print("\nFixes applied:")
-print("  ✓ Properly inverted penis data (black background)")
-print("  ✓ Removed all-white/all-black images")
-print("  ✓ Normalized stroke widths (target: 4.5px)")
-print("  ✓ Ensured consistent background values")
-print("  ✓ Balanced classes")
-print("  ✓ Proper shuffling")
+print('\nFixes applied:')
+print('  ✓ Properly inverted penis data (black background)')
+print('  ✓ Removed all-white/all-black images')
+print('  ✓ Normalized stroke widths (target: 4.5px)')
+print('  ✓ Ensured consistent background values')
+print('  ✓ Balanced classes')
+print('  ✓ Proper shuffling')
 print(f"\nFinal dataset:")
 print(f"  Training: {len(X_train):,} samples (50/50 split)")
 print(f"  Test: {len(X_test):,} samples (50/50 split)")
 print(f"  Brightness difference: {abs(pos_mean - neg_mean):.4f}")
-print("\nReady for training! Run:")
-print("  bash train_max_accuracy.sh")
+print('\nReady for training! Run:')
+print('  bash train_max_accuracy.sh')

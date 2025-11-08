@@ -181,7 +181,7 @@ def compare_models(baseline_stats: Dict, quantized_stats: Dict,
     size_reduction = ((baseline_size - quantized_size) / baseline_size) * 100
     
     print("\n" + "=" * 70)
-    print("Model Comparison")
+    print('Model Comparison')
     print("=" * 70)
     print(f"{'Metric':<20} {'Baseline':<15} {'Quantized':<15} {'Improvement':<15}")
     print("-" * 70)
@@ -197,7 +197,7 @@ def compare_models(baseline_stats: Dict, quantized_stats: Dict,
     print("=" * 70)
     
     # Assessment
-    print("\nAssessment:")
+    print('\nAssessment:')
     if speedup >= 3.0:
         print(f"✓ Excellent speedup: {speedup:.1f}x faster")
     elif speedup >= 2.0:
@@ -224,9 +224,9 @@ def compare_models(baseline_stats: Dict, quantized_stats: Dict,
 def benchmark_batch_inference(interpreter, input_shape, batch_sizes: List[int], iterations: int):
     """Benchmark different batch sizes (simulated by running multiple inferences)."""
     print("\n" + "=" * 70)
-    print("Batch Inference Benchmark (Simulated)")
+    print('Batch Inference Benchmark (Simulated)')
     print("=" * 70)
-    print("Note: TFLite models have fixed batch size. Testing sequential inference.")
+    print('Note: TFLite models have fixed batch size. Testing sequential inference.')
     print(f"{'Batch Size':<15} {'Total (ms)':<15} {'Per-sample (ms)':<18} {'Throughput (inf/s)':<20}")
     print("-" * 70)
     
@@ -262,8 +262,8 @@ def benchmark_batch_inference(interpreter, input_shape, batch_sizes: List[int], 
         print(f"{batch_size:<15} {mean_total:<15.2f} {per_sample:<18.2f} {throughput:<20.1f}")
     
     print("=" * 70)
-    print("Note: These are sequential inference times. For true batch inference,")
-    print("      consider using TensorFlow SavedModel or batched preprocessing.")
+    print('Note: These are sequential inference times. For true batch inference,')
+    print('      consider using TensorFlow SavedModel or batched preprocessing.')
 
 
 def save_results(output_dir: Path, results: Dict[str, Any]):
@@ -290,7 +290,7 @@ def main():
         sys.exit(1)
     
     print("=" * 70)
-    print("TensorFlow Lite Model Benchmark")
+    print('TensorFlow Lite Model Benchmark')
     print("=" * 70)
     print(f"Model:       {model_path}")
     print(f"Iterations:  {args.iterations}")
@@ -358,7 +358,7 @@ def main():
     output_dir = Path(args.output)
     save_results(output_dir, results)
     
-    print("\n✓ Benchmark complete")
+    print('\n✓ Benchmark complete')
 
 
 if __name__ == '__main__':
