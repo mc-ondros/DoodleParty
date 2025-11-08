@@ -60,12 +60,17 @@ env/
 # Data and models - Large files
 data/raw/**/*.npy
 data/raw/**/*.ndjson
+data/raw_ndjson/**/*.ndjson
 data/processed/**/*.npy
 data/processed/**/*.pkl
+data/processed_64x64/**/*.npy
+data/processed_96x96/**/*.npy
 models/**/*.h5
 models/**/*.pkl
 models/**/*.pth
 models/**/*.pt
+models/**/*.onnx
+models/**/*.tflite
 
 # Output
 *.log
