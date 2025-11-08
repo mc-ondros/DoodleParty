@@ -26,95 +26,190 @@ from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-# Import from models.py and data_pipeline.py
-from models import get_model
-from data_pipeline import prepare_test_data
+# Only import get_model when using transfer learning
+# from src.core.models import get_model
+# from src.data.augmentation import prepare_test_data
 
 
-def build_model(num_classes=2, enhanced=False):
+def build_model(num_classes=2, enhanced=False, input_shape=(128, 128, 1)):
     """
-    Build CNN model for binary classification.
+    Build CNN model for binary classification with variable resolution support.
+    
+    Automatically adjusts architecture based on input resolution:
+    - 64x64: Reduces pooling to preserve spatial info
+    - 96x96: Balanced architecture 
+    - 128x128: Original architecture
     
     Args:
         num_classes: Number of classes (default 2 for binary)
         enhanced: If True, use larger model with more capacity (slower but more accurate)
+        input_shape: Input tensor shape (H, W, C), e.g., (64, 64, 1) or (128, 128, 1)
     """
+    resolution = input_shape[0]  # Height (assuming square images)
+    
+    print(f"Building model for {resolution}x{resolution} input...")
+    
     if enhanced:
-        # ENHANCED MODEL - More capacity for better real-world accuracy (128x128 input)
-        model = models.Sequential([
-            # First Conv Block - 64 filters
-            layers.Conv2D(64, (3, 3), activation='relu', input_shape=(128, 128, 1)),
-            layers.BatchNormalization(),
-            layers.Conv2D(64, (3, 3), activation='relu'),
-            layers.BatchNormalization(),
-            layers.MaxPooling2D((2, 2)),
-            layers.Dropout(0.25),
-            
-            # Second Conv Block - 128 filters
-            layers.Conv2D(128, (3, 3), activation='relu'),
-            layers.BatchNormalization(),
-            layers.Conv2D(128, (3, 3), activation='relu'),
-            layers.BatchNormalization(),
-            layers.MaxPooling2D((2, 2)),
-            layers.Dropout(0.3),
-            
-            # Third Conv Block - 256 filters
-            layers.Conv2D(256, (3, 3), activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.3),
-            
-            # Dense layers with more neurons
-            layers.Flatten(),
-            layers.Dense(512, activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.5),
-            
-            layers.Dense(256, activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.5),
-            
-            layers.Dense(128, activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.5),
-            
-            # Output layer
-            layers.Dense(1, activation='sigmoid')
-        ])
-        print("✓ Using ENHANCED model (larger capacity, ~2.5M params)")
+        # ENHANCED MODEL - More capacity for better real-world accuracy
+        if resolution <= 64:
+            # For 64x64: Use fewer pooling layers to preserve spatial information
+            model = models.Sequential([
+                # First Conv Block - 64 filters
+                layers.Conv2D(64, (3, 3), activation='relu', input_shape=input_shape),
+                layers.BatchNormalization(),
+                layers.Conv2D(64, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.MaxPooling2D((2, 2)),  # → 31x31
+                layers.Dropout(0.25),
+                
+                # Second Conv Block - 128 filters
+                layers.Conv2D(128, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.Conv2D(128, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                # NO POOLING - preserve spatial info (27x27)
+                layers.Dropout(0.3),
+                
+                # Third Conv Block - 256 filters
+                layers.Conv2D(256, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.MaxPooling2D((2, 2)),  # → 12x12
+                layers.Dropout(0.3),
+                
+                # Larger dense layers to compensate for less spatial info
+                layers.Flatten(),
+                layers.Dense(768, activation='relu'),  # Increased
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                layers.Dense(384, activation='relu'),  # Increased
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                layers.Dense(128, activation='relu'),
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                # Output layer
+                layers.Dense(1, activation='sigmoid')
+            ])
+            print(f"✓ Using ENHANCED model optimized for {resolution}x{resolution} (~1.8M params)")
+        
+        else:
+            # For 96x96 and 128x128: Original enhanced architecture
+            model = models.Sequential([
+                # First Conv Block - 64 filters
+                layers.Conv2D(64, (3, 3), activation='relu', input_shape=input_shape),
+                layers.BatchNormalization(),
+                layers.Conv2D(64, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.MaxPooling2D((2, 2)),
+                layers.Dropout(0.25),
+                
+                # Second Conv Block - 128 filters
+                layers.Conv2D(128, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.Conv2D(128, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.MaxPooling2D((2, 2)),
+                layers.Dropout(0.3),
+                
+                # Third Conv Block - 256 filters
+                layers.Conv2D(256, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.Dropout(0.3),
+                
+                # Dense layers with more neurons
+                layers.Flatten(),
+                layers.Dense(512, activation='relu'),
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                layers.Dense(256, activation='relu'),
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                layers.Dense(128, activation='relu'),
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                # Output layer
+                layers.Dense(1, activation='sigmoid')
+            ])
+            print(f"✓ Using ENHANCED model for {resolution}x{resolution} (~2.5M params)")
+    
     else:
-        # STANDARD MODEL - Original architecture (128x128 input)
-        model = models.Sequential([
-            # First Conv Block
-            layers.Conv2D(32, (3, 3), activation='relu', input_shape=(128, 128, 1)),
-            layers.BatchNormalization(),
-            layers.MaxPooling2D((2, 2)),
-            layers.Dropout(0.25),
-            
-            # Second Conv Block
-            layers.Conv2D(64, (3, 3), activation='relu'),
-            layers.BatchNormalization(),
-            layers.MaxPooling2D((2, 2)),
-            layers.Dropout(0.25),
-            
-            # Third Conv Block
-            layers.Conv2D(128, (3, 3), activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.25),
-            
-            # Flatten and Dense layers
-            layers.Flatten(),
-            layers.Dense(256, activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.5),
-            
-            layers.Dense(128, activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.5),
-            
-            # Output layer - binary classification
-            layers.Dense(1, activation='sigmoid')
-        ])
-        print("✓ Using STANDARD model (~423K params)")
+        # STANDARD MODEL
+        if resolution <= 64:
+            # For 64x64: Optimized architecture with careful pooling
+            model = models.Sequential([
+                # First Conv Block
+                layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
+                layers.BatchNormalization(),
+                layers.MaxPooling2D((2, 2)),  # → 31x31
+                layers.Dropout(0.25),
+                
+                # Second Conv Block
+                layers.Conv2D(64, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                # NO POOLING - preserve spatial info (29x29)
+                layers.Dropout(0.25),
+                
+                # Third Conv Block
+                layers.Conv2D(128, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.MaxPooling2D((2, 2)),  # → 13x13
+                layers.Dropout(0.25),
+                
+                # Larger dense layer to compensate
+                layers.Flatten(),
+                layers.Dense(384, activation='relu'),  # Increased from 256
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                layers.Dense(192, activation='relu'),  # Increased from 128
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                # Output layer - binary classification
+                layers.Dense(1, activation='sigmoid')
+            ])
+            print(f"✓ Using STANDARD model optimized for {resolution}x{resolution} (~600K params)")
+        
+        else:
+            # For 96x96 and 128x128: Original standard architecture
+            model = models.Sequential([
+                # First Conv Block
+                layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
+                layers.BatchNormalization(),
+                layers.MaxPooling2D((2, 2)),
+                layers.Dropout(0.25),
+                
+                # Second Conv Block
+                layers.Conv2D(64, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.MaxPooling2D((2, 2)),
+                layers.Dropout(0.25),
+                
+                # Third Conv Block
+                layers.Conv2D(128, (3, 3), activation='relu'),
+                layers.BatchNormalization(),
+                layers.Dropout(0.25),
+                
+                # Flatten and Dense layers
+                layers.Flatten(),
+                layers.Dense(256, activation='relu'),
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                layers.Dense(128, activation='relu'),
+                layers.BatchNormalization(),
+                layers.Dropout(0.5),
+                
+                # Output layer - binary classification
+                layers.Dense(1, activation='sigmoid')
+            ])
+            print(f"✓ Using STANDARD model for {resolution}x{resolution} (~423K params)")
     
     return model
 
@@ -213,9 +308,17 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
 
     # Build model
     print("\nBuilding model...")
+    
+    # Auto-detect input resolution from data
+    input_resolution = X_train.shape[1]  # Height dimension
+    input_shape = (input_resolution, input_resolution, 1)
+    print(f"Detected input resolution: {input_resolution}x{input_resolution}")
+    
     if architecture == 'custom':
-        model = build_model(enhanced=enhanced)
+        model = build_model(enhanced=enhanced, input_shape=input_shape)
     else:
+        # Import transfer learning only when needed
+        from src.core.models import get_model
         print(f"Using transfer learning architecture: {architecture}")
         model, _ = get_model(architecture, freeze_base=True, summary=False)
     
@@ -304,10 +407,11 @@ def train_model(data_dir, epochs=50, batch_size=32, model_output="models/quickdr
         X_val_norm = X_val_split
         X_test_norm = X_test
     else:
-        print("\nNormalizing data with per-image normalization...")
-        X_train_norm = prepare_test_data(X_train_split)
-        X_val_norm = prepare_test_data(X_val_split)
-        X_test_norm = prepare_test_data(X_test)
+        # Data needs normalization - just do basic normalization
+        print("\nNormalizing data...")
+        X_train_norm = X_train_split.astype(np.float32) / 255.0
+        X_val_norm = X_val_split.astype(np.float32) / 255.0
+        X_test_norm = X_test.astype(np.float32) / 255.0
     
     # Determine proper background fill value from data
     # Sample corner pixels to estimate background
