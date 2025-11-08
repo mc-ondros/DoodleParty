@@ -7,10 +7,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.model_selection import train_test_split
-from keras.preprocessing.image import ImageDataGenerator
+from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 print("="*70)
-print("VISUALIZING ACTUAL TRAINING BATCHES")
+print('VISUALIZING ACTUAL TRAINING BATCHES')
 print("="*70)
 
 # Load and split data using identical parameters to training to ensure visualization reflects actual training conditions
@@ -83,11 +83,11 @@ for batch_num in range(4):
 
 plt.tight_layout()
 plt.savefig('viz_06_actual_training_batches.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_06_actual_training_batches.png")
+print('   ✓ Saved: viz_06_actual_training_batches.png')
 plt.close()
 
 # VISUALIZATION 7: Batch-level Statistics
-print("\n  Analyzing batch-level statistics over 100 batches...")
+print('\n  Analyzing batch-level statistics over 100 batches...')
 
 batch_stats = {
     'pos_ratio': [],
@@ -180,11 +180,11 @@ ax6.grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig('viz_07_batch_statistics.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_07_batch_statistics.png")
+print('   ✓ Saved: viz_07_batch_statistics.png')
 plt.close()
 
 # VISUALIZATION 8: Augmentation Effect on Separability
-print("\n  Analyzing how augmentation affects class separability...")
+print('\n  Analyzing how augmentation affects class separability...')
 
 # Compare original and augmented samples to analyze how augmentation affects class separability and feature distribution
 pos_idx = np.where(y_train_split == 1)[0][:100]
@@ -281,27 +281,27 @@ ax8.axis('off')
 
 plt.tight_layout()
 plt.savefig('viz_08_augmentation_separability.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_08_augmentation_separability.png")
+print('   ✓ Saved: viz_08_augmentation_separability.png')
 plt.close()
 
 # FINAL SUMMARY
 print("\n" + "="*70)
-print("✅ BATCH VISUALIZATION COMPLETE")
+print('✅ BATCH VISUALIZATION COMPLETE')
 print("="*70)
-print("\nGenerated 3 additional visualizations:")
-print("  6. viz_06_actual_training_batches.png - Real batches during training")
-print("  7. viz_07_batch_statistics.png - Batch-level statistics")
-print("  8. viz_08_augmentation_separability.png - Augmentation effects")
-print("\nKey insights:")
+print('\nGenerated 3 additional visualizations:')
+print('  6. viz_06_actual_training_batches.png - Real batches during training')
+print('  7. viz_07_batch_statistics.png - Batch-level statistics')
+print('  8. viz_08_augmentation_separability.png - Augmentation effects')
+print('\nKey insights:')
 print(f"  • Mean pos ratio per batch: {np.mean(batch_stats['pos_ratio']):.3f}")
 print(f"  • Batch brightness std: {np.std(batch_stats['mean_brightness']):.4f}")
 print(f"  • Original brightness Δ: {abs(pos_orig_bright.mean()-neg_orig_bright.mean()):.4f}")
 print(f"  • Augmented brightness Δ: {abs(pos_aug_bright.mean()-neg_aug_bright.mean()):.4f}")
 
 if abs(pos_aug_bright.mean()-neg_aug_bright.mean()) > 0.15:
-    print("\n  ⚠️  Even after augmentation, brightness difference remains large!")
-    print("     Model will likely use brightness as primary feature.")
+    print('\n  ⚠️  Even after augmentation, brightness difference remains large!')
+    print('     Model will likely use brightness as primary feature.')
 else:
-    print("\n  ✓ Augmentation helps reduce brightness bias")
+    print('\n  ✓ Augmentation helps reduce brightness bias')
 
-print("\nAll 8 visualizations are ready for analysis!")
+print('\nAll 8 visualizations are ready for analysis!')

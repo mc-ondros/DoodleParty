@@ -268,7 +268,7 @@ def discover_appendix_files(appendix_dir):
             category, variant = filename.rsplit('-', 1)
         else:
             category = filename
-            variant = "default"
+            variant = 'default'
         
         if category not in categories:
             categories[category] = []
@@ -283,7 +283,7 @@ def discover_appendix_files(appendix_dir):
     return categories
 
 
-def load_appendix_category(filepath, max_samples=None, prefer_variant="raw"):
+def load_appendix_category(filepath, max_samples=None, prefer_variant = 'raw'):
     """
     Load a single category from NDJSON file.
     
@@ -313,9 +313,9 @@ def load_appendix_category(filepath, max_samples=None, prefer_variant="raw"):
     return images, category
 
 
-def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed", 
+def prepare_multi_class_dataset(appendix_dir, output_dir = 'data/processed', 
                                 max_samples_per_class=None, test_split=0.2,
-                                negative_class_type="noise"):
+                                negative_class_type = 'noise'):
     """
     Prepare multi-class dataset from entire QuickDraw Appendix library.
     
@@ -338,7 +338,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     categories = discover_appendix_files(appendix_dir)
     
     if not categories:
-        print("No NDJSON files found in appendix directory!")
+        print('No NDJSON files found in appendix directory!')
         return None
     
     print(f"\nLoading {len(categories)} categories...")
@@ -349,7 +349,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     idx = 0
     
     # Load all positive examples (actual drawings)
-    print("\nLoading Positive Examples (Appendix Drawings)")
+    print('\nLoading Positive Examples (Appendix Drawings)')
     total_positive = 0
     
     for category, files in sorted(categories.items()):
@@ -369,7 +369,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
             images, cat_name = load_appendix_category(
                 best_file['path'],
                 max_samples=max_samples_per_class,
-                prefer_variant="raw"
+                prefer_variant = 'raw'
             )
             
             if len(images) > 0:
@@ -388,7 +388,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     print(f"\nTotal positive samples: {total_positive}")
     
     # Generate negative examples
-    print("\nGenerating Negative Examples")
+    print('\nGenerating Negative Examples')
     if negative_class_type == "noise":
         print(f"Generating {total_positive} random noise samples...")
         negative_images = np.random.randint(0, 256, (total_positive, 28, 28), dtype=np.uint8)
@@ -399,7 +399,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     print(f"✓ Generated {total_positive} negative samples")
     
     # Combine and prepare
-    print("\nPreparing Dataset")
+    print('\nPreparing Dataset')
     X = np.concatenate(all_images, axis=0)
     y = np.concatenate(all_labels, axis=0)
     
@@ -422,10 +422,10 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     X_test, y_test = X[train_size:], y[train_size:]
     
     # Save
-    np.save(output_dir / "X_train.npy", X_train)
-    np.save(output_dir / "y_train.npy", y_train)
-    np.save(output_dir / "X_test.npy", X_test)
-    np.save(output_dir / "y_test.npy", y_test)
+    np.save(output_dir / 'X_train.npy', X_train)
+    np.save(output_dir / 'y_train.npy', y_train)
+    np.save(output_dir / 'X_test.npy', X_test)
+    np.save(output_dir / 'y_test.npy', y_test)
     
     # Save class mapping
     class_mapping = {
@@ -434,7 +434,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
         'categories': category_to_idx,
         'description': f'Binary classification: positive={len(category_to_idx)} appendix categories, negative=random noise'
     }
-    with open(output_dir / "class_mapping.pkl", 'wb') as f:
+    with open(output_dir / 'class_mapping.pkl', 'wb') as f:
         pickle.dump(class_mapping, f)
     
     print(f"\n✓ Multi-class dataset prepared successfully!")
@@ -446,7 +446,7 @@ def prepare_multi_class_dataset(appendix_dir, output_dir="data/processed",
     return (X_train, y_train), (X_test, y_test), class_mapping
 
 
-def prepare_appendix_dataset(ndjson_file, output_dir="data/processed", 
+def prepare_appendix_dataset(ndjson_file, output_dir = 'data/processed', 
                              max_samples_per_class=2000, test_split=0.2):
     """
     Prepare binary classification dataset from QuickDraw Appendix.
@@ -498,10 +498,10 @@ def prepare_appendix_dataset(ndjson_file, output_dir="data/processed",
     X_test, y_test = X[train_size:], y[train_size:]
     
     # Save
-    np.save(output_dir / "X_train.npy", X_train)
-    np.save(output_dir / "y_train.npy", y_train)
-    np.save(output_dir / "X_test.npy", X_test)
-    np.save(output_dir / "y_test.npy", y_test)
+    np.save(output_dir / 'X_train.npy', X_train)
+    np.save(output_dir / 'y_train.npy', y_train)
+    np.save(output_dir / 'X_test.npy', X_test)
+    np.save(output_dir / 'y_test.npy', y_test)
     
     # Save class mapping
     class_mapping = {
@@ -509,7 +509,7 @@ def prepare_appendix_dataset(ndjson_file, output_dir="data/processed",
         'positive': 1,
         'description': 'Binary classification: positive=appendix drawings, negative=random noise'
     }
-    with open(output_dir / "class_mapping.pkl", 'wb') as f:
+    with open(output_dir / 'class_mapping.pkl', 'wb') as f:
         pickle.dump(class_mapping, f)
     
     print(f"\n✓ Binary dataset prepared successfully!")
@@ -523,12 +523,12 @@ def prepare_appendix_dataset(ndjson_file, output_dir="data/processed",
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Process QuickDraw Appendix dataset")
-    parser.add_argument("--input", help="Path to single NDJSON file (for single-file mode)")
-    parser.add_argument("--appendix-dir", help="Path to QuickDraw Appendix directory (for multi-file mode)")
-    parser.add_argument("--output-dir", default="data/processed", help="Output directory")
-    parser.add_argument("--max-samples", type=int, default=None, help="Max samples per class")
-    parser.add_argument("--test-split", type=float, default=0.2, help="Test set fraction")
+    parser = argparse.ArgumentParser(description = 'Process QuickDraw Appendix dataset')
+    parser.add_argument("--input", help = 'Path to single NDJSON file (for single-file mode)')
+    parser.add_argument("--appendix-dir", help = 'Path to QuickDraw Appendix directory (for multi-file mode)')
+    parser.add_argument("--output-dir", default = 'data/processed', help = 'Output directory')
+    parser.add_argument("--max-samples", type=int, default=None, help = 'Max samples per class')
+    parser.add_argument("--test-split", type=float, default=0.2, help = 'Test set fraction')
     
     args = parser.parse_args()
     
@@ -550,6 +550,6 @@ if __name__ == "__main__":
         )
     else:
         parser.print_help()
-        print("\nExample usage:")
-        print("  Single file:  python appendix_loader.py --input penis-raw.ndjson")
-        print("  All files:    python appendix_loader.py --appendix-dir /path/to/quickdraw_appendix")
+        print('\nExample usage:')
+        print('  Single file:  python appendix_loader.py --input penis-raw.ndjson')
+        print('  All files:    python appendix_loader.py --appendix-dir /path/to/quickdraw_appendix')

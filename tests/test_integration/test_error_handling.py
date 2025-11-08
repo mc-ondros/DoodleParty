@@ -17,7 +17,7 @@ class TestDataLoadingErrors:
     
     def test_missing_data_file(self):
         """Test error when data file doesn't exist."""
-        dataset = QuickDrawDataset(data_dir="nonexistent_dir")
+        dataset = QuickDrawDataset(data_dir = 'nonexistent_dir')
         
         with pytest.raises(FileNotFoundError):
             dataset.load_class_data("airplane")
@@ -50,7 +50,7 @@ class TestModelErrors:
     
     def test_invalid_architecture_name(self):
         """Test error for invalid architecture name."""
-        with pytest.raises(ValueError, match="Unknown architecture"):
+        with pytest.raises(ValueError, match = 'Unknown architecture'):
             get_model('nonexistent_architecture', summary=False)
     
     def test_invalid_input_shape(self):

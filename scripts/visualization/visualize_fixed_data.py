@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 print("="*70)
-print("BEFORE/AFTER FIX COMPARISON")
+print('BEFORE/AFTER FIX COMPARISON')
 print("="*70)
 
 # Load the corrected dataset to verify that data quality issues have been properly resolved
@@ -23,7 +23,7 @@ pos_idx = np.where(y_train_new == 1)[0]
 neg_idx = np.where(y_train_new == 0)[0]
 
 # VISUALIZATION: Show Fixed Samples
-print("\n1. Creating visualization of fixed samples...")
+print('\n1. Creating visualization of fixed samples...')
 
 fig = plt.figure(figsize=(20, 12))
 fig.suptitle('FIXED Training Data - Quality Improvements', 
@@ -54,7 +54,7 @@ for i in range(20):
                      rotation=0, ha='right', va='center')
 
 # Demonstrate proper augmentation using the calculated background value to prevent artifacts during training
-from keras.preprocessing.image import ImageDataGenerator
+from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 # Estimate background value from corner pixels to configure augmentation with appropriate fill value
 sample_corners = []
@@ -147,19 +147,19 @@ plt.colorbar(im, ax=ax, fraction=0.046)
 
 plt.tight_layout()
 plt.savefig('viz_10_fixed_data.png', dpi=150, bbox_inches='tight')
-print("   ✓ Saved: viz_10_fixed_data.png")
+print('   ✓ Saved: viz_10_fixed_data.png')
 plt.close()
 
 # SUMMARY
 print("\n" + "="*70)
-print("✅ VISUALIZATION COMPLETE")
+print('✅ VISUALIZATION COMPLETE')
 print("="*70)
-print("\nKey improvements:")
+print('\nKey improvements:')
 print(f"  • Dataset size: {len(X_train_new):,} samples")
 print(f"  • Brightness difference: {abs(pos_means.mean()-neg_means.mean()):.4f}")
 print(f"  • Background value: {background_value:.3f} (used for augmentation)")
 print(f"  • All problematic images removed")
 print(f"  • Stroke widths normalized")
-print("\nVisualization saved: viz_10_fixed_data.png")
-print("\nThe data is now clean and ready for training!")
-print("Run: bash train_max_accuracy.sh")
+print('\nVisualization saved: viz_10_fixed_data.png')
+print('\nThe data is now clean and ready for training!')
+print('Run: bash train_max_accuracy.sh')

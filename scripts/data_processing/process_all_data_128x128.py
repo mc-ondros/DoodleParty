@@ -163,7 +163,7 @@ def process_quickdraw_ndjson_to_128(filepath, max_samples=1200):
 def main():
     """Process all data to 128x128."""
     print("="*70)
-    print("PROCESSING ALL DATA TO 128x128")
+    print('PROCESSING ALL DATA TO 128x128')
     print("="*70)
     
     project_root = Path(__file__).parent.parent.parent
@@ -175,7 +175,7 @@ def main():
     
     # Step 1: Process penis data from NDJSON
     print("\n" + "="*70)
-    print("STEP 1: Processing Penis Data (NDJSON → 128x128)")
+    print('STEP 1: Processing Penis Data (NDJSON → 128x128)')
     print("="*70)
     
     ndjson_file = appendix_dir / 'penis-raw.ndjson'
@@ -192,7 +192,7 @@ def main():
     
     # Step 2: Process QuickDraw negative classes from NDJSON (raw strokes → 128x128)
     print("\n" + "="*70)
-    print("STEP 2: Processing QuickDraw Negative Classes (NDJSON → 128x128)")
+    print('STEP 2: Processing QuickDraw Negative Classes (NDJSON → 128x128)')
     print("="*70)
     
     negative_classes = [
@@ -222,19 +222,19 @@ def main():
             print(f"      Run: python scripts/data_processing/download_quickdraw_ndjson.py")
     
     print("\n" + "="*70)
-    print("SUMMARY")
+    print('SUMMARY')
     print("="*70)
-    print("✓ All data processed to 128x128 with consistent formatting:")
-    print("  • Black background (pixel value 0)")
-    print("  • White strokes (pixel value 255)")
-    print("  • Consistent stroke width (12px on 256x256 canvas)")
-    print("  • Proper bounding box fitting with 20px padding")
-    print("  • Rendered directly from vector strokes (NO BLURRINESS!)")
-    print("  • High-quality LANCZOS resampling")
+    print('✓ All data processed to 128x128 with consistent formatting:')
+    print('  • Black background (pixel value 0)')
+    print('  • White strokes (pixel value 255)')
+    print('  • Consistent stroke width (12px on 256x256 canvas)')
+    print('  • Proper bounding box fitting with 20px padding')
+    print('  • Rendered directly from vector strokes (NO BLURRINESS!)')
+    print('  • High-quality LANCZOS resampling')
     print(f"\nProcessed files saved to: {processed_dir}")
-    print("\nNext step: Run training data regeneration")
-    print("  python scripts/data_processing/regenerate_training_data.py")
+    print('\nNext step: Run training data regeneration')
+    print('  python scripts/data_processing/regenerate_training_data.py')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -2,6 +2,8 @@
 
 **Purpose:** Technical documentation of system design, component interactions, and data flow for DoodleHunter binary classification system.
 
+**Status: Experimental** - This documentation may not fully reflect the current codebase. Last updated to match code: Nov 2024.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -28,8 +30,9 @@ The system prioritizes accuracy, performance, and edge device deployment for con
 **Key Design Decisions:**
 - TensorFlow/Keras for ML framework (widely supported, easy deployment)
 - Flask for web interface (lightweight, Python-native)
-- QuickDraw dataset for training data (large, diverse, free)
+- QuickDraw dataset (NumPy bitmap format, pre-processed 28x28 images)
 - Binary classification (simplifies model and improves accuracy)
+- Multiple CNN architectures available (Custom, ResNet50, MobileNetV3, EfficientNet)
 - **Raspberry Pi 4 deployment target** (requires aggressive optimization)
 
 ### Deployment Targets
@@ -101,10 +104,10 @@ graph TB
 
 ```mermaid
 graph LR
-    A[Download QuickDraw<br/>NPY format] --> B[Load & Preprocess<br/>128x128, normalize]
+    A[Download QuickDraw<br/>NPY format] --> B[Load & Preprocess<br/>28x28, normalize]
     B --> C[Data Augmentation<br/>rotation, translation, zoom]
     C --> D[Train CNN Model<br/>binary crossentropy]
-    D --> E[Save Model<br/>quickdraw_classifier.h5]
+    D --> E[Save Model<br/>quickdraw_model.h5]
 ```
 
 ### Inference Data Flow
@@ -130,23 +133,34 @@ sequenceDiagram
 
 ### CNN Architecture
 
+**Available Architectures:**
+
+The project includes multiple CNN architectures with different complexity/performance trade-offs:
+
+1. **Custom CNN** (423K parameters)
 ```mermaid
 graph TB
-    Input[Input<br/>128x128x1 grayscale] --> Conv1[Conv2D 32, 3x3<br/>ReLU + MaxPool 2x2]
-    Conv1 --> Conv2[Conv2D 64, 3x3<br/>ReLU + MaxPool 2x2]
-    Conv2 --> Conv3[Conv2D 128, 3x3<br/>ReLU + MaxPool 2x2]
+    Input[Input<br/>28x28x1 grayscale] --> Conv1[Conv2D 32, 3x3<br/>ReLU + BatchNorm + MaxPool + Dropout]
+    Conv1 --> Conv2[Conv2D 64, 3x3<br/>ReLU + BatchNorm + MaxPool + Dropout]
+    Conv2 --> Conv3[Conv2D 128, 3x3<br/>ReLU + BatchNorm + Dropout]
     Conv3 --> Flatten[Flatten]
-    Flatten --> Dense1[Dense 128<br/>ReLU + Dropout 0.5]
+    Flatten --> Dense1[Dense 256<br/>ReLU + BatchNorm + Dropout 0.5]
     Dense1 --> Dense2[Dense 1<br/>Sigmoid]
     Dense2 --> Output[Output<br/>Binary probability]
 ```
 
-**Model Specifications:**
-- Input: 128x128 grayscale images
+2. **Transfer Learning Models** (larger, higher accuracy)
+   - ResNet50: 23.5M parameters
+   - MobileNetV3: 5.4M parameters
+   - EfficientNet: 5.3M parameters
+
+**Model Specifications (Custom CNN):**
+- Input: 28x28 grayscale images
 - Output: Single probability value (0.0-1.0)
 - Loss: Binary crossentropy
 - Optimizer: Adam (lr=0.001)
 - Metrics: Accuracy, precision, recall
+- Parameters: ~423K (lightweight, fast inference)
 
 **Training Configuration:**
 ```python
@@ -164,36 +178,213 @@ model.compile(
 def preprocess_image(image):
     # 1. Convert to grayscale
     image = image.convert('L')
-    
+
     # 2. Invert colors (canvas has white bg, model expects black bg)
     img_array = 255 - np.array(image)
-    
-    # 3. Resize to 128x128
-    image = Image.fromarray(img_array).resize((128, 128))
-    
-    # 4. Normalize to [0, 1]
+
+    # 3. Apply morphological dilation to thicken strokes
+    # Prevents thin lines from disappearing
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    img_array = cv2.dilate(img_array, kernel, iterations=1)
+
+    # 4. Resize to 28x28 (model input size)
+    image = Image.fromarray(img_array).resize((28, 28))
+
+    # 5. Normalize to [0, 1]
     img_array = np.array(image, dtype=np.float32) / 255.0
-    
-    # 5. Add batch and channel dimensions
+
+    # 6. Apply z-score normalization (only if sufficient variation)
+    if img_array.std() > 0.01:
+        img_array = (img_array - img_array.mean()) / (img_array.std() + 1e-7)
+        img_array = (img_array + 2) / 4  # Rescale to [0, 1]
+        img_array = np.clip(img_array, 0, 1)
+
+    # 7. Add batch and channel dimensions
     img_array = np.expand_dims(img_array, axis=(0, -1))
-    
+
     return img_array
 ```
+
+## Detection Strategies
+
+DoodleHunter implements multiple detection modes to address different security and performance requirements:
+
+### Mode 1: Standard Single-Image Classification
+
+**Endpoint:** `POST /api/predict`
+
+**Pipeline:**
+```
+Canvas (512x512) → Preprocess → Resize to 28x28 → TFLite INT8 Model → Binary Classification
+```
+
+**Characteristics:**
+- Fastest inference (<30ms on RPi4)
+- Simplest implementation
+- Vulnerable to content dilution attacks (offensive content mixed with innocent shapes)
+- Best for: Quick validation, low-risk scenarios
+
+### Mode 2: Contour-Based Detection (Current Production)
+
+**Endpoint:** `POST /api/predict/region`
+
+**Pipeline:**
+```
+Canvas → OpenCV findContours(RETR_TREE) → Extract Hierarchical Contours → 
+Classify Each Contour → Detect Nested Content → Aggregate Results
+```
+
+**Key Features:**
+- Isolates individual shapes for independent classification
+- Uses `cv2.RETR_TREE` by default for full hierarchical detection
+- Detects nested content (e.g., offensive drawing inside a benign circle)
+- Filters small contours (noise reduction)
+- Supports multiple aggregation strategies: MAX, MEAN, WEIGHTED_MEAN, VOTING, ANY_POSITIVE
+- Early stopping on first positive detection
+- Typical latency: ~125-135ms for 5-10 contours (including nested analysis)
+- Optional `cv2.RETR_EXTERNAL` mode for faster detection (outer boundaries only)
+
+### Mode 3: Tile-Based Detection (Production Ready)
+
+**Endpoint:** `POST /api/predict/tile`
+
+**Pipeline:**
+```
+Canvas → Fixed Grid (e.g., 8x8 = 64 tiles) → Dirty Tile Tracking → 
+Per-Tile Inference → Tile Caching → Aggregate Results
+```
+
+**Key Features:**
+- Divides canvas into fixed-size tiles (configurable: 32x32, 64x64, 128x128)
+- Supports non-square canvas dimensions (dynamic grid calculation)
+- Dirty tile tracking: only re-analyze tiles affected by new strokes
+- Tile caching: cache predictions for unchanged tiles (incremental updates <1ms)
+- Robust against content dilution attacks (each tile analyzed independently)
+- Benchmarked latency: ~342ms for 64 tiles (mock model), <200ms expected with TFLite INT8
+- Incremental updates: <0.1ms for 1-4 dirty tiles
+
+**Use Case:** High-security scenarios where users may attempt to hide offensive content by mixing with innocent shapes across the canvas
+
+### Mode 4: Shape-Based Detection (Stroke-Aware, Grouping, Heuristic)
+
+**Status:** Advanced / UI-focused, designed for realistic multi-part penis detection and introspection.
+
+**Core Implementation:** [`src/core/shape_detection.py`](src/core/shape_detection.py:1)
+
+**Goals:**
+- Detect coherent offensive objects (especially multi-part penis drawings) instead of treating each sub-shape independently.
+- Use all available signals:
+  - stroke coordinates,
+  - stroke timing / order,
+  - spatial configuration of components,
+  - model confidence scores.
+
+**Pipeline Overview:**
+
+1. Stroke-Aware Shape Proposals
+   - Source: `stroke_history` from the web UI.
+   - [`ShapeDetector.extract_shapes_from_strokes()`](src/core/shape_detection.py:117):
+     - Normalizes each stroke into:
+       - points: [(x, y), ...]
+       - start/end points
+       - timestamp (per stroke or last point)
+     - Clusters strokes via union-find:
+       - Connect strokes if:
+         - endpoints within a spatial radius (default ≤32px),
+         - OR temporal gap ≤900ms.
+     - Each connected component of strokes becomes a candidate shape with its own bounding box.
+   - Rationale:
+     - Captures user intent better than raw pixels.
+     - Ensures related strokes (shaft + balls) are considered together or as tightly related proposals.
+
+2. Robust Contour Fallback
+   - If stroke-based clustering yields no shapes:
+     - [`ShapeDetector.extract_shapes()`](src/core/shape_detection.py:243):
+       - Grayscale + Otsu/adaptive thresholding.
+       - Morphological closing to connect fragmented strokes.
+       - Area and aspect-ratio filters for noise rejection.
+   - This guarantees a reliable fallback even without stroke metadata.
+
+3. Per-Shape Normalization and Scoring
+   - For each candidate shape:
+     - Crop with a margin, preserve aspect ratio, normalize to model input size.
+     - [`ShapeDetector.predict_shape()`](src/core/shape_detection.py:434):
+       - Supports both Keras and TFLite backends.
+       - Converts arbitrary output tensors into a stable scalar offensive score in [0,1].
+   - Results are captured as [`ShapeInfo`](src/core/shape_detection.py:31):
+     - bounding_box, confidence, is_positive, area, shape_id, etc.
+
+4. Grouping Logic (Merging Related Shapes)
+   - [`ShapeDetector._merge_positive_shapes()`](src/core/shape_detection.py:488):
+     - Operates on shapes flagged as positive by the caller (either strict or heuristic).
+     - Builds an undirected graph where shapes are linked if:
+       - center distance ≤80px, OR
+       - IoU ≥0.05.
+     - Each connected component becomes a merged object:
+       - merged bounding box,
+       - group score = max member confidence.
+   - This is used in two phases:
+     - Strict grouping for shapes ≥ global threshold.
+     - Heuristic grouping for “near-positive” shapes.
+
+5. Penis-Specific Cluster Heuristic
+   - Implemented in [`ShapeDetector.detect()`](src/core/shape_detection.py:600).
+   - Logic:
+     - First, try strict grouping:
+       - if any merged group contains shapes ≥ threshold → positive verdict.
+     - If no strict-positive cluster:
+       - identify shapes with confidence close to threshold (e.g. ≥0.45 for threshold 0.5);
+       - if 3 or more such shapes form a single merged cluster under `_merge_positive_shapes`:
+         - treat them as one coherent offensive object (classic shaft + two balls pattern),
+         - promote overall verdict to positive,
+         - boost group confidence (capped below 1.0) to reflect combined evidence.
+   - Intent:
+     - Avoid “three 49% negatives” outcome for clear penis drawings.
+     - Use geometry + stroke intent + multiple strong signals to reach a decisive verdict without globally lowering thresholds.
+
+6. Integration and Exposure
+   - Endpoint: `/api/predict/shape` in [`src/web/app.py`](src/web/app.py:961)
+     - Constructs a `ShapeDetector` with the active model / threshold.
+     - Passes both:
+       - preprocessed image,
+       - stroke_history (if provided by frontend).
+     - Returns:
+       - `verdict` and `confidence` from `ShapeDetectionResult`,
+       - `shape_predictions` for per-shape introspection,
+       - `grouped_boxes` for merged offensive objects (used by visual debug).
+   - Frontend: [`src/web/static/script.js`](src/web/static/script.js:732)
+     - Visual Debug mode:
+       - sends `stroke_history`,
+       - overlays bounding boxes and IDs,
+       - can be extended to highlight merged groups distinctly.
+
+**Why this matters architecturally:**
+- Moves from purely pixel-based classification to behavior-aware detection leveraging:
+  - temporal drawing patterns,
+  - spatial composition,
+  - aggregation of multiple moderately strong cues.
+- Provides a principled way to:
+  - detect multi-part NSFW shapes,
+  - remain robust against noise,
+  - serve interpretable visualizations for debugging and tuning.
 
 ## Web Application Architecture
 
 ### Flask Application Structure
 
 **Directory Layout:**
-- `src/web/app.py` - Flask server
+- `src/web/app.py` - Flask server with multiple detection modes
 - `src/web/templates/index.html` - Drawing interface
-- `src/web/static/css/style.css` - Styles
-- `src/web/static/js/canvas.js` - Canvas drawing logic
+- `src/web/static/style.css` - Styles
+- `src/web/static/script.js` - Canvas drawing logic
 
 **Flask Routes:**
 - `GET /` - Serve drawing interface
-- `POST /predict` - Classify drawing
-- `GET /health` - Health check
+- `POST /api/predict` - Standard single-image classification
+- `POST /api/predict/region` - Contour-based detection
+- `POST /api/predict/tile` - Tile-based detection (experimental)
+- `POST /api/tile/reset` - Reset tile detector cache
+- `GET /api/health` - Health check with model status
 
 **Request/Response Flow:**
 
@@ -220,13 +411,14 @@ sequenceDiagram
 
 **Phase 1: Data Preparation**
 ```bash
-# Download QuickDraw data
-python scripts/data_processing/download_quickdraw_ndjson.py
+# Download QuickDraw data (NumPy bitmap format, 28x28 pre-processed)
+python scripts/data_processing/download_quickdraw_npy.py
 ```
 
 **Data Organization:**
-- `data/raw_ndjson/` - Downloaded NDJSON files (penis-raw.ndjson, circle-raw.ndjson, etc.)
+- `data/raw/` - Downloaded NumPy bitmap files (penis.npy, circle.npy, etc.)
 - `data/processed/` - Processed data and class_mapping.pkl
+- Format: Pre-processed 28x28 grayscale bitmaps from Google's QuickDraw dataset
 
 **Phase 2: Model Training**
 ```python
@@ -236,14 +428,14 @@ python scripts/train.py \
   --batch-size 32 \
   --learning-rate 0.001
 
-# Output: models/quickdraw_classifier.keras
+# Output: models/quickdraw_model.h5
 ```
 
 **Phase 3: Evaluation**
 ```python
 # Evaluate model
 python scripts/evaluate.py \
-  --model models/quickdraw_classifier.keras
+  --model models/quickdraw_model.h5
 
 # Outputs:
 # - Accuracy, precision, recall, F1
@@ -261,17 +453,16 @@ python scripts/evaluate.py \
 
 **Implementation:**
 ```python
-# See src/data/augmentation.py for implementation
-from src.data.augmentation import create_augmentation_pipeline
-
-datagen = create_augmentation_pipeline(
-    rotation_range=15,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    zoom_range=0.1,
-    horizontal_flip=True
-)
+# Note: Data augmentation is applied during training
+# The QuickDraw dataset is pre-processed (28x28 bitmap format)
+# No additional preprocessing needed beyond what's in the dataset
 ```
+
+**Data Source:**
+- Google QuickDraw Dataset (NumPy bitmap format)
+- Pre-processed 28x28 grayscale images
+- Downloaded from: `https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap/`
+- Categories: penis (positive) + 21 common shapes (negative)
 
 ## Performance Targets
 
@@ -328,7 +519,7 @@ datagen = create_augmentation_pipeline(
 import tensorflow as tf
 
 # Load trained model
-model = tf.keras.models.load_model('quickdraw_classifier.keras')
+model = tf.keras.models.load_model('quickdraw_model.h5')
 
 # Create representative dataset for calibration
 def representative_dataset():
@@ -346,7 +537,7 @@ converter.inference_output_type = tf.uint8
 tflite_model = converter.convert()
 
 # Save optimized model
-with open('quickdraw_classifier_int8.tflite', 'wb') as f:
+with open('quickdraw_model_int8.tflite', 'wb') as f:
     f.write(tflite_model)
 ```
 

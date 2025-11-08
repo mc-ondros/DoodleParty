@@ -26,7 +26,7 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 
 print("="*70)
-print("REGENERATING DATA *WITHOUT* PER-IMAGE NORMALIZATION")
+print('REGENERATING DATA *WITHOUT* PER-IMAGE NORMALIZATION')
 print("="*70)
 
 # Paths
@@ -35,18 +35,18 @@ raw_dir = data_dir / 'raw'
 processed_dir = data_dir / 'processed'
 
 # Load positive class samples from preprocessed data
-print("\n1. Loading penis data...")
+print('\n1. Loading penis data...')
 penis_data = np.load(processed_dir / 'penis_raw_X.npy')
 print(f"   ✓ Loaded {len(penis_data):,} penis samples")
 
 # Convert from white-on-black to black-on-white to match QuickDraw convention
 # Why invert: QuickDraw dataset uses black background (0) with white strokes (255)
 # Penis data comes as white-on-black, requiring inversion for consistency
-print("   ✓ Inverting to black background")
+print('   ✓ Inverting to black background')
 penis_data = 255 - penis_data
 
 # Load negative class samples from raw QuickDraw data
-print("\n2. Loading QuickDraw negatives...")
+print('\n2. Loading QuickDraw negatives...')
 negative_classes = [
     'airplane', 'apple', 'arm', 'banana', 'bird', 'boomerang',
     'cat', 'circle', 'cloud', 'dog', 'drill', 'fish', 'flower',
@@ -76,7 +76,7 @@ negative_data = np.concatenate(negative_data_list, axis=0)
 print(f"\n   Total negatives: {len(negative_data):,}")
 
 # Balance positive and negative classes to prevent bias
-print("\n3. Balancing...")
+print('\n3. Balancing...')
 n_positive = len(penis_data)
 n_negative = len(negative_data)
 
@@ -104,7 +104,7 @@ print(f"\n   Combined: {len(X):,} samples (50/50 split)")
 
 # Shuffle to randomize order before train/test split
 # Why shuffle: Prevents ordered batches that could bias training
-print("   ✓ Shuffling...")
+print('   ✓ Shuffling...')
 np.random.seed(42)
 shuffle_idx = np.random.permutation(len(X))
 X = X[shuffle_idx]
@@ -113,7 +113,7 @@ y = y[shuffle_idx]
 # Normalize pixel values to [0, 1] range using simple division
 # Why simple normalization: Preserves relative brightness differences between classes
 # This differs from per-image normalization which centers each image independently
-print("\n4. Simple normalization (divide by 255)...")
+print('\n4. Simple normalization (divide by 255)...')
 X = X.reshape(-1, 28, 28, 1).astype(np.float32) / 255.0
 print(f"   ✓ Shape: {X.shape}")
 print(f"   Value range: {X.min():.3f} - {X.max():.3f}")
@@ -131,7 +131,7 @@ else:
     print(f"   ⚠️  Classes have similar brightness")
 
 # Create stratified train/test split to maintain class balance
-print("\n5. Splitting...")
+print('\n5. Splitting...')
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=123, stratify=y, shuffle=True
 )
@@ -140,7 +140,7 @@ print(f"   ✓ Training: {len(X_train):,}")
 print(f"   ✓ Test: {len(X_test):,}")
 
 # Persist processed datasets for training
-print("\n6. Saving...")
+print('\n6. Saving...')
 np.save(processed_dir / 'X_train.npy', X_train)
 np.save(processed_dir / 'y_train.npy', y_train)
 np.save(processed_dir / 'X_test.npy', X_test)
@@ -163,9 +163,9 @@ with open(processed_dir / 'class_mapping.pkl', 'wb') as f:
 print(f"   ✓ Saved to {processed_dir}/")
 
 print("\n" + "="*70)
-print("✅ DATA READY - Simple normalization (NO per-image)")
+print('✅ DATA READY - Simple normalization (NO per-image)')
 print("="*70)
-print("\nKey difference: Brightness signal PRESERVED")
-print("Why this matters: Preserves natural class differences while simplifying preprocessing")
-print("Expected benefit: More stable training compared to per-image normalization")
-print("\nNext: bash test_extended_training.sh")
+print('\nKey difference: Brightness signal PRESERVED')
+print('Why this matters: Preserves natural class differences while simplifying preprocessing')
+print('Expected benefit: More stable training compared to per-image normalization')
+print('\nNext: bash test_extended_training.sh')

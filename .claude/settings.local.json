@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(tree -I '__pycache__|*.pyc|.git|.direnv|data|.github|models|.documentation|flake.*|module.nix' -L 3)"
-    ],
-    "deny": [],
-    "ask": []
-  }
-}

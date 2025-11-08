@@ -19,9 +19,9 @@ class QuickDrawDataset:
     """Handles QuickDraw dataset loading and preprocessing."""
     
     # GCS public bucket with numpy bitmap format (smaller, pre-processed)
-    BASE_URL = "https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap"
+    BASE_URL = 'https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap'
     
-    def __init__(self, data_dir="data/raw"):
+    def __init__(self, data_dir = 'data/raw'):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
@@ -57,8 +57,9 @@ class QuickDrawDataset:
             print(f"✓ {class_name} downloaded successfully")
         except Exception as e:
             print(f"✗ Error downloading {class_name}: {e}")
+            # Clean up partial downloads to avoid corrupted data files
             if filepath.exists():
-                filepath.unlink()  # Clean up partial download
+                filepath.unlink()
     
     def load_class_data(self, class_name, max_samples=None, normalize=True):
         """Load data for a single class."""
@@ -80,7 +81,7 @@ class QuickDrawDataset:
         
         return data
     
-    def prepare_dataset(self, classes, output_dir="data/processed", 
+    def prepare_dataset(self, classes, output_dir = 'data/processed', 
                        max_samples_per_class=None, test_split=0.2):
         """
         Prepare binary classification dataset.
@@ -102,7 +103,7 @@ class QuickDrawDataset:
         print(f"\nPreparing binary dataset with {len(classes)} positive classes...")
         
         # Load positive examples (in-distribution)
-        print("\nLoading positive examples (in-distribution)...")
+        print('\nLoading positive examples (in-distribution)...')
         for class_name in classes:
             try:
                 images = self.load_class_data(class_name, max_samples_per_class)
@@ -114,11 +115,14 @@ class QuickDrawDataset:
             except Exception as e:
                 print(f"  ✗ Error loading {class_name}: {e}")
         
-        # Generate negative examples (out-of-distribution random noise)
-        print("\nGenerating negative examples (out-of-distribution)...")
+        # Generate negative examples using random noise
+        # WHY random noise: Creates strong distribution separation so model learns
+        # to distinguish structured drawings from random patterns. This makes the
+        # binary classifier robust to non-drawing inputs.
+        print('\nGenerating negative examples (out-of-distribution)...')
         num_positive = sum(len(img) for img in all_images)
         negative_images = np.random.randint(0, 256, (num_positive, 28, 28), dtype=np.uint8)
-        negative_labels = np.zeros(num_positive, dtype=np.int32)  # Label 0 for out-of-distribution
+        negative_labels = np.zeros(num_positive, dtype=np.int32)
         
         all_images.append(negative_images.astype(np.float32) / 255.0)
         all_labels.append(negative_labels)
@@ -136,7 +140,9 @@ class QuickDrawDataset:
         if X.max() > 1.0:
             X = X / 255.0
         
-        # Shuffle data
+        # Shuffle to prevent class clustering
+        # WHY shuffle: Ensures batches contain mix of both classes during training,
+        # preventing gradient updates biased towards one class
         indices = np.random.permutation(len(X))
         X = X[indices]
         y = y[indices]
@@ -150,14 +156,14 @@ class QuickDrawDataset:
         X_test, y_test = X[train_size:], y[train_size:]
         
         # Save datasets
-        np.save(output_dir / "X_train.npy", X_train)
-        np.save(output_dir / "y_train.npy", y_train)
-        np.save(output_dir / "X_test.npy", X_test)
-        np.save(output_dir / "y_test.npy", y_test)
+        np.save(output_dir / 'X_train.npy', X_train)
+        np.save(output_dir / 'y_train.npy', y_train)
+        np.save(output_dir / 'X_test.npy', X_test)
+        np.save(output_dir / 'y_test.npy', y_test)
         
         # Save class mapping (binary: 0=negative, 1=positive)
         class_mapping = {'negative': 0, 'positive': 1, 'positive_classes': classes}
-        with open(output_dir / "class_mapping.pkl", 'wb') as f:
+        with open(output_dir / 'class_mapping.pkl', 'wb') as f:
             pickle.dump(class_mapping, f)
         
         print(f"\n✓ Binary dataset prepared successfully!")
@@ -169,14 +175,14 @@ class QuickDrawDataset:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Download and prepare QuickDraw dataset")
-    parser.add_argument("--download", action="store_true", help="Download raw data")
-    parser.add_argument("--classes", nargs="+", default=["airplane", "apple", "banana", "cat", "dog"],
-                       help="Classes to download")
-    parser.add_argument("--raw-dir", default="data/raw", help="Directory for raw data")
-    parser.add_argument("--output-dir", default="data/processed", help="Directory for processed data")
-    parser.add_argument("--max-samples", type=int, default=5000, help="Max samples per class")
-    parser.add_argument("--test-split", type=float, default=0.2, help="Test set fraction")
+    parser = argparse.ArgumentParser(description = 'Download and prepare QuickDraw dataset')
+    parser.add_argument("--download", action = 'store_true', help = 'Download raw data')
+    parser.add_argument("--classes", nargs = '+', default=["airplane", "apple", "banana", "cat", "dog"],
+                       help = 'Classes to download')
+    parser.add_argument("--raw-dir", default = 'data/raw', help = 'Directory for raw data')
+    parser.add_argument("--output-dir", default = 'data/processed', help = 'Directory for processed data')
+    parser.add_argument("--max-samples", type=int, default=5000, help = 'Max samples per class')
+    parser.add_argument("--test-split", type=float, default=0.2, help = 'Test set fraction')
     
     args = parser.parse_args()
     

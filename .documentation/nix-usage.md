@@ -27,7 +27,7 @@ nix run .#train -- --epochs 50 --batch-size 32
 
 **Evaluate a model:**
 ```bash
-nix run .#evaluate -- --model models/quickdraw_classifier.h5
+nix run .#evaluate -- --model models/quickdraw_model.h5
 ```
 
 **Start web interface:**
@@ -64,7 +64,7 @@ Add to your NixOS configuration:
     enable = true;
     port = 5000;
     host = "0.0.0.0";
-    modelPath = "/var/lib/doodlehunter/models/quickdraw_classifier.h5";
+    modelPath = "/var/lib/doodlehunter/models/quickdraw_model.h5";
     openFirewall = true;
   };
 }
@@ -118,7 +118,7 @@ Add to your NixOS configuration:
 ```nix
 services.doodlehunter = {
   enable = true;
-  modelPath = "/home/user/models/quickdraw_classifier.h5";
+  modelPath = "/home/user/models/quickdraw_model.h5";
 };
 ```
 
@@ -128,7 +128,7 @@ services.doodlehunter = {
   enable = true;
   port = 8080;
   host = "0.0.0.0";
-  modelPath = "/var/lib/doodlehunter/models/quickdraw_classifier.h5";
+  modelPath = "/var/lib/doodlehunter/models/quickdraw_model.h5";
   openFirewall = true;
 };
 ```
@@ -222,7 +222,7 @@ Ensure the model path is accessible:
 
 ```bash
 # Check file exists
-ls -l /var/lib/doodlehunter/models/quickdraw_classifier.h5
+ls -l /var/lib/doodlehunter/models/quickdraw_model.h5
 
 # Check permissions
 sudo chown doodlehunter:doodlehunter /var/lib/doodlehunter/models/

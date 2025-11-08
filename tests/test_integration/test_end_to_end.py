@@ -109,8 +109,9 @@ class TestModelTrainingIntegration:
         temp_file = tempfile.NamedTemporaryFile(suffix='.h5', delete=False)
         model.save(temp_file.name)
         
-        # Load model
-        loaded_model = keras.models.load_model(temp_file.name)
+        # Load model (use keras from top-level import)
+        import keras as standalone_keras
+        loaded_model = standalone_keras.models.load_model(temp_file.name)
         
         # Verify loaded model works
         predictions = loaded_model.predict(X_val, verbose=0)
@@ -213,7 +214,7 @@ class TestModelEvaluationIntegration:
         model.compile(
             optimizer='adam',
             loss='binary_crossentropy',
-            metrics=['accuracy', tf.keras.metrics.AUC()]
+            metrics=['accuracy', 'auc']
         )
         
         # Train briefly

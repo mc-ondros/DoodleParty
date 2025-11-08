@@ -99,7 +99,7 @@ ls -lh models/
 **Solutions:**
 ```bash
 # Retry with specific categories
-python scripts/data_processing/download_quickdraw_ndjson.py --categories penis circle square
+python scripts/data_processing/download_quickdraw_npy.py --categories penis circle square
 
 # Check internet connection
 ping storage.googleapis.com

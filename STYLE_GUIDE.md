@@ -7,6 +7,7 @@ This guide defines the consistent coding and documentation standards for all Doo
 **Never use these in comments:**
 - `===` (triple equals)
 - `---` (triple dashes)
+- `╔════╗`, `╚════╝`, `║` (box-drawing characters)
 
 Use these alternatives instead:
 - For separation: blank comment lines

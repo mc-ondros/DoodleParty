@@ -3,7 +3,7 @@
 import pytest
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
+from keras import Model, layers
 
 from src.core.models import (
     build_custom_cnn,
@@ -22,16 +22,23 @@ class TestCustomCNN:
         """Test building custom CNN with default parameters."""
         model = build_custom_cnn()
         
-        assert isinstance(model, keras.Model)
+        assert isinstance(model, Model)
         assert model.input_shape == (None, 28, 28, 1)
-        assert model.output_shape == (None, 1)
+        # Model is built, check output shape through forward pass
+        dummy_input = np.random.rand(1, 28, 28, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_custom_cnn_custom_input_shape(self):
         """Test custom CNN with different input shape."""
         model = build_custom_cnn(input_shape=(128, 128, 1))
-        
+
         assert model.input_shape == (None, 128, 128, 1)
-        assert model.output_shape == (None, 1)
+        # Model is built, check output shape through forward pass
+        # Use correct input shape that matches the model's input_shape
+        dummy_input = np.random.rand(1, 128, 128, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_custom_cnn_has_required_layers(self):
         """Test that custom CNN has expected layer types."""
@@ -81,10 +88,14 @@ class TestTransferLearningModels:
     def test_build_resnet50_default(self):
         """Test building ResNet50 with default parameters."""
         model, base_model = build_transfer_learning_resnet50()
-        
-        assert isinstance(model, keras.Model)
-        assert isinstance(base_model, keras.Model)
-        assert model.output_shape == (None, 1)
+
+        assert isinstance(model, Model)
+        assert isinstance(base_model, Model)
+        # Model is built, check output shape through forward pass
+        import numpy as np
+        dummy_input = np.random.rand(1, 28, 28, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_resnet50_freeze_base(self):
         """Test that base model is frozen when specified."""
@@ -115,9 +126,13 @@ class TestTransferLearningModels:
         """Test building MobileNetV3 with default parameters."""
         model, base_model = build_transfer_learning_mobilenetv3()
         
-        assert isinstance(model, keras.Model)
-        assert isinstance(base_model, keras.Model)
-        assert model.output_shape == (None, 1)
+        assert isinstance(model, Model)
+        assert isinstance(base_model, Model)
+        # Model is built, check output shape through forward pass
+        import numpy as np
+        dummy_input = np.random.rand(1, 28, 28, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_mobilenetv3_freeze_base(self):
         """Test that MobileNetV3 base is frozen when specified."""
@@ -140,9 +155,13 @@ class TestTransferLearningModels:
         """Test building EfficientNet with default parameters."""
         model, base_model = build_transfer_learning_efficientnet()
         
-        assert isinstance(model, keras.Model)
-        assert isinstance(base_model, keras.Model)
-        assert model.output_shape == (None, 1)
+        assert isinstance(model, Model)
+        assert isinstance(base_model, Model)
+        # Model is built, check output shape through forward pass
+        import numpy as np
+        dummy_input = np.random.rand(1, 28, 28, 1).astype(np.float32)
+        output = model(dummy_input)
+        assert output.shape == (1, 1)
     
     def test_build_efficientnet_freeze_base(self):
         """Test that EfficientNet base is frozen when specified."""
@@ -169,29 +188,29 @@ class TestGetModel:
         """Test getting custom architecture."""
         model, base_model = get_model('custom', summary=False)
         
-        assert isinstance(model, keras.Model)
+        assert isinstance(model, Model)
         assert base_model is None
     
     def test_get_model_resnet50(self, capsys):
         """Test getting ResNet50 architecture."""
         model, base_model = get_model('resnet50', summary=False)
         
-        assert isinstance(model, keras.Model)
-        assert isinstance(base_model, keras.Model)
+        assert isinstance(model, Model)
+        assert isinstance(base_model, Model)
     
     def test_get_model_mobilenetv3(self, capsys):
         """Test getting MobileNetV3 architecture."""
         model, base_model = get_model('mobilenetv3', summary=False)
         
-        assert isinstance(model, keras.Model)
-        assert isinstance(base_model, keras.Model)
+        assert isinstance(model, Model)
+        assert isinstance(base_model, Model)
     
     def test_get_model_efficientnet(self, capsys):
         """Test getting EfficientNet architecture."""
         model, base_model = get_model('efficientnet', summary=False)
         
-        assert isinstance(model, keras.Model)
-        assert isinstance(base_model, keras.Model)
+        assert isinstance(model, Model)
+        assert isinstance(base_model, Model)
     
     def test_get_model_case_insensitive(self):
         """Test that architecture names are case-insensitive."""
@@ -200,13 +219,13 @@ class TestGetModel:
         model3, _ = get_model('Custom', summary=False)
         
         # All should work
-        assert isinstance(model1, keras.Model)
-        assert isinstance(model2, keras.Model)
-        assert isinstance(model3, keras.Model)
+        assert isinstance(model1, Model)
+        assert isinstance(model2, Model)
+        assert isinstance(model3, Model)
     
     def test_get_model_invalid_architecture(self):
         """Test error handling for invalid architecture."""
-        with pytest.raises(ValueError, match="Unknown architecture"):
+        with pytest.raises(ValueError, match = 'Unknown architecture'):
             get_model('invalid_arch', summary=False)
     
     def test_get_model_freeze_base_parameter(self):
@@ -262,7 +281,7 @@ class TestModelProperties:
             
             # Last layer should have sigmoid activation
             last_layer = model.layers[-1]
-            assert isinstance(last_layer, keras.layers.Dense)
+            assert isinstance(last_layer, layers.Dense)
             assert last_layer.units == 1
             # Check activation (may be string or function)
             activation = last_layer.activation

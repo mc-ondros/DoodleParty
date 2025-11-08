@@ -14,7 +14,8 @@ Exports:
 """
 
 import numpy as np
-from keras.preprocessing.image import ImageDataGenerator
+# Use legacy ImageDataGenerator from keras for compatibility
+from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 
 def normalize_image(img):
@@ -31,9 +32,14 @@ def normalize_image(img):
         Normalized image in range [0, 1]
     """
     img_flat = img.flatten()
-    if img_flat.std() > 0.01:  # Avoid division by near-zero
+    # Check if image has sufficient variation to normalize
+    # WHY 0.01 threshold: Prevents division by near-zero std which creates artifacts
+    if img_flat.std() > 0.01:
+        # Z-score normalization: removes brightness bias that causes model to
+        # memorize "dense drawings are positive"
         img_norm = (img - img_flat.mean()) / (img_flat.std() + 1e-7)
-        img_norm = (img_norm + 2) / 4  # Rescale to ~0-1 range
+        # Rescale from ~[-2, 2] to [0, 1] range for model compatibility
+        img_norm = (img_norm + 2) / 4
         img_norm = np.clip(img_norm, 0, 1)
         return img_norm
     return img
@@ -73,7 +79,9 @@ def get_augmentation_generator(X_train, y_train, batch_size=32,
     Returns:
         Fitted ImageDataGenerator and generator
     """
-    # Normalize all training data first
+    # Normalize before augmentation to ensure augmented data maintains consistent distribution
+    # WHY normalize first: Augmentation can introduce brightness variations; normalizing
+    # beforehand ensures all augmented samples start from same distribution
     X_train_norm = normalize_batch(X_train)
     
     # Create augmentation generator
@@ -83,7 +91,10 @@ def get_augmentation_generator(X_train, y_train, batch_size=32,
         height_shift_range=height_shift,
         zoom_range=zoom_range,
         fill_mode='constant',
-        cval=0.5,  # Use middle gray for padding
+        # WHY 0.5: Middle gray matches normalized background, preventing edge artifacts
+        cval=0.5,
+        # WHY None: Data is already normalized; double normalization would corrupt distribution
+        rescale=None
     )
     
     # Create batch generator

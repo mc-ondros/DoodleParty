@@ -97,8 +97,8 @@ def load_training_data(data_dir: Path):
     
     if not all([X_train_path.exists(), y_train_path.exists(), 
                 X_val_path.exists(), y_val_path.exists()]):
-        print("✗ Error: Training data not found")
-        print("  Please run data processing first")
+        print('✗ Error: Training data not found')
+        print('  Please run data processing first')
         sys.exit(1)
     
     X_train = np.load(X_train_path)
@@ -137,7 +137,7 @@ def create_pruning_schedule(sparsity: float, num_samples: int, batch_size: int, 
 def apply_pruning(model, sparsity: float, num_samples: int, batch_size: int, 
                   epochs: int, structured: bool = False):
     """Apply pruning to model."""
-    print("\nApplying pruning...")
+    print('\nApplying pruning...')
     print(f"  Target sparsity: {sparsity * 100:.0f}%")
     print(f"  Pruning type: {'Structured' if structured else 'Unstructured'}")
     
@@ -157,7 +157,7 @@ def apply_pruning(model, sparsity: float, num_samples: int, batch_size: int,
         **pruning_params
     )
     
-    print("✓ Pruning applied to model")
+    print('✓ Pruning applied to model')
     return pruned_model
 
 
@@ -217,13 +217,13 @@ def strip_pruning_and_save(pruned_model, output_path: Path):
     print(f"Saving pruned model to: {output_path}")
     final_model.save(output_path)
     
-    print("✓ Model saved")
+    print('✓ Model saved')
     return final_model
 
 
 def analyze_sparsity(model):
     """Analyze actual sparsity in model weights."""
-    print("\nAnalyzing model sparsity...")
+    print('\nAnalyzing model sparsity...')
     
     total_weights = 0
     zero_weights = 0
@@ -255,7 +255,7 @@ def compare_models(original_path: Path, pruned_path: Path,
     acc_diff = pruned_acc - original_acc
     
     print("\n" + "=" * 70)
-    print("Pruning Results")
+    print('Pruning Results')
     print("=" * 70)
     print(f"{'Metric':<25} {'Original':<20} {'Pruned':<20} {'Change':<15}")
     print("-" * 70)
@@ -264,17 +264,17 @@ def compare_models(original_path: Path, pruned_path: Path,
     print(f"{'Sparsity':<25} {0.0:<20.1f}% {actual_sparsity * 100:<19.1f}%")
     print("=" * 70)
     
-    print("\nNotes:")
-    print("  - Keras model size may not decrease significantly")
-    print("  - Convert to TFLite for actual size reduction benefits")
-    print("  - Pruned models work best with hardware acceleration")
+    print('\nNotes:')
+    print('  - Keras model size may not decrease significantly')
+    print('  - Convert to TFLite for actual size reduction benefits')
+    print('  - Pruned models work best with hardware acceleration')
     
     if abs(acc_diff) < 0.01:
-        print("\n✓ Excellent: Minimal accuracy loss")
+        print('\n✓ Excellent: Minimal accuracy loss')
     elif abs(acc_diff) < 0.02:
-        print("\n✓ Good: Acceptable accuracy loss")
+        print('\n✓ Good: Acceptable accuracy loss')
     else:
-        print("\n⚠ Warning: Significant accuracy change")
+        print('\n⚠ Warning: Significant accuracy change')
 
 
 def main():
@@ -295,7 +295,7 @@ def main():
     data_dir = Path(args.data_dir)
     
     print("=" * 70)
-    print("Weight Pruning")
+    print('Weight Pruning')
     print("=" * 70)
     print(f"Input model:    {model_path}")
     print(f"Output model:   {output_path}")
@@ -306,13 +306,13 @@ def main():
     # Load original model
     print(f"\nLoading original model...")
     original_model = tf.keras.models.load_model(model_path)
-    print("✓ Model loaded")
+    print('✓ Model loaded')
     
     # Load training data
     X_train, y_train, X_val, y_val = load_training_data(data_dir)
     
     # Evaluate original model
-    print("\nEvaluating original model...")
+    print('\nEvaluating original model...')
     orig_loss, orig_acc, orig_prec, orig_rec = original_model.evaluate(
         X_val, y_val, verbose=0
     )
@@ -349,11 +349,11 @@ def main():
     # Compare models
     compare_models(model_path, output_path, orig_acc, pruned_acc, actual_sparsity)
     
-    print("\n✓ Pruning complete")
-    print("\nNext steps:")
-    print("  1. Convert to TFLite to see size reduction")
-    print("  2. Benchmark inference speed")
-    print("  3. Test on full validation set")
+    print('\n✓ Pruning complete')
+    print('\nNext steps:')
+    print('  1. Convert to TFLite to see size reduction')
+    print('  2. Benchmark inference speed')
+    print('  3. Test on full validation set')
 
 
 if __name__ == '__main__':
