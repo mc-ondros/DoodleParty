@@ -342,9 +342,6 @@ MODEL_PATH=models/quickdraw_model_int8.tflite
 IMAGE_SIZE=28
 THRESHOLD=0.5
 
-# Database
-DATABASE_URL=postgresql://localhost/doodleparty
-REDIS_URL=redis://localhost:6379
 ```
 
 ## Troubleshooting
@@ -482,8 +479,6 @@ pkgs.mkShell {
   buildInputs = with pkgs; [
     nodejs_18
     python311
-    postgresql
-    redis
     nodePackages.typescript
     nodePackages.eslint
   ];

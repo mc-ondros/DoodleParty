@@ -41,8 +41,6 @@
 - [Cloud Deployment (DigitalOcean)](#cloud-deployment-digitalocean)
   - [1. Create Kubernetes Cluster](#1-create-kubernetes-cluster)
   - [2. Deploy Application](#2-deploy-application)
-  - [3. Setup Database](#3-setup-database)
-  - [4. Setup Redis Cache](#4-setup-redis-cache)
 
 
 ### Next Steps
@@ -149,14 +147,11 @@ NODE_ENV=development
 PORT=3000
 ML_SERVICE_URL=http://localhost:5001
 
-# ML Model
-MODEL_PATH=models/quickdraw_model_int8.tflite
-IMAGE_SIZE=28
-THRESHOLD=0.5
+|# ML Model
+|MODEL_PATH=models/quickdraw_model_int8.tflite
+|IMAGE_SIZE=128
+|THRESHOLD=0.5
 
-# Database (if using cloud)
-DATABASE_URL=postgresql://user:password@localhost/doodleparty
-REDIS_URL=redis://localhost:6379
 
 # DigitalOcean AI (optional)
 DIGITALOCEAN_API_KEY=your_api_key_here
@@ -380,23 +375,6 @@ kubectl apply -f k8s/deployment-ml.yaml
 kubectl apply -f k8s/service.yaml
 ```
 
-### 3. Setup Database
-
-```bash
-doctl databases create doodleparty-db \
-  --engine pg \
-  --region nyc3 \
-  --num-nodes 1
-```
-
-### 4. Setup Redis Cache
-
-```bash
-doctl databases create doodleparty-redis \
-  --engine redis \
-  --region nyc3 \
-  --num-nodes 1
-```
 
 
 ## Next Steps

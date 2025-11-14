@@ -79,13 +79,13 @@
 
 **Framework:** TensorFlow/Keras with TFLite optimization
 **Base Model:** Custom CNN (423K parameters) or transfer learning
-**Input:** 28x28 grayscale images (QuickDraw dataset format)
+**Input:** 128x128 grayscale images (QuickDraw dataset format)
 **Output:** Binary probability (0.0-1.0)
 
 ### Custom CNN Architecture
 
 ```
-Input (28x28x1 grayscale)
+Input (128x128x1 grayscale)
     ↓
 Conv2D 32 filters, 3x3 kernel
 ReLU + BatchNorm + MaxPool(2x2) + Dropout(0.25)
@@ -147,8 +147,8 @@ def preprocess_image(image):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     img_array = cv2.dilate(img_array, kernel, iterations=1)
 
-    # 4. Resize to 28x28 (model input size)
-    image = Image.fromarray(img_array).resize((28, 28))
+    # 4. Resize to 128x128 (model input size)
+    image = Image.fromarray(img_array).resize((128, 128))
 
     # 5. Normalize to [0, 1]
     img_array = np.array(image, dtype=np.float32) / 255.0
@@ -169,7 +169,7 @@ def preprocess_image(image):
 1. Grayscale conversion for model compatibility
 2. Color inversion (white canvas → black background)
 3. Morphological dilation to preserve thin strokes
-4. Resize to 28x28 (model input size)
+4. Resize to 128x128 (model input size)
 5. Normalization to [0, 1] range
 6. Z-score normalization for better training
 7. Batch and channel dimension addition
@@ -182,7 +182,7 @@ def preprocess_image(image):
 
 **Pipeline:**
 ```
-Canvas (512x512) → Preprocess → Resize to 28x28 → TFLite INT8 Model → Binary Classification
+Canvas (512x512) → Preprocess → Resize to 128x128 → TFLite INT8 Model → Binary Classification
 ```
 
 **Characteristics:**
@@ -404,7 +404,7 @@ model = tf.keras.models.load_model('quickdraw_model.h5')
 # Create representative dataset for calibration
 def representative_dataset():
     for _ in range(100):
-        yield [np.random.rand(1, 28, 28, 1).astype(np.float32)]
+        yield [np.random.rand(1, 128, 128, 1).astype(np.float32)]
 
 # Convert with INT8 quantization
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
@@ -511,7 +511,7 @@ python scripts/data_processing/download_quickdraw_npy.py
 **Data Organization:**
 - `data/raw/` - Downloaded NumPy bitmap files (penis.npy, circle.npy, etc.)
 - `data/processed/` - Processed data and class_mapping.pkl
-- Format: Pre-processed 28x28 grayscale bitmaps from Google's QuickDraw dataset
+- Format: Pre-processed 128x128 grayscale bitmaps from Google's QuickDraw dataset
 
 ### Phase 2: Model Training
 
@@ -546,7 +546,7 @@ python scripts/evaluate.py \
 
 **Data Source:**
 - Google QuickDraw Dataset (NumPy bitmap format)
-- Pre-processed 28x28 grayscale images
+- Pre-processed 128x128 grayscale images
 - Categories: penis (positive) + 21 common shapes (negative)
 
 ## Inference API

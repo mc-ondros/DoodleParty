@@ -443,7 +443,6 @@ Health check endpoint.
   "services": {
     "websocket": "ok",
     "ml_inference": "ok",
-    "database": "ok"
   }
 }
 ```
