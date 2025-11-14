@@ -58,11 +58,20 @@ def build_custom_cnn(input_shape=(28, 28, 1), num_classes=1):
         # Output layer
         layers.Dense(num_classes, activation='sigmoid' if is_binary else 'softmax')
     ])
-    
+
+    if is_binary:
+        metrics = [
+            keras.metrics.BinaryAccuracy(name='accuracy'),
+            keras.metrics.Precision(name='precision'),
+            keras.metrics.Recall(name='recall')
+        ]
+    else:
+        metrics = ['accuracy']
+
     model.compile(
         optimizer='adam',
         loss='binary_crossentropy' if is_binary else 'categorical_crossentropy',
-        metrics=['accuracy', 'precision', 'recall']
+        metrics=metrics
     )
     
     return model
