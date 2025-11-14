@@ -1,7 +1,7 @@
 class InkMeter {
     constructor(inkLevelElement) {
         this.inkLevelElement = inkLevelElement;
-        this.currentInkLevel = 100; // Assuming ink level starts at 100%
+        this.currentInkLevel = 100;
         this.updateInkLevelDisplay();
     }
 

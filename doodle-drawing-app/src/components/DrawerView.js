@@ -3,7 +3,6 @@ class DrawerView {
         this.onColorChange = onColorChange;
         this.onBrushSizeChange = onBrushSizeChange;
 
-        this.colorPicker = document.getElementById('colorPicker');
         this.colorPresetButtons = document.querySelectorAll('.color-dot');
         this.brushSizeSelector = document.getElementById('brushSize');
         this.brushSizeValue = document.getElementById('brushSizeValue');
@@ -11,7 +10,7 @@ class DrawerView {
         this.inkMeterFill = document.getElementById('inkFill');
         this.timerDisplay = document.getElementById('timer');
         this.activeColorButton = document.querySelector('.color-dot.active');
-
+        this.rootStyle = document.documentElement.style;
         this.initialize();
     }
 
@@ -64,6 +63,11 @@ class DrawerView {
         this.activeColorButton?.classList.remove('active');
         button.classList.add('active');
         this.activeColorButton = button;
+
+        const color = button.dataset.color;
+        if (color) {
+            this.rootStyle.setProperty('--selected-color', color);
+        }
     }
 }
 
