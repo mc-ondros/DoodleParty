@@ -1,0 +1,41 @@
+.dashboard-container { display: grid; grid-template-columns: 1fr; gap: var(--space-md); padding: var(--space-lg); width: 100%; min-height: 100vh; }
+@media (min-width: 768px) { .dashboard-container { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .dashboard-container { grid-template-columns: repeat(3, 1fr); } }
+
+.dashboard-header { grid-column: 1 / -1; padding: var(--space-lg); }
+.dashboard-header h1 { margin-bottom: var(--space-sm); }
+.dashboard-header p { color: var(--text-secondary); margin-bottom: 0; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-md); }
+@media (min-width: 768px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.stat-card { display: flex; align-items: flex-start; justify-content: space-between; }
+.stat-card-content { flex: 1; }
+.stat-card-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: var(--space-sm); }
+.stat-card-value { font-size: 48px; font-weight: 700; color: var(--text-primary); line-height: 1; margin-bottom: var(--space-sm); font-family: 'SF Mono', Monaco, Inconsolata, monospace; }
+.stat-card-description { font-size: 12px; color: var(--text-secondary); }
+.stat-card-icon { width: 32px; height: 32px; color: var(--text-tertiary); flex-shrink: 0; opacity: 0.7; }
+
+.control-panel { display: flex; flex-direction: column; gap: var(--space-sm); }
+.control-panel h3 { margin-bottom: var(--space-md); }
+
+.timer-display { text-align: center; padding: var(--space-xl); }
+.timer-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: var(--space-md); }
+.timer-value { font-size: 64px; font-weight: 700; font-family: 'SF Mono', Monaco, Inconsolata, monospace; color: var(--text-primary); line-height: 1; margin-bottom: var(--space-md); }
+.timer-status { font-size: 12px; color: var(--text-secondary); }
+.timer-status.running { color: var(--accent-success); }
+.timer-status.paused { color: var(--accent-warning); }
+.timer-status.expired { color: var(--accent-danger); }
+
+.theme-selector { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-top: var(--space-md); }
+.theme-selector h3 { grid-column: 1 / -1; margin-bottom: 0; }
+.theme-option { padding: var(--space-md); text-align: center; font-size: 12px; font-weight: 600; text-transform: capitalize; }
+.theme-option.active { background: var(--accent-primary); color: var(--text-inverse); border-color: var(--accent-primary); }
+
+/* Player list helpers */
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-success); display: inline-block; }
+.status-dot.idle { background: var(--accent-warning); }
+.muted { color: var(--text-secondary); }
+.badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); }
+.menu { z-index: 10; }

@@ -1,0 +1,17 @@
+.text-center{ text-align:center; } .text-right{ text-align:right; } .text-left{ text-align:left; }
+.font-bold{ font-weight:700; } .font-semibold{ font-weight:600; } .font-medium{ font-weight:500; } .font-normal{ font-weight:400; }
+.uppercase{text-transform:uppercase;} .lowercase{text-transform:lowercase;} .capitalize{text-transform:capitalize;} .italic{ font-style: italic; }
+.hidden{ display:none !important; } .block{ display:block; } .inline{ display:inline; } .inline-block{ display:inline-block; }
+.flex{ display:flex; } .items-center{ align-items:center; } .items-start{ align-items:flex-start; } .items-end{ align-items:flex-end; }
+.justify-between{ justify-content: space-between; } .justify-center{ justify-content: center; } .justify-start{ justify-content:flex-start; }
+.gap-1{ gap: var(--space-xs); } .gap-2{ gap: var(--space-sm);} .gap-3{ gap: var(--space-md);} .gap-4{ gap: var(--space-lg);} .gap-6{ gap: var(--space-xl);}
+.p-0{ padding:0;} .p-1{ padding: var(--space-xs);} .p-2{ padding: var(--space-sm);} .p-3{ padding: var(--space-md);} .p-4{ padding: var(--space-lg);} .p-6{ padding: var(--space-xl);} .p-8{ padding: var(--space-2xl);}
+.m-0{ margin:0;} .m-1{ margin: var(--space-xs);} .m-2{ margin: var(--space-sm);} .m-3{ margin: var(--space-md);} .m-4{ margin: var(--space-lg);} .m-6{ margin: var(--space-xl);} .m-8{ margin: var(--space-2xl);}
+.mb-1{ margin-bottom: var(--space-xs);} .mb-2{ margin-bottom: var(--space-sm);} .mb-3{ margin-bottom: var(--space-md);} .mb-4{ margin-bottom: var(--space-lg);} .mb-6{ margin-bottom: var(--space-xl);}
+.w-full{ width: 100%; } .w-auto{ width: auto; } .h-full{ height: 100%; } .h-auto{ height: auto; }
+.border{ border: 1px solid var(--glass-border);} .border-t{ border-top: 1px solid var(--glass-border);} .border-b{ border-bottom: 1px solid var(--glass-border);} 
+.opacity-0{opacity:0;} .opacity-25{opacity:.25;} .opacity-50{opacity:.5;} .opacity-75{opacity:.75;} .opacity-100{opacity:1;}
+.rounded{ border-radius: var(--radius-md);} .rounded-lg{ border-radius: var(--radius-lg);} .rounded-full{ border-radius: 9999px; }
+.shadow-sm{ box-shadow: var(--shadow-sm);} .shadow-md{ box-shadow: var(--shadow-md);} .shadow-lg{ box-shadow: var(--shadow-lg);} 
+.cursor-pointer{ cursor: pointer;} .cursor-default{ cursor: default;} .cursor-not-allowed{ cursor: not-allowed; }
+.overflow-hidden{ overflow: hidden;} .overflow-auto{ overflow: auto; }

@@ -1,0 +1,24 @@
+:root {
+  --bg: #0f172a;
+  --panel: #0b1222;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --brand: #8b5cf6;
+  --accent: #22d3ee;
+  --border: #1f2937;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+.brand { color: white; font-weight: 800; letter-spacing: .2px; }
+.muted { color: var(--muted); }
+.btn { background: linear-gradient(90deg, var(--brand), var(--accent)); color: #0b1020; border: none; padding: 10px 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }

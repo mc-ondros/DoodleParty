@@ -1,0 +1,39 @@
+button, .btn, .glass-btn {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  white-space: nowrap;
+  text-decoration: none;
+  outline: none;
+}
+button:hover, .btn:hover, .glass-btn:hover { transform: translateY(-2px); background: var(--glass-bg-elevated); border-color: var(--glass-border-elevated); box-shadow: var(--shadow-md); }
+button:active, .btn:active, .glass-btn:active { transform: translateY(0); }
+button:disabled, .btn:disabled, .glass-btn:disabled { opacity: .5; pointer-events:none; cursor:not-allowed; }
+.btn-primary { background: var(--accent-primary); border-color: var(--accent-primary); color: var(--text-inverse); }
+.btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); }
+.btn-secondary { background: transparent; border: 1px solid var(--glass-border); color: var(--text-primary); }
+.btn-secondary:hover { background: var(--glass-bg); }
+.btn-success { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); color:#047857; }
+.btn-success:hover { background: rgba(16,185,129,0.25); }
+.btn-warning { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.3); color:#b45309; }
+.btn-warning:hover { background: rgba(245,158,11,0.25); }
+.btn-danger, .glass-btn.danger { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color:#dc2626; }
+.btn-danger:hover { background: rgba(239,68,68,0.25); }
+.btn-sm { padding: 8px 16px; font-size: 12px; }
+.btn-lg { padding: 16px 32px; font-size: 16px; }
+.btn-block { width: 100%; }
+.btn-icon { width: 40px; height: 40px; padding: 0; border-radius: var(--radius-sm); }
+.btn-icon:hover { transform: translateY(-1px); }
+.btn svg, .glass-btn svg { width: 20px; height: 20px; display: flex; }
