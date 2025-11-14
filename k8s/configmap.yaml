@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doodleparty-config
+  namespace: doodleparty
+data:
+  VITE_API_URL: "https://api.doodleparty.io"
+  VITE_ML_URL: "https://ml.doodleparty.io"
+  VITE_ENV: "production"
+  NODE_ENV: "production"
