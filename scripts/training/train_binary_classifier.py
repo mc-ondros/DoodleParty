@@ -12,6 +12,14 @@ import sys
 import numpy as np
 import pickle
 from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
+from rich.table import Table
+from rich.layout import Layout
+from rich import box
+from rich.live import Live
+from rich.text import Text
 
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
@@ -19,6 +27,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
 from src_py.core.models import build_custom_cnn
 from src_py.core.training import create_callbacks, train_model
 from src_py.data.augmentation import DataAugmentation
+
+# Initialize Rich console
+console = Console()
 
 
 def load_category(data_dir: str, category: str, max_samples: int = None) -> np.ndarray:
@@ -28,17 +39,17 @@ def load_category(data_dir: str, category: str, max_samples: int = None) -> np.n
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Category file not found: {file_path}")
     
-    print(f"Loading {category}...", end=' ')
-    data = np.load(file_path)
+    with console.status(f"[cyan]Loading {category}...", spinner="dots"):
+        data = np.load(file_path)
+        
+        if max_samples:
+            data = data[:max_samples]
+        
+        # Normalize to [0, 1] and reshape to (N, 28, 28, 1)
+        data = data.astype(np.float32) / 255.0
+        data = data.reshape(-1, 28, 28, 1)
     
-    if max_samples:
-        data = data[:max_samples]
-    
-    # Normalize to [0, 1] and reshape to (N, 28, 28, 1)
-    data = data.astype(np.float32) / 255.0
-    data = data.reshape(-1, 28, 28, 1)
-    
-    print(f"✓ {len(data)} samples")
+    console.print(f"  [green]✓[/green] {category}: [bold]{len(data):,}[/bold] samples loaded")
     return data
 
 
@@ -68,26 +79,38 @@ def prepare_binary_dataset(
             "rectangle", "diamond", "heart", "cloud", "moon"
         ]
     
-    print("=" * 70)
-    print("Loading Binary Classification Dataset (28x28)")
-    print("=" * 70)
-    print(f"\nPositive class: {positive_category}")
-    print(f"Negative classes: {len(negative_categories)}")
-    print(f"Max samples per category: {max_samples_per_category}")
-    print()
+    # Display header
+    console.print()
+    console.print(Panel.fit(
+        "[bold cyan]Binary Classification Dataset Loader[/bold cyan]\n"
+        f"[dim]28x28 QuickDraw Format[/dim]",
+        border_style="cyan",
+        box=box.DOUBLE
+    ))
+    
+    # Configuration table
+    config_table = Table(show_header=False, box=box.SIMPLE, padding=(0, 2))
+    config_table.add_row("[cyan]Positive class:[/cyan]", f"[yellow]{positive_category}[/yellow]")
+    config_table.add_row("[cyan]Negative classes:[/cyan]", f"[yellow]{len(negative_categories)}[/yellow] categories")
+    config_table.add_row("[cyan]Max samples/category:[/cyan]", f"[yellow]{max_samples_per_category:,}[/yellow]")
+    config_table.add_row("[cyan]Train/Val split:[/cyan]", f"[yellow]{train_split:.0%} / {(1-train_split):.0%}[/yellow]")
+    console.print(config_table)
+    console.print()
     
     # Load positive samples (label = 1)
+    console.print("[bold cyan]Loading positive samples:[/bold cyan]")
     positive_data = load_category(data_dir, positive_category, max_samples_per_category)
     positive_labels = np.ones(len(positive_data), dtype=np.float32)
     
     # Load negative samples (label = 0)
+    console.print("\n[bold cyan]Loading negative samples:[/bold cyan]")
     negative_data_list = []
     for category in negative_categories:
         try:
             data = load_category(data_dir, category, max_samples_per_category)
             negative_data_list.append(data)
         except FileNotFoundError as e:
-            print(f"⚠ Warning: {e}")
+            console.print(f"  [yellow]⚠[/yellow] Warning: {e}")
             continue
     
     if not negative_data_list:
@@ -97,30 +120,40 @@ def prepare_binary_dataset(
     negative_labels = np.zeros(len(negative_data), dtype=np.float32)
     
     # Combine and shuffle
-    print(f"\nCombining datasets...")
-    print(f"Positive samples: {len(positive_data):,}")
-    print(f"Negative samples: {len(negative_data):,}")
+    console.print("\n[bold cyan]Dataset Summary:[/bold cyan]")
     
-    all_data = np.concatenate([positive_data, negative_data], axis=0)
-    all_labels = np.concatenate([positive_labels, negative_labels], axis=0)
+    summary_table = Table(box=box.ROUNDED, show_header=True, header_style="bold magenta")
+    summary_table.add_column("Class", style="cyan")
+    summary_table.add_column("Samples", justify="right", style="yellow")
+    summary_table.add_row("Positive (offensive)", f"{len(positive_data):,}")
+    summary_table.add_row("Negative (safe)", f"{len(negative_data):,}")
+    console.print(summary_table)
     
-    # Shuffle
-    indices = np.random.permutation(len(all_data))
-    all_data = all_data[indices]
-    all_labels = all_labels[indices]
+    with console.status("[cyan]Combining and shuffling datasets...", spinner="dots"):
+        all_data = np.concatenate([positive_data, negative_data], axis=0)
+        all_labels = np.concatenate([positive_labels, negative_labels], axis=0)
+        
+        # Shuffle
+        indices = np.random.permutation(len(all_data))
+        all_data = all_data[indices]
+        all_labels = all_labels[indices]
+        
+        # Split train/val
+        split_idx = int(len(all_data) * train_split)
+        train_images = all_data[:split_idx]
+        train_labels = all_labels[:split_idx]
+        val_images = all_data[split_idx:]
+        val_labels = all_labels[split_idx:]
     
-    # Split train/val
-    split_idx = int(len(all_data) * train_split)
-    train_images = all_data[:split_idx]
-    train_labels = all_labels[:split_idx]
-    val_images = all_data[split_idx:]
-    val_labels = all_labels[split_idx:]
-    
-    print(f"\nDataset split:")
-    print(f"Training: {len(train_images):,} samples")
-    print(f"Validation: {len(val_images):,} samples")
-    print(f"Class balance (train): {train_labels.mean():.1%} positive")
-    print(f"Class balance (val): {val_labels.mean():.1%} positive")
+    console.print("\n[bold cyan]Data Split:[/bold cyan]")
+    split_table = Table(box=box.ROUNDED, show_header=True, header_style="bold magenta")
+    split_table.add_column("Split", style="cyan")
+    split_table.add_column("Samples", justify="right", style="yellow")
+    split_table.add_column("Balance", justify="right", style="green")
+    split_table.add_row("Training", f"{len(train_images):,}", f"{train_labels.mean():.1%} positive")
+    split_table.add_row("Validation", f"{len(val_images):,}", f"{val_labels.mean():.1%} positive")
+    split_table.add_row("[bold]Total[/bold]", f"[bold]{len(all_data):,}[/bold]", f"[bold]{all_labels.mean():.1%} positive[/bold]")
+    console.print(split_table)
     
     return (train_images, train_labels), (val_images, val_labels)
 
@@ -204,24 +237,34 @@ Examples:
     )
     
     # Build model
-    print("\n" + "=" * 70)
-    print("Building Model")
-    print("=" * 70)
-    model = build_custom_cnn(input_shape=(28, 28, 1), num_classes=1)
+    console.print()
+    console.print(Panel.fit(
+        "[bold cyan]Model Architecture[/bold cyan]\n"
+        f"[dim]Input: 28x28x1 | Output: Binary Classification[/dim]",
+        border_style="cyan",
+        box=box.DOUBLE
+    ))
     
-    print("\nModel Summary:")
+    with console.status("[cyan]Building model architecture...", spinner="dots"):
+        model = build_custom_cnn(input_shape=(28, 28, 1), num_classes=1)
+    
+    console.print("\n[bold cyan]Model Summary:[/bold cyan]")
     model.summary()
     
     total_params = model.count_params()
-    print(f"\nTotal parameters: {total_params:,}")
+    console.print(f"\n[bold green]✓[/bold green] Total parameters: [bold yellow]{total_params:,}[/bold yellow]")
     
     # Create callbacks
-    callbacks = create_callbacks(args.model_name, checkpoint_dir=args.output_dir + '/')
+    callbacks = create_callbacks(args.model_name, checkpoint_dir=args.output_dir + '/', epochs=args.epochs)
     
     # Train model
-    print("\n" + "=" * 70)
-    print(f"Training for {args.epochs} epochs")
-    print("=" * 70)
+    console.print()
+    console.print(Panel.fit(
+        f"[bold cyan]Training Session[/bold cyan]\n"
+        f"[yellow]Epochs:[/yellow] {args.epochs} | [yellow]Batch Size:[/yellow] {args.batch_size}",
+        border_style="green",
+        box=box.DOUBLE
+    ))
     
     history = train_model(
         model,
@@ -234,13 +277,22 @@ Examples:
     
     # Save final model
     final_model_path = os.path.join(args.output_dir, f"{args.model_name}.h5")
-    model.save(final_model_path)
     
-    print("\n" + "=" * 70)
-    print("Training Complete!")
-    print("=" * 70)
-    print(f"\nModel saved to: {final_model_path}")
-    print(f"Best model saved to: {args.output_dir}/{args.model_name}_best.h5")
+    with console.status("[cyan]Saving final model...", spinner="dots"):
+        model.save(final_model_path)
+    
+    console.print()
+    console.print(Panel.fit(
+        "[bold green]✓ Training Complete![/bold green]",
+        border_style="green",
+        box=box.DOUBLE
+    ))
+    
+    console.print("\n[bold cyan]Model Artifacts:[/bold cyan]")
+    artifacts_table = Table(box=box.ROUNDED, show_header=False)
+    artifacts_table.add_row("[cyan]Final model:[/cyan]", f"[yellow]{final_model_path}[/yellow]")
+    artifacts_table.add_row("[cyan]Best model:[/cyan]", f"[yellow]{args.output_dir}/{args.model_name}_best.h5[/yellow]")
+    console.print(artifacts_table)
     
     # Final metrics
     final_loss = history.history['loss'][-1]
@@ -248,24 +300,28 @@ Examples:
     val_loss = history.history['val_loss'][-1]
     val_acc = history.history['val_accuracy'][-1]
     
-    print(f"\nFinal Training Metrics:")
-    print(f"  Loss: {final_loss:.4f}")
-    print(f"  Accuracy: {final_acc:.4f}")
-    print(f"\nFinal Validation Metrics:")
-    print(f"  Loss: {val_loss:.4f}")
-    print(f"  Accuracy: {val_acc:.4f}")
+    console.print("\n[bold cyan]Final Metrics:[/bold cyan]")
+    metrics_table = Table(box=box.ROUNDED, show_header=True, header_style="bold magenta")
+    metrics_table.add_column("Metric", style="cyan")
+    metrics_table.add_column("Training", justify="right", style="yellow")
+    metrics_table.add_column("Validation", justify="right", style="green")
+    metrics_table.add_row("Loss", f"{final_loss:.4f}", f"{val_loss:.4f}")
+    metrics_table.add_row("Accuracy", f"{final_acc:.2%}", f"{val_acc:.2%}")
+    console.print(metrics_table)
     
     # Check if model meets targets
-    print(f"\nTarget Check:")
+    console.print("\n[bold cyan]Target Validation:[/bold cyan]")
     if val_acc >= 0.90:
-        print(f"  ✓ Accuracy target met: {val_acc:.1%} >= 90%")
+        console.print(f"  [bold green]✓[/bold green] Accuracy target met: [green]{val_acc:.1%}[/green] >= [dim]90%[/dim]")
     else:
-        print(f"  ✗ Accuracy target not met: {val_acc:.1%} < 90%")
+        console.print(f"  [bold red]✗[/bold red] Accuracy target not met: [red]{val_acc:.1%}[/red] < [dim]90%[/dim]")
     
-    print("\nNext steps:")
-    print(f"  1. Evaluate model: python scripts/evaluation/evaluate.py --model {final_model_path}")
-    print(f"  2. Convert to TFLite: python scripts/optimization/convert_to_tflite.py --model {final_model_path}")
-    print("=" * 70)
+    console.print("\n[bold cyan]Next Steps:[/bold cyan]")
+    steps_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+    steps_table.add_row("[cyan]1.[/cyan]", f"Evaluate model: [dim]python scripts/evaluation/evaluate.py --model {final_model_path}[/dim]")
+    steps_table.add_row("[cyan]2.[/cyan]", f"Convert to TFLite: [dim]python scripts/optimization/convert_to_tflite.py --model {final_model_path}[/dim]")
+    console.print(steps_table)
+    console.print()
     
     return 0
 

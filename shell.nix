@@ -9,6 +9,7 @@
 let
   pythonEnv = pkgs.python3.withPackages (ps: with ps; [
     tensorflow
+    keras
     numpy
     opencv4
     scikit-learn
@@ -29,12 +30,13 @@ let
     mypy
     sphinx
     sphinx-rtd-theme
+    rich
   ]);
 
 in pkgs.mkShell {
   buildInputs = with pkgs; [
     pythonEnv
-    nodejs_18
+    nodejs_22
     yarn
     nodePackages.typescript
     nodePackages.typescript-language-server
@@ -62,10 +64,12 @@ in pkgs.mkShell {
     echo "  npm run lint      - Run ESLint"
     echo "  npm run test      - Run tests"
     echo "  python -m pytest  - Run Python tests"
+    echo "  scripts/training/train.py --help - Train model"
+    echo "  scripts/data_processing/download_quickdraw_npy.py --help - Download data"
     echo ""
     
     # Set up Python path
-    export PYTHONPATH="$(pwd)/src-py:$PYTHONPATH"
+    export PYTHONPATH="$(pwd):$PYTHONPATH"
     
     # Install npm dependencies if needed
     if [ ! -d "node_modules" ]; then

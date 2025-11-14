@@ -4,8 +4,14 @@ Supports: Custom CNN, ResNet50, MobileNetV3, EfficientNet
 """
 
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+try:
+    # TensorFlow 2.16+ uses Keras 3
+    import keras
+    from keras import layers
+except ImportError:
+    # Fallback for older TensorFlow versions
+    from tensorflow import keras
+    from tensorflow.keras import layers
 
 
 def build_custom_cnn(input_shape=(28, 28, 1), num_classes=1):

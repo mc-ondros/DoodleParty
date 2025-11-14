@@ -1,10 +1,31 @@
 """
-Single and batch prediction inference.
+Inference Module - Neural Network Predictions
+
+Provides both single and batch prediction capabilities for trained models.
+Handles image preprocessing, model loading, and result formatting.
+
+Key Components:
+- InferenceEngine: Main class that loads models and performs predictions
+- Supported prediction types: single image, batch, top-k results
+
+Examples:
+    >>> engine = InferenceEngine("path/to/model.h5")
+    >>> result = engine.predict_single(image_array)
+    >>> print(result)  # {'circle': 0.85, 'square': 0.15}
+
+Related Modules:
+- src-py/core/training.py (model training)
+- src-py/data/loaders.py (data loading utilities)
 """
 
 import numpy as np
 import tensorflow as tf
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, TypedDict
+
+# Type aliases for clearer type hints
+PredictionDict = Dict[str, float]
+BatchPredictions = List[PredictionDict]
+TopKPredictions = List[Tuple[str, float]]
 
 
 class InferenceEngine:
@@ -50,15 +71,22 @@ class InferenceEngine:
         
         return result
     
-    def predict_batch(self, images: np.ndarray) -> List[Dict[str, float]]:
+    def predict_batch(self, images: np.ndarray) -> BatchPredictions:
         """
-        Predict classes for multiple images.
+        Predict class probabilities for a batch of images.
         
         Args:
-            images: Batch of images as numpy array
+            images: Batch of images as numpy array with shape (N, H, W, C)
+                    Where N is number of images
         
         Returns:
-            List of prediction dictionaries
+            List of dictionaries mapping class names to probabilities
+            
+        Example:
+            >>> batch = np.array([image1, image2, image3])
+            >>> results = engine.predict_batch(batch)
+            >>> print(results[0])
+            {'circle': 0.95, 'square': 0.05}
         """
         predictions = self.model.predict(images, verbose=0)
         
@@ -78,16 +106,22 @@ class InferenceEngine:
         self,
         image: np.ndarray,
         k: int = 5
-    ) -> List[Tuple[str, float]]:
+    ) -> TopKPredictions:
         """
-        Get top-k predictions for an image.
+        Get top-k highest probability predictions for an image.
         
         Args:
-            image: Input image
-            k: Number of top predictions
+            image: Input image as numpy array
+            k: Number of top predictions to return (default: 5)
         
         Returns:
-            List of (class_name, probability) tuples
+            Ordered list of (class_name, probability) tuples,
+            sorted descending by probability
+            
+        Example:
+            >>> top3 = engine.predict_top_k(image_array, k=3)
+            >>> print(top3)
+            [('circle', 0.92), ('triangle', 0.07), ('square', 0.01)]
         """
         predictions = self.predict_single(image)
         top_k = sorted(predictions.items(), key=lambda x: x[1], reverse=True)[:k]

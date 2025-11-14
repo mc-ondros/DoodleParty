@@ -1,8 +1,8 @@
 # DoodleParty Nix Usage Guide
 
-**Purpose:** Instructions for using DoodleParty with Nix and NixOS.
+**Purpose:** Instructions for using DoodleParty with Nix and NixOS, including model training and system integration.
 
-**Status: Updated**
+**Status: Updated - Nov 2025**
 
 ## Table of Contents
 
@@ -90,10 +90,11 @@ nix develop
 ```
 
 This provides:
-- Node.js 18 with npm
+- Node.js 22 with npm
 - Python 3.11 with TensorFlow and ML dependencies
 - Development tools (eslint, prettier, pytest, black)
-- All required system libraries
+- Rich library for beautiful terminal output
+- All required system libraries for training and inference
 
 ### Running Applications
 
@@ -131,6 +132,53 @@ The result will be in `./result/`.
 
 ### Installation
 
+#### Option 1: Using Flakes (Recommended)
+
+Add DoodleParty to your system flake:
+
+```nix
+# /etc/nixos/flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    doodleparty.url = "path:/home/diatom/Documents/DoodleParty";
+    # Or from git:
+    # doodleparty.url = "github:yourusername/DoodleParty";
+  };
+
+  outputs = { self, nixpkgs, doodleparty, ... }: {
+    nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+        doodleparty.nixosModules.doodleparty
+      ];
+    };
+  };
+}
+```
+
+Then in your configuration.nix:
+
+```nix
+# configuration.nix
+{ config, pkgs, ... }:
+
+{
+  services.doodleparty = {
+    enable = true;
+    port = 5000;
+    openFirewall = true;
+    
+    # AI features
+    enableAI = true;
+    moderationThreshold = 0.85;
+  };
+}
+```
+
+#### Option 2: Without Flakes
+
 Add to your NixOS configuration:
 
 ```nix
@@ -139,50 +187,51 @@ Add to your NixOS configuration:
 
 {
   imports = [
-    /path/to/doodleparty/module.nix
+    /home/diatom/Documents/DoodleParty/module.nix
   ];
 
   services.doodleparty = {
     enable = true;
-    port = 3000;
-    host = "0.0.0.0";
-    modelPath = "/var/lib/doodleparty/models/quickdraw_model_int8.tflite";
+    port = 5000;
     openFirewall = true;
   };
 }
 ```
 
+#### Rebuild Your System
+
+```bash
+sudo nixos-rebuild switch
+```
+
 ### Configuration Options
+
+**Core Settings:**
 
 **`services.doodleparty.enable`**
 - Type: boolean
 - Default: `false`
-- Enable the DoodleParty web interface service
+- Enable the DoodleParty service
 
 **`services.doodleparty.port`**
 - Type: port
-- Default: `3000`
-- Port for the Node.js web server
+- Default: `5000`
+- Port for the Flask web server
 
 **`services.doodleparty.host`**
 - Type: string
-- Default: `"127.0.0.1"`
-- Host address to bind to (use `"0.0.0.0"` for external access)
-
-**`services.doodleparty.modelPath`**
-- Type: path
-- Required
-- Path to the trained TFLite model file
-
-**`services.doodleparty.mlPort`**
-- Type: port
-- Default: `5001`
-- Port for the ML inference service
+- Default: `"0.0.0.0"`
+- Host address to bind to
 
 **`services.doodleparty.dataDir`**
 - Type: path
 - Default: `"/var/lib/doodleparty"`
-- Directory for DoodleParty data
+- Directory for DoodleParty data and state
+
+**`services.doodleparty.modelsDir`**
+- Type: path
+- Default: `"/var/lib/doodleparty/models"`
+- Directory for ML models
 
 **`services.doodleparty.user`**
 - Type: string
@@ -197,12 +246,58 @@ Add to your NixOS configuration:
 **`services.doodleparty.openFirewall`**
 - Type: boolean
 - Default: `false`
-- Whether to open the firewall for the web interface
+- Whether to open the firewall for the configured port
 
-**`services.doodleparty.enableML`**
+**Performance Settings:**
+
+**`services.doodleparty.workers`**
+- Type: int
+- Default: `4`
+- Number of Gunicorn worker processes
+
+**`services.doodleparty.maxConcurrentUsers`**
+- Type: int
+- Default: `100`
+- Maximum number of concurrent users
+
+**AI/ML Settings:**
+
+**`services.doodleparty.enableAI`**
 - Type: boolean
 - Default: `true`
-- Whether to enable the ML inference service
+- Enable AI-powered content moderation
+
+**`services.doodleparty.moderationThreshold`**
+- Type: float
+- Default: `0.85`
+- Threshold for content moderation (0.0 - 1.0, lower = stricter)
+
+**`services.doodleparty.enableLLM`**
+- Type: boolean
+- Default: `false`
+- Enable LLM integration for prompts and narration
+
+**`services.doodleparty.llmApiKeyFile`**
+- Type: nullOr path
+- Default: `null`
+- File containing the API key for LLM service
+
+**Logging & Monitoring:**
+
+**`services.doodleparty.logLevel`**
+- Type: enum ["DEBUG" "INFO" "WARNING" "ERROR" "CRITICAL"]
+- Default: `"INFO"`
+- Logging level for the application
+
+**`services.doodleparty.enableMetrics`**
+- Type: boolean
+- Default: `true`
+- Enable Prometheus metrics endpoint
+
+**`services.doodleparty.extraConfig`**
+- Type: attrs
+- Default: `{}`
+- Extra configuration options as attribute set
 
 ### Example Configurations
 
@@ -210,7 +305,7 @@ Add to your NixOS configuration:
 ```nix
 services.doodleparty = {
   enable = true;
-  modelPath = "/home/user/models/quickdraw_model_int8.tflite";
+  openFirewall = true;
 };
 ```
 
@@ -218,12 +313,32 @@ services.doodleparty = {
 ```nix
 services.doodleparty = {
   enable = true;
-  port = 3000;
+  port = 5000;
   host = "0.0.0.0";
-  mlPort = 5001;
-  modelPath = "/var/lib/doodleparty/models/quickdraw_model_int8.tflite";
   openFirewall = true;
-  enableML = true;
+  
+  # Performance
+  workers = 8;
+  maxConcurrentUsers = 500;
+  
+  # AI features
+  enableAI = true;
+  moderationThreshold = 0.85;
+  
+  # LLM integration
+  enableLLM = true;
+  llmApiKeyFile = "/run/secrets/doodleparty-llm-key";
+  
+  # Monitoring
+  logLevel = "INFO";
+  enableMetrics = true;
+  
+  # Custom config
+  extraConfig = {
+    CANVAS_WIDTH = 1920;
+    CANVAS_HEIGHT = 1080;
+    SAVE_INTERVAL = 60;
+  };
 };
 ```
 
@@ -231,12 +346,53 @@ services.doodleparty = {
 ```nix
 services.doodleparty = {
   enable = true;
-  port = 3000;
+  port = 5000;
   host = "0.0.0.0";
-  modelPath = "/var/lib/doodleparty/models/quickdraw_model_int8.tflite";
   openFirewall = true;
-  user = "pi";
-  group = "pi";
+  
+  # Optimize for RPi4 resources
+  workers = 2;
+  maxConcurrentUsers = 100;
+  
+  # Use INT8 quantized models
+  extraConfig = {
+    MODEL_TYPE = "tflite";
+    USE_INT8_QUANTIZATION = "true";
+    CANVAS_WIDTH = 1280;
+    CANVAS_HEIGHT = 720;
+    JPEG_QUALITY = 75;
+  };
+  
+  # Disable LLM for offline events
+  enableLLM = false;
+};
+
+# Performance tuning for RPi4
+boot.kernelParams = [ "cma=256M" ];
+```
+
+**With Nginx reverse proxy:**
+```nix
+services.doodleparty = {
+  enable = true;
+  port = 5000;
+  # Don't open firewall; only accessible via nginx
+};
+
+services.nginx = {
+  enable = true;
+  
+  virtualHosts."doodleparty.example.com" = {
+    serverName = "doodleparty.example.com";
+    enableACME = true;
+    forceSSL = true;
+    # Module automatically configures proxy
+  };
+};
+
+security.acme = {
+  acceptTerms = true;
+  defaults.email = "admin@example.com";
 };
 ```
 

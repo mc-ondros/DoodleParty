@@ -17,6 +17,7 @@
         # Python environment with ML dependencies
         pythonEnv = pkgs.python3.withPackages (ps: with ps; [
           tensorflow
+          keras
           numpy
           opencv4
           scikit-learn
@@ -37,6 +38,9 @@
           mypy
           sphinx
           sphinx-rtd-theme
+          rich
+          # For training and optimization
+          # tensorflow-model-optimization not in nixpkgs, install via pip if needed
         ]);
 
         # Node.js dependencies
@@ -79,7 +83,7 @@
 
             buildInputs = [
               pythonEnv
-              pkgs.nodejs_18
+              pkgs.nodejs_22
             ];
 
             installPhase = ''
@@ -87,7 +91,7 @@
               mkdir -p $out/share/doodleparty
 
               # Copy Python backend
-              cp -r src-py $out/share/doodleparty/
+              cp -r src_py $out/share/doodleparty/
               cp requirements.txt $out/share/doodleparty/
 
               # Copy frontend build
@@ -112,7 +116,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             pythonEnv
-            nodejs_18
+            nodejs_22
             yarn
             nodePackages.typescript
             nodePackages.typescript-language-server
@@ -140,10 +144,12 @@
             echo "  npm run lint      - Run ESLint"
             echo "  npm run test      - Run tests"
             echo "  python -m pytest  - Run Python tests"
+            echo "  scripts/training/train.py --help - Train model"
+            echo "  scripts/data_processing/download_quickdraw_npy.py --help - Download data"
             echo ""
             
             # Set up Python path
-            export PYTHONPATH="${./.}/src-py:$PYTHONPATH"
+            export PYTHONPATH="${./}:$PYTHONPATH"
             
             # Install npm dependencies if needed
             if [ ! -d "node_modules" ]; then
@@ -155,9 +161,6 @@
 
         # NixOS module
         nixosModules.default = import ./module.nix;
-
-        # For home-manager integration
-        homeManagerModules.default = self.nixosModules.${system}.default;
       }
     ) // {
       # NixOS module available at flake level

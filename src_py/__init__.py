@@ -1,0 +1,1 @@
+"""DoodleParty source code package."""

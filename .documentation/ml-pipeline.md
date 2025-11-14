@@ -524,8 +524,8 @@ python scripts/data_processing/download_quickdraw_npy.py
 
 ### Phase 2: Model Training
 
+**Option A: Train with .npy only (28x28 native)**
 ```bash
-# Train binary classifier (penis vs safe)
 python scripts/training/train_binary_classifier.py \
   --data-dir data/raw \
   --epochs 30 \
@@ -533,7 +533,20 @@ python scripts/training/train_binary_classifier.py \
   --max-samples 10000
 ```
 
-**Output:** `models/quickdraw_binary_28x28.h5`
+**Option B: Train with mixed datasets (.npy + appendix)**
+```bash
+# Combines QuickDraw .npy (28x28) + Appendix (128x128→28x28)
+python scripts/training/train_mixed_dataset.py \
+  --npy-dir data/raw \
+  --appendix-dir data/appendix \
+  --epochs 30 \
+  --max-npy-samples 10000 \
+  --max-appendix-samples 5000
+```
+
+**Outputs:** `models/quickdraw_binary_28x28.h5` or `models/quickdraw_mixed_28x28.h5`
+
+**Note:** Appendix images (128x128) are automatically downscaled to 28x28 using `cv2.INTER_AREA` for optimal quality while maintaining model efficiency.
 
 ### Phase 3: Evaluation
 
@@ -555,11 +568,11 @@ python scripts/evaluate.py \
 - Zoom: 90-110%
 - Horizontal flip: 50% probability
 
-**Data Source:**
-- Google QuickDraw Dataset (NumPy bitmap format)
-- Native 28x28 grayscale bitmaps (no preprocessing needed)
+**Data Sources:**
+- **QuickDraw .npy:** Native 28x28 grayscale bitmaps (primary source)
+- **QuickDraw Appendix:** 128x128 images (automatically downscaled to 28x28)
 - Categories: penis (positive) + 21 common shapes (negative)
-- Alternative: Moniker "Do Not Draw a Penis" dataset (25K additional penis drawings)
+- See `docs/MIXED_DATASET_TRAINING.md` for mixed dataset details
 
 ## Inference API
 

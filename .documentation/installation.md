@@ -108,13 +108,21 @@ The ML model is required for content moderation. For detailed information about 
 
 ```bash
 # Download QuickDraw dataset (28x28 native format)
+# Note: Scripts feature professional TUI with progress bars and colored output
 python scripts/data_processing/download_quickdraw_npy.py --output-dir data/raw
 
-# Train binary classifier
+# Train binary classifier (option A: .npy only)
 python scripts/training/train_binary_classifier.py \
   --data-dir data/raw \
   --epochs 30 \
   --batch-size 32
+
+# Or train with mixed datasets (option B: .npy + appendix)
+# Automatically downscales 128x128 appendix images to 28x28
+python scripts/training/train_mixed_dataset.py \
+  --npy-dir data/raw \
+  --appendix-dir data/appendix \
+  --epochs 30
 ```
 
 Or download pre-trained model:

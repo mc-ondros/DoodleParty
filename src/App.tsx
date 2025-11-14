@@ -1,3 +1,20 @@
+/**
+ * Main Application Component
+ *
+ * Root component for the DoodleParty application.
+ * Renders core UI elements including:
+ * - DrawerView (drawing controls)
+ * - DrawingCanvas (main drawing area)
+ * - GameModeSelector (game configuration)
+ *
+ * Related:
+ * - src/components/DrawingCanvas.tsx (canvas rendering)
+ * - src/components/GameModeSelector.tsx (game mode input)
+ * 
+ * Exports:
+ * - App (default export)
+ */
+
 import React from 'react';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawerView } from './components/DrawerView';

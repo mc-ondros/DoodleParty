@@ -15,51 +15,52 @@ import sys
 import urllib.request
 import urllib.error
 from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, DownloadColumn, BarColumn, TextColumn, TransferSpeedColumn, TimeRemainingColumn
+from rich.table import Table
+from rich import box
+
+# Initialize Rich console
+console = Console()
 
 
-# Official Google QuickDraw dataset URL
-QUICKDRAW_BASE_URL = "https://quickdraw.withgoogle.com/data/numpy_bitmap"
+# Official Google QuickDraw dataset URL (hosted on Google Cloud Storage)
+QUICKDRAW_BASE_URL = "https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap"
+
+# Quickdraw Appendix (explicit content) - raw NDJSON format
+QUICKDRAW_APPENDIX_BASE_URL = "https://raw.githubusercontent.com/studiomoniker/Quickdraw-appendix/master"
 
 # Categories for binary classification
-# Positive class: penis (offensive content)
+# Positive class: explicit/inappropriate content from Quickdraw Appendix
 POSITIVE_CATEGORIES = [
-    "penis"
+    "penis",  # From Quickdraw Appendix
 ]
 
-# Negative categories: common safe shapes (22 categories)
+# Negative categories: shapes and objects that might look similar (to reduce false positives)
+# Include elongated/organic shapes that could be confused with explicit content
 NEGATIVE_CATEGORIES = [
-    "circle",
-    "rectangle", 
-    "triangle",
-    "star",
-    "line",
-    "square",
-    "diamond",
-    "heart",
-    "plus",
-    "cross",
-    "crescent",
-    "octagon",
-    "pentagon",
-    "hexagon",
-    "spiral",
-    "cloud",
-    "moon",
-    "sun",
-    "zig-zag",
-    "check",
-    "X"
+    "banana",       # Elongated organic shape
+    "carrot",       # Similar shape profile  
+    "pencil",       # Elongated object
+    "candle",       # Cylindrical with top
+    "mushroom",     # Could have similar silhouette
+    "lollipop",     # Round top with stick
+    "circle",       # Basic shape
+    "triangle",     # Basic shape
+    "line",         # Basic element
 ]
 
 
-def download_category(category: str, output_dir: str, verbose: bool = True) -> bool:
+def download_category(category: str, output_dir: str, progress: Progress = None, task_id = None) -> bool:
     """
     Download a single QuickDraw category.
     
     Args:
         category: Category name (e.g., 'penis', 'circle')
         output_dir: Directory to save the .npy file
-        verbose: Print progress messages
+        progress: Rich Progress object
+        task_id: Progress task ID
     
     Returns:
         True if successful, False otherwise
@@ -72,38 +73,50 @@ def download_category(category: str, output_dir: str, verbose: bool = True) -> b
     
     # Skip if already downloaded
     if os.path.exists(output_path):
-        if verbose:
-            print(f"✓ {category}.npy already exists")
+        file_size = os.path.getsize(output_path)
+        if progress and task_id is not None:
+            progress.update(task_id, description=f"[cyan]{category}[/cyan]", completed=file_size, total=file_size)
         return True
     
     try:
-        if verbose:
-            print(f"⬇ Downloading {category}...")
+        # Start download with timeout
+        response = urllib.request.urlopen(url, timeout=30)
+        total_size = int(response.headers.get('content-length', 0))
         
-        # Download with progress callback
-        def progress_hook(block_num, block_size, total_size):
-            downloaded = block_num * block_size
-            if total_size > 0:
-                percent = min(100, (downloaded * 100) // total_size)
-                if block_num % 50 == 0 and verbose:
-                    print(f"   {percent}% ({downloaded}/{total_size} bytes)")
+        if progress and task_id is not None:
+            progress.update(task_id, total=total_size, description=f"[cyan]{category}[/cyan]")
         
-        urllib.request.urlretrieve(url, output_path, progress_hook)
+        # Download in chunks
+        downloaded = 0
+        chunk_size = 8192
         
-        if verbose:
-            file_size = os.path.getsize(output_path)
-            print(f"✓ Downloaded {category}.npy ({file_size:,} bytes)")
+        with open(output_path, 'wb') as f:
+            while True:
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+                downloaded += len(chunk)
+                
+                if progress and task_id is not None:
+                    progress.update(task_id, completed=downloaded)
         
         return True
     
     except urllib.error.HTTPError as e:
-        print(f"✗ Error downloading {category}: HTTP {e.code}")
+        console.print(f"  [red]✗[/red] Error downloading {category}: HTTP {e.code}")
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        return False
+    
+    except urllib.error.URLError as e:
+        console.print(f"  [red]✗[/red] Network error downloading {category}: {str(e)}")
         if os.path.exists(output_path):
             os.remove(output_path)
         return False
     
     except Exception as e:
-        print(f"✗ Error downloading {category}: {str(e)}")
+        console.print(f"  [red]✗[/red] Error downloading {category}: {str(e)}")
         if os.path.exists(output_path):
             os.remove(output_path)
         return False
@@ -182,45 +195,87 @@ Examples:
     verbose = not args.quiet
     
     if verbose:
-        print("=" * 60)
-        print("QuickDraw Dataset Downloader for DoodleParty")
-        print("=" * 60)
-        print(f"\nCategories to download: {len(categories)}")
-        print(f"Output directory: {args.output_dir}")
-        print(f"Total size estimate: ~{len(categories) * 25}MB\n")
+        console.print()
+        console.print(Panel.fit(
+            "[bold cyan]QuickDraw Dataset Downloader[/bold cyan]\n"
+            f"[dim]DoodleParty Training Data Preparation[/dim]",
+            border_style="cyan",
+            box=box.DOUBLE
+        ))
+        
+        # Configuration table
+        config_table = Table(show_header=False, box=box.SIMPLE, padding=(0, 2))
+        config_table.add_row("[cyan]Categories:[/cyan]", f"[yellow]{len(categories)}[/yellow]")
+        config_table.add_row("[cyan]Output directory:[/cyan]", f"[yellow]{args.output_dir}[/yellow]")
+        config_table.add_row("[cyan]Estimated size:[/cyan]", f"[yellow]~{len(categories) * 25}MB[/yellow]")
+        console.print(config_table)
+        console.print()
     
     if args.dry_run:
         if verbose:
-            print("DRY RUN - Categories to download:")
-            for cat in categories:
-                print(f"  - {cat}")
+            console.print("[bold yellow]DRY RUN[/bold yellow] - Categories to download:")
+            cat_table = Table(show_header=False, box=box.SIMPLE)
+            for i, cat in enumerate(categories, 1):
+                cat_table.add_row(f"[dim]{i}.[/dim]", f"[cyan]{cat}[/cyan]")
+            console.print(cat_table)
         return 0
     
-    # Download categories
+    # Download categories with progress bar
     successful = 0
     failed = 0
     
-    for category in categories:
-        if download_category(category, args.output_dir, verbose):
-            successful += 1
-        else:
-            failed += 1
+    if verbose:
+        with Progress(
+            TextColumn("{task.description}"),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            TransferSpeedColumn(),
+            TimeRemainingColumn(),
+            console=console
+        ) as progress:
+            for category in categories:
+                task = progress.add_task(f"[cyan]{category}[/cyan]", total=100)
+                if download_category(category, args.output_dir, progress, task):
+                    successful += 1
+                    progress.update(task, description=f"[green]✓[/green] [cyan]{category}[/cyan]")
+                else:
+                    failed += 1
+                    progress.update(task, description=f"[red]✗[/red] [cyan]{category}[/cyan]")
+    else:
+        for category in categories:
+            if download_category(category, args.output_dir):
+                successful += 1
+            else:
+                failed += 1
     
     if verbose:
-        print("\n" + "=" * 60)
-        print(f"Download complete: {successful} successful, {failed} failed")
+        console.print()
+        console.print(Panel.fit(
+            f"[bold green]✓ Download Complete![/bold green]\n"
+            f"[green]Successful:[/green] {successful} | [red]Failed:[/red] {failed}",
+            border_style="green" if failed == 0 else "yellow",
+            box=box.DOUBLE
+        ))
         
         if successful > 0:
-            print(f"\nDataset location: {os.path.abspath(args.output_dir)}")
+            console.print("\n[bold cyan]Dataset Location:[/bold cyan]")
+            console.print(f"  [yellow]{os.path.abspath(args.output_dir)}[/yellow]")
+            
             # List files
             npy_files = sorted([f for f in os.listdir(args.output_dir) if f.endswith('.npy')])
-            print(f"Files downloaded: {len(npy_files)}")
+            console.print(f"\n[bold cyan]Files Downloaded:[/bold cyan] [yellow]{len(npy_files)}[/yellow]")
+            
+            file_table = Table(show_header=False, box=box.SIMPLE, padding=(0, 1))
             for f in npy_files[:5]:
-                print(f"  - {f}")
+                file_size = os.path.getsize(os.path.join(args.output_dir, f))
+                file_table.add_row("[dim]•[/dim]", f"[cyan]{f}[/cyan]", f"[dim]({file_size / 1024 / 1024:.1f} MB)[/dim]")
+            
             if len(npy_files) > 5:
-                print(f"  ... and {len(npy_files) - 5} more")
+                file_table.add_row("[dim]•[/dim]", f"[dim]... and {len(npy_files) - 5} more[/dim]", "")
+            
+            console.print(file_table)
         
-        print("=" * 60)
+        console.print()
     
     return 0 if failed == 0 else 1
 

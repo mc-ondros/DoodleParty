@@ -20,6 +20,7 @@ let
     python-dotenv
     pyyaml
     tqdm
+    rich
   ]);
 
 in {

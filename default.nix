@@ -29,6 +29,7 @@ let
     mypy
     sphinx
     sphinx-rtd-theme
+    rich
   ]);
 
 in pkgs.stdenv.mkDerivation {
@@ -39,7 +40,7 @@ in pkgs.stdenv.mkDerivation {
 
   buildInputs = [
     pythonEnv
-    pkgs.nodejs_18
+    pkgs.nodejs_22
     pkgs.yarn
   ];
 

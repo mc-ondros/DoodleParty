@@ -5,6 +5,13 @@ Model evaluation script.
 
 import argparse
 import numpy as np
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich import box
+
+# Initialize Rich console
+console = Console()
 
 
 def main():
@@ -15,9 +22,32 @@ def main():
     
     args = parser.parse_args()
     
-    print(f"Evaluating model: {args.model}")
-    print(f"Test data: {args.test_data}")
-    print("Evaluation complete!")
+    console.print()
+    console.print(Panel.fit(
+        "[bold cyan]Model Evaluation[/bold cyan]\n"
+        f"[dim]DoodleParty Model Performance Analysis[/dim]",
+        border_style="cyan",
+        box=box.DOUBLE
+    ))
+    
+    # Configuration table
+    config_table = Table(show_header=False, box=box.SIMPLE, padding=(0, 2))
+    config_table.add_row("[cyan]Model:[/cyan]", f"[yellow]{args.model}[/yellow]")
+    config_table.add_row("[cyan]Test data:[/cyan]", f"[yellow]{args.test_data}[/yellow]")
+    config_table.add_row("[cyan]Batch size:[/cyan]", f"[yellow]{args.batch_size}[/yellow]")
+    console.print(config_table)
+    
+    with console.status("[cyan]Running evaluation...", spinner="dots"):
+        # TODO: Implement actual evaluation logic
+        pass
+    
+    console.print()
+    console.print(Panel.fit(
+        "[bold green]✓ Evaluation Complete![/bold green]",
+        border_style="green",
+        box=box.DOUBLE
+    ))
+    console.print()
 
 
 if __name__ == '__main__':
