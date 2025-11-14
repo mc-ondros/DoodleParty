@@ -1,25 +1,28 @@
 :root {
-  --bg-primary: #f3f4f6;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #e5e7eb;
-  --glass-bg: rgba(255, 255, 255, 0.1);
-  --glass-bg-elevated: rgba(255, 255, 255, 0.15);
-  --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-border-elevated: rgba(255, 255, 255, 0.25);
-  --glass-backdrop: blur(10px);
-  --shadow-sm: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 20px 60px 0 rgba(0, 0, 0, 0.15);
-  --shadow-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
-  --text-primary: #1a1a1a;
-  --text-secondary: rgba(0, 0, 0, 0.6);
-  --text-tertiary: rgba(0, 0, 0, 0.4);
-  --text-inverse: #ffffff;
+  /* Doodle theme 60/30/10 */
+  --bg-primary: #FAF5E4;   /* 60% */
+  --panel-bg: #FF6363;     /* 30% */
+  --accent-primary: #F8B400;/* 10% */
+
+  --text-primary: #2B2B2B;
+  --text-on-panel: #FFFFFF;
+  --text-inverse: #FFFFFF;
+  --text-secondary: rgba(43, 43, 43, 0.7);
+  --text-tertiary: rgba(43, 43, 43, 0.5);
+
+  --panel-border: #e95858;
+  --panel-shadow: 0 6px 18px rgba(0,0,0,0.12);
+
+  --shadow-sm: 0 2px 6px rgba(0,0,0,0.08);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,0.16);
+  --shadow-inset: inset 0 1px 0 rgba(255,255,255,0.2);
+
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
   --accent-info: #3b82f6;
-  --accent-primary: #3b82f6;
+
   --transition-sm: 0.15s ease;
   --transition-md: 0.2s ease;
   --transition-lg: 0.3s ease;
@@ -36,18 +39,12 @@
   --space-2xl: 48px;
 }
 
-:root.theme-modern { --bg-primary: #f3f4f6; --text-primary: #1a1a1a; --accent-primary: #3b82f6; --glass-bg: rgba(255,255,255,0.1); }
-:root.theme-eink { --bg-primary: #f5f5f5; --text-primary: #000; --accent-primary: #6b7280; --glass-bg: rgba(0,0,0,0.05); }
-:root.theme-neon { --bg-primary: #1a1a2e; --text-primary: #00d9ff; --accent-primary: #ff006e; --glass-bg: rgba(0,217,255,0.1); }
-:root.theme-pastel { --bg-primary: #fef3f2; --text-primary: #5a4a42; --accent-primary: #fb7185; --glass-bg: rgba(251,113,133,0.1); }
-:root.theme-highcontrast { --bg-primary: #fff; --text-primary: #000; --accent-primary: #000; --glass-bg: rgba(0,0,0,0.15); }
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-family: 'Finger Paint', cursive;
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -56,13 +53,13 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.2; margin-bottom: var(--space-md); }
-h1 { font-size: 32px; font-weight: 700; }
-h2 { font-size: 24px; font-weight: 600; }
-h3 { font-size: 20px; font-weight: 600; }
-h4 { font-size: 18px; font-weight: 600; }
+h1 { font-size: 40px; font-weight: 400; }
+h2 { font-size: 28px; font-weight: 400; }
+h3 { font-size: 24px; font-weight: 400; }
+h4 { font-size: 20px; font-weight: 400; }
 p { margin-bottom: var(--space-md); }
 small { font-size: 12px; }
-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+label { font-size: 16px; font-weight: 400; letter-spacing: 0.02em; color: var(--text-on-panel); }
 
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--accent-primary);

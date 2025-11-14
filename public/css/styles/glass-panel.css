@@ -1,40 +1,18 @@
 .glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-md), var(--shadow-inset);
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
   border-radius: var(--radius-lg);
-  transition: all var(--transition-md);
+  transition: transform var(--transition-md), box-shadow var(--transition-md), filter var(--transition-md);
+  color: var(--text-on-panel);
 }
 
 .glass-panel:hover {
   transform: translateY(-2px);
-  background: var(--glass-bg-elevated);
-  border-color: var(--glass-border-elevated);
-  box-shadow: var(--shadow-lg), var(--shadow-inset);
+  filter: brightness(1.02);
 }
 
-.glass-panel:active {
-  transform: translateY(0);
-  background: var(--glass-bg);
-  box-shadow: var(--shadow-md), var(--shadow-inset);
-}
-
-.glass-panel-primary {
-  background: var(--glass-bg-elevated);
-  border: 1px solid var(--glass-border-elevated);
-  box-shadow: var(--shadow-lg), var(--shadow-inset);
-}
-
-.glass-panel-secondary {
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: var(--shadow-sm);
-  border-radius: var(--radius-md);
-}
+.glass-panel:active { transform: translateY(0); }
 
 .glass-panel-sm { border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
 .glass-panel-lg { border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); }
