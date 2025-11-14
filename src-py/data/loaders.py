@@ -11,17 +11,20 @@ class QuickDrawLoader:
     """Load QuickDraw dataset."""
     
     @staticmethod
-    def load_quickdraw_npy(data_dir: str, categories: List[str]) -> Tuple[np.ndarray, np.ndarray]:
+    def load_quickdraw_npy(data_dir: str, categories: List[str], target_size: int = 128) -> Tuple[np.ndarray, np.ndarray]:
         """
         Load QuickDraw data from .npy files.
         
         Args:
             data_dir: Directory containing .npy files
             categories: List of category names to load
+            target_size: Target image size (default 128x128)
         
         Returns:
             Tuple of (images, labels)
         """
+        from PIL import Image
+        
         images = []
         labels = []
         
@@ -29,11 +32,45 @@ class QuickDrawLoader:
             file_path = os.path.join(data_dir, f'{category}.npy')
             if os.path.exists(file_path):
                 data = np.load(file_path)
+                
+                # Determine original size from flattened array
+                # Google QuickDraw: 784 = 28x28
+                # Quickdraw-appendix: 16384 = 128x128
+                pixels_per_image = data.shape[1] if len(data.shape) > 1 else data.size
+                
+                if pixels_per_image == 784:  # 28x28
+                    original_size = 28
+                elif pixels_per_image == 16384:  # 128x128
+                    original_size = 128
+                else:
+                    # Try to infer square size
+                    original_size = int(np.sqrt(pixels_per_image))
+                    if original_size * original_size != pixels_per_image:
+                        raise ValueError(f"Cannot determine image size for {category}.npy with {pixels_per_image} pixels")
+                
+                # Reshape to square images
+                data = data.reshape(-1, original_size, original_size)
+                
+                # Resize if needed
+                if original_size != target_size:
+                    print(f"  Resizing {category} from {original_size}x{original_size} to {target_size}x{target_size}...")
+                    resized_data = []
+                    for img in data:
+                        pil_img = Image.fromarray(img.astype(np.uint8))
+                        pil_img = pil_img.resize((target_size, target_size), Image.Resampling.LANCZOS)
+                        resized_data.append(np.array(pil_img))
+                    data = np.array(resized_data)
+                
+                # Flatten back for storage
+                data = data.reshape(-1, target_size * target_size)
+                
                 # Normalize to 0-1 range
                 data = data.astype(np.float32) / 255.0
                 
                 images.extend(data)
                 labels.extend([idx] * len(data))
+                
+                print(f"  Loaded {len(data)} images from {category}.npy")
         
         return np.array(images), np.array(labels)
     
@@ -41,7 +78,8 @@ class QuickDrawLoader:
     def load_quickdraw_split(
         data_dir: str,
         categories: List[str],
-        train_split: float = 0.8
+        train_split: float = 0.8,
+        target_size: int = 128
     ) -> Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]:
         """
         Load and split QuickDraw data.
@@ -50,11 +88,12 @@ class QuickDrawLoader:
             data_dir: Directory containing .npy files
             categories: List of category names to load
             train_split: Fraction for training (0-1)
+            target_size: Target image size (default 128x128)
         
         Returns:
             Tuple of ((train_images, train_labels), (val_images, val_labels))
         """
-        images, labels = QuickDrawLoader.load_quickdraw_npy(data_dir, categories)
+        images, labels = QuickDrawLoader.load_quickdraw_npy(data_dir, categories, target_size)
         
         # Shuffle
         indices = np.random.permutation(len(images))

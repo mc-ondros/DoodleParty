@@ -6,15 +6,17 @@ yarn-error.log*
 dist/
 .vite/
 
-# Python
+# Python artifacts
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 *$py.class
 *.so
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -24,22 +26,33 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Virtual environments
 venv/
 env/
 ENV/
+.venv/
+.env/
 
-# ML Models and Data
+# Training artifacts and datasets
+models/
 models/*.h5
 models/*.tflite
 models/*.pb
+logs/
+*.npz
+*.tfrecord
+*.ckpt*
 data/raw/
 data/processed/
-*.npz
+/data/
 
-# IDE
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
@@ -50,7 +63,7 @@ data/processed/
 .DS_Store
 Thumbs.db
 
-# Environment
+# Environment files
 .env
 .env.local
 .env.*.local
