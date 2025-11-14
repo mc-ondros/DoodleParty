@@ -79,23 +79,23 @@
 
 **Framework:** TensorFlow/Keras with TFLite optimization
 **Base Model:** Custom CNN (423K parameters) or transfer learning
-**Input:** 128x128 grayscale images (QuickDraw dataset format)
+**Input:** 28x28 grayscale images (QuickDraw native format)
 **Output:** Binary probability (0.0-1.0)
 
 ### Custom CNN Architecture
 
 ```
-Input (128x128x1 grayscale)
+Input (28x28x1 grayscale)
     ↓
-Conv2D 32 filters, 3x3 kernel
+Conv2D 32 filters, 3x3 kernel (padding='same')
 ReLU + BatchNorm + MaxPool(2x2) + Dropout(0.25)
-    ↓
-Conv2D 64 filters, 3x3 kernel
+    ↓ (14x14x32)
+Conv2D 64 filters, 3x3 kernel (padding='same')
 ReLU + BatchNorm + MaxPool(2x2) + Dropout(0.25)
-    ↓
-Conv2D 128 filters, 3x3 kernel
+    ↓ (7x7x64)
+Conv2D 128 filters, 3x3 kernel (padding='same')
 ReLU + BatchNorm + Dropout(0.25)
-    ↓
+    ↓ (7x7x128)
 Flatten
     ↓
 Dense 256 units
@@ -134,8 +134,27 @@ model.compile(
 
 ### Image Preprocessing Pipeline
 
+**Training Data (QuickDraw):**
 ```python
-def preprocess_image(image):
+def load_quickdraw_category(file_path):
+    # QuickDraw .npy files are already 28x28 grayscale bitmaps
+    data = np.load(file_path)  # Shape: (N, 784) or (N, 28, 28)
+    
+    # Normalize to [0, 1]
+    data = data.astype(np.float32) / 255.0
+    
+    # Reshape to (N, 28, 28, 1) if needed
+    if data.ndim == 2:
+        data = data.reshape(-1, 28, 28, 1)
+    elif data.ndim == 3:
+        data = np.expand_dims(data, axis=-1)
+    
+    return data
+```
+
+**Inference (Canvas → 28x28):**
+```python
+def preprocess_canvas_image(image):
     # 1. Convert to grayscale
     image = image.convert('L')
 
@@ -143,36 +162,27 @@ def preprocess_image(image):
     img_array = 255 - np.array(image)
 
     # 3. Apply morphological dilation to thicken strokes
-    # Prevents thin lines from disappearing
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     img_array = cv2.dilate(img_array, kernel, iterations=1)
 
-    # 4. Resize to 128x128 (model input size)
-    image = Image.fromarray(img_array).resize((128, 128))
+    # 4. Resize to 28x28 (model input size)
+    image = Image.fromarray(img_array).resize((28, 28), Image.LANCZOS)
 
     # 5. Normalize to [0, 1]
     img_array = np.array(image, dtype=np.float32) / 255.0
 
-    # 6. Apply z-score normalization (only if sufficient variation)
-    if img_array.std() > 0.01:
-        img_array = (img_array - img_array.mean()) / (img_array.std() + 1e-7)
-        img_array = (img_array + 2) / 4  # Rescale to [0, 1]
-        img_array = np.clip(img_array, 0, 1)
-
-    # 7. Add batch and channel dimensions
+    # 6. Add batch and channel dimensions
     img_array = np.expand_dims(img_array, axis=(0, -1))
 
     return img_array
 ```
 
 **Key Steps:**
-1. Grayscale conversion for model compatibility
-2. Color inversion (white canvas → black background)
-3. Morphological dilation to preserve thin strokes
-4. Resize to 128x128 (model input size)
+1. **Training:** Use native 28x28 QuickDraw .npy format (no preprocessing needed)
+2. **Inference:** Resize canvas to 28x28 to match model input
+3. Grayscale conversion and color inversion
+4. Morphological dilation to preserve thin strokes
 5. Normalization to [0, 1] range
-6. Z-score normalization for better training
-7. Batch and channel dimension addition
 
 ## Detection Strategies
 
@@ -182,7 +192,7 @@ def preprocess_image(image):
 
 **Pipeline:**
 ```
-Canvas (512x512) → Preprocess → Resize to 128x128 → TFLite INT8 Model → Binary Classification
+Canvas (512x512) → Preprocess → Resize to 28x28 → TFLite INT8 Model → Binary Classification
 ```
 
 **Characteristics:**
@@ -510,19 +520,20 @@ python scripts/data_processing/download_quickdraw_npy.py
 
 **Data Organization:**
 - `data/raw/` - Downloaded NumPy bitmap files (penis.npy, circle.npy, etc.)
-- `data/processed/` - Processed data and class_mapping.pkl
-- Format: Pre-processed 128x128 grayscale bitmaps from Google's QuickDraw dataset
+- Format: Native 28x28 grayscale bitmaps from Google's QuickDraw dataset (no preprocessing needed)
 
 ### Phase 2: Model Training
 
 ```bash
-python scripts/train.py \
-  --epochs 50 \
+# Train binary classifier (penis vs safe)
+python scripts/training/train_binary_classifier.py \
+  --data-dir data/raw \
+  --epochs 30 \
   --batch-size 32 \
-  --learning-rate 0.001
+  --max-samples 10000
 ```
 
-**Output:** `models/quickdraw_model.h5`
+**Output:** `models/quickdraw_binary_28x28.h5`
 
 ### Phase 3: Evaluation
 
@@ -546,8 +557,9 @@ python scripts/evaluate.py \
 
 **Data Source:**
 - Google QuickDraw Dataset (NumPy bitmap format)
-- Pre-processed 128x128 grayscale images
+- Native 28x28 grayscale bitmaps (no preprocessing needed)
 - Categories: penis (positive) + 21 common shapes (negative)
+- Alternative: Moniker "Do Not Draw a Penis" dataset (25K additional penis drawings)
 
 ## Inference API
 

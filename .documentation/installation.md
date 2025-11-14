@@ -102,20 +102,26 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Download ML Model
+### 3. Train ML Model
 
 The ML model is required for content moderation. For detailed information about the model architecture and performance, see the [ML Pipeline documentation](ml-pipeline.md).
 
 ```bash
-python scripts/data_processing/download_quickdraw_npy.py
-python scripts/train.py --epochs 50 --batch-size 32
+# Download QuickDraw dataset (28x28 native format)
+python scripts/data_processing/download_quickdraw_npy.py --output-dir data/raw
+
+# Train binary classifier
+python scripts/training/train_binary_classifier.py \
+  --data-dir data/raw \
+  --epochs 30 \
+  --batch-size 32
 ```
 
 Or download pre-trained model:
 ```bash
-wget https://releases.doodleparty.io/models/quickdraw_model_int8.tflite
+wget https://releases.doodleparty.io/models/quickdraw_binary_28x28_int8.tflite
 mkdir -p models
-mv quickdraw_model_int8.tflite models/
+mv quickdraw_binary_28x28_int8.tflite models/
 ```
 
 ### 4. Start Development Server
@@ -130,7 +136,11 @@ Access at `http://localhost:3000`
 
 In a separate terminal:
 ```bash
-python src/web/app.py
+# Set model path
+export DOODLEPARTY_MODEL=models/quickdraw_binary_28x28.h5
+
+# Start ML service
+python src-py/web/app.py
 ```
 
 ML service runs on `http://localhost:5001`
@@ -147,10 +157,9 @@ NODE_ENV=development
 PORT=3000
 ML_SERVICE_URL=http://localhost:5001
 
-|# ML Model
-|MODEL_PATH=models/quickdraw_model_int8.tflite
-|IMAGE_SIZE=128
-|THRESHOLD=0.5
+# ML Model
+DOODLEPARTY_MODEL=models/quickdraw_binary_28x28.h5
+THRESHOLD=0.5
 
 
 # DigitalOcean AI (optional)
