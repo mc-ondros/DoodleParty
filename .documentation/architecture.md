@@ -356,7 +356,7 @@ graph TD
 
 **Framework:** TensorFlow/Keras with TFLite optimization
 **Base Model:** Custom CNN (423K parameters) or transfer learning
-**Input:** 28x28 grayscale images (QuickDraw dataset format)
+**Input:** 128x128 grayscale images (QuickDraw dataset format)
 **Output:** Binary probability (0.0-1.0)
 
 *For detailed implementation, see the [ML Pipeline documentation](ml-pipeline.md) which covers the preprocessing steps, detection strategies, and Raspberry Pi 4 optimization in greater depth.*
@@ -396,7 +396,7 @@ graph TD
     C1["Convert to grayscale"]
     C2["Invert colors"]
     C3["Morphological dilation"]
-    C4["Resize to 28x28"]
+    C4["Resize to 128x128"]
     C5["Normalize to [0, 1]"]
     C6["Z-score normalization"]
     D["TFLite Inference"]
