@@ -1,8 +1,8 @@
 :root {
-  /* Doodle theme 60/30/10 */
-  --bg-primary: #FAF5E4;   /* 60% */
-  --panel-bg: #FF6363;     /* 30% */
-  --accent-primary: #F8B400;/* 10% */
+  /* Doodle theme adjusted: 60/30/10 */
+  --bg-primary: #F8F4EC;   /* 60% */
+  --panel-bg: rgba(67, 51, 76, 0.92);     /* 30% (a bit transparent) */
+  --accent-primary: #E83C91;/* 10% */
 
   --text-primary: #2B2B2B;
   --text-on-panel: #FFFFFF;
@@ -10,7 +10,7 @@
   --text-secondary: rgba(43, 43, 43, 0.7);
   --text-tertiary: rgba(43, 43, 43, 0.5);
 
-  --panel-border: #e95858;
+  --panel-border: #35283D;
   --panel-shadow: 0 6px 18px rgba(0,0,0,0.12);
 
   --shadow-sm: 0 2px 6px rgba(0,0,0,0.08);
@@ -27,16 +27,18 @@
   --transition-md: 0.2s ease;
   --transition-lg: 0.3s ease;
   --transition-xl: 0.5s ease-in-out;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* slightly smaller shapes */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --space-xs: 4px;
   --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-2xl: 48px;
+  /* slightly tighter spacing */
+  --space-md: 14px;
+  --space-lg: 20px;
+  --space-xl: 28px;
+  --space-2xl: 44px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
