@@ -96,6 +96,44 @@ class QuickDrawLoader:
 
 class QuickDrawAppendixLoader:
     """Load QuickDraw Appendix dataset (128x128 images) and downscale to 28x28."""
+
+    @staticmethod
+    def _prepare_npy_images(data: np.ndarray, target_size: Tuple[int, int] = (28, 28)) -> np.ndarray:
+        """Ensure npy batches are shaped/normalized as 28x28 inputs."""
+        if data.size == 0:
+            return data.reshape(0, target_size[0], target_size[1], 1)
+
+        data = data.astype(np.float32)
+
+        if data.ndim == 2:
+            pixels = data.shape[1]
+            side = int(np.sqrt(pixels))
+            if side * side != pixels:
+                raise ValueError(f"Cannot reshape flattened sample of length {pixels} into a square image")
+            data = data.reshape(-1, side, side)
+        elif data.ndim == 3:
+            pass
+        elif data.ndim == 4:
+            if data.shape[-1] != 1:
+                data = np.mean(data, axis=-1, keepdims=True)
+        else:
+            raise ValueError(f"Unsupported npy data shape: {data.shape}")
+
+        if data.ndim == 3:
+            data = np.expand_dims(data, axis=-1)
+
+        current_h, current_w = data.shape[1:3]
+        if (current_h, current_w) != target_size:
+            resized = np.empty((data.shape[0], target_size[0], target_size[1], 1), dtype=np.float32)
+            for idx in range(data.shape[0]):
+                resized[idx, ..., 0] = cv2.resize(data[idx, ..., 0], target_size, interpolation=cv2.INTER_AREA)
+            data = resized
+
+        max_val = data.max()
+        if max_val > 1.0:
+            data = data / 255.0
+
+        return data
     
     @staticmethod
     def load_appendix_images(
@@ -223,15 +261,9 @@ class QuickDrawAppendixLoader:
         # Load positive samples from .npy
         npy_path = os.path.join(npy_data_dir, f"{positive_category}.npy")
         if os.path.exists(npy_path):
-            data = np.load(npy_path)[:max_npy_samples]
-            data = data.astype(np.float32) / 255.0
-            
-            # Reshape to (N, 28, 28, 1) if needed
-            if data.ndim == 2:
-                data = data.reshape(-1, 28, 28, 1)
-            elif data.ndim == 3:
-                data = np.expand_dims(data, axis=-1)
-            
+            data = np.load(npy_path)
+            data = data[:max_npy_samples]
+            data = QuickDrawAppendixLoader._prepare_npy_images(data, target_size=(28, 28))
             all_images.append(data)
             all_labels.append(np.ones(len(data), dtype=np.float32))
         
@@ -249,15 +281,9 @@ class QuickDrawAppendixLoader:
         for category in negative_categories:
             npy_path = os.path.join(npy_data_dir, f"{category}.npy")
             if os.path.exists(npy_path):
-                data = np.load(npy_path)[:max_npy_samples]
-                data = data.astype(np.float32) / 255.0
-                
-                # Reshape to (N, 28, 28, 1) if needed
-                if data.ndim == 2:
-                    data = data.reshape(-1, 28, 28, 1)
-                elif data.ndim == 3:
-                    data = np.expand_dims(data, axis=-1)
-                
+                data = np.load(npy_path)
+                data = data[:max_npy_samples]
+                data = QuickDrawAppendixLoader._prepare_npy_images(data, target_size=(28, 28))
                 all_images.append(data)
                 all_labels.append(np.zeros(len(data), dtype=np.float32))
         
