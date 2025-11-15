@@ -6,8 +6,6 @@ import { fileURLToPath } from 'node:url'
 const rootDir = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig({
-  root: 'public',
-  publicDir: false,
   plugins: [react()],
   resolve: {
     alias: {
@@ -15,7 +13,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../dist',
+    outDir: 'dist',
     emptyOutDir: true
   }
 })
