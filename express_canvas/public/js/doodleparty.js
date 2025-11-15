@@ -21,6 +21,86 @@ const DEBUG_MODE = false; // Set to true to show manual send buttons
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
 const INITIAL_ZOOM = 2; // Start zoomed in
+const SESSION_STORAGE_KEY = 'doodleparty_session';
+
+// Session Management
+function generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function getOrCreateSessionId() {
+    let sessionId = sessionStorage.getItem('sessionId');
+    if (!sessionId) {
+        sessionId = generateSessionId();
+        sessionStorage.setItem('sessionId', sessionId);
+        console.log('Created new session:', sessionId);
+    } else {
+        console.log('Restored session:', sessionId);
+    }
+    return sessionId;
+}
+
+function saveSessionState() {
+    const sessionState = {
+        sessionId: getOrCreateSessionId(),
+        inkAmount,
+        remainingTime,
+        isLocked,
+        zoomLevel,
+        offsetX,
+        offsetY,
+        timestamp: Date.now()
+    };
+    
+    try {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionState));
+        console.log('Session state saved');
+    } catch (e) {
+        console.error('Failed to save session state:', e);
+    }
+}
+
+function restoreSessionState() {
+    try {
+        const savedState = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (!savedState) return false;
+        
+        const sessionState = JSON.parse(savedState);
+        
+        // Check if session is still valid (within 24 hours)
+        const age = Date.now() - sessionState.timestamp;
+        if (age > 24 * 60 * 60 * 1000) {
+            console.log('Session expired, starting fresh');
+            localStorage.removeItem(SESSION_STORAGE_KEY);
+            return false;
+        }
+        
+        // Restore state (strokes will be restored from server)
+        inkAmount = sessionState.inkAmount ?? INITIAL_INK;
+        remainingTime = sessionState.remainingTime ?? ROUND_DURATION_SECONDS;
+        isLocked = sessionState.isLocked || false;
+        zoomLevel = sessionState.zoomLevel ?? INITIAL_ZOOM;
+        offsetX = sessionState.offsetX ?? 0;
+        offsetY = sessionState.offsetY ?? 0;
+        
+        console.log('Session state restored:', {
+            inkAmount,
+            remainingTime,
+            isLocked
+        });
+        
+        return true;
+    } catch (e) {
+        console.error('Failed to restore session state:', e);
+        return false;
+    }
+}
+
+function clearSessionState() {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    sessionStorage.removeItem('sessionId');
+    console.log('Session state cleared');
+}
 
 // Drawing state
 let isDrawing = false;
@@ -252,6 +332,9 @@ function endStroke() {
         const quickDrawFormat = exportStrokeToQuickDraw(currentStroke);
         socket.emit('quickdraw.stroke', quickDrawFormat);
         console.log('Auto-sent stroke:', quickDrawFormat);
+        
+        // Save session state after each completed stroke
+        saveSessionState();
     }
     currentStroke = null;
     
@@ -496,7 +579,12 @@ function exportStrokeToQuickDraw(stroke) {
         ts.push(point.timestamp);
     });
     
-    return [xs, ys, ts];
+    // Return extended format with color and width metadata
+    return {
+        points: [xs, ys, ts],
+        color: stroke.color,
+        width: brushSize
+    };
 }
 
 function sendLastStroke() {
@@ -528,8 +616,11 @@ function clearCanvas() {
     inkAmount = INITIAL_INK;
     updateInkMeter();
     isLocked = false;
+    remainingTime = ROUND_DURATION_SECONDS;
+    updateTimer();
+    clearSessionState();
     socket.emit('quickdraw.clear');
-    console.log('Canvas cleared');
+    console.log('Canvas cleared and session reset');
 }
 
 // Button event listeners
@@ -585,9 +676,33 @@ function handleRoundEnd() {
 }
 
 // Initialize
-updateInkMeter();
+const sessionId = getOrCreateSessionId();
+console.log('Session ID:', sessionId);
+
+// Try to restore previous session state
+const sessionRestored = restoreSessionState();
+
+if (sessionRestored) {
+    // Update UI with restored state (strokes will come from server)
+    updateInkMeter();
+    updateTimer();
+    if (isLocked) {
+        canvas.style.cursor = 'not-allowed';
+    }
+} else {
+    updateInkMeter();
+}
+
 startTimer();
 updateSocketStatus('connecting');
+
+// Save session state periodically (every 5 seconds)
+setInterval(saveSessionState, 5000);
+
+// Save session state before page unload
+window.addEventListener('beforeunload', () => {
+    saveSessionState();
+});
 
 // Hide control buttons if not in debug mode
 if (!DEBUG_MODE) {
