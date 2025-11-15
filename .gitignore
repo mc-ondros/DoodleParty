@@ -8,15 +8,17 @@ dist/
 .vite/
 .cache/
 
-# Python
+# Python artifacts
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 *$py.class
 *.so
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -38,8 +40,10 @@ ENV/
 env.bak/
 venv.bak/
 .venv/
+.env/
 
-# ML Models and Data
+# Training artifacts and datasets
+models/
 models/*.h5
 models/*.keras
 models/*.tflite
@@ -51,6 +55,8 @@ models/*.onnx
 models/checkpoint/
 data/raw/*.npy
 data/raw/*.ndjson
+data/raw/
+*.tfrecord
 data/processed/
 data/temp/
 data/cache/
@@ -70,7 +76,7 @@ checkpoints/
 .ipynb_checkpoints/
 *.ipynb
 
-# IDE
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
@@ -91,7 +97,7 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# Environment
+# Environment files
 .env
 .env.local
 .env.*.local
