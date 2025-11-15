@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickDraw Socket Canvas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='quickdraw-canvas.css') }}">
+    <script src="https://cdn.socket.io/4.8.0/socket.io.min.js" integrity="sha384-5TBKTcH6kOQGY2csuXzRi2j77A7cjuZJGYRj8r3rCrjLt3vz+o+wDBATliF4LcAZ" crossorigin="anonymous" defer></script>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero">
+            <div>
+                <p class="super-title">DoodleHunter</p>
+                <h1>QuickDraw Socket Viewer</h1>
+                <p class="lede">Render QuickDraw strokes streamed over <code>socket.io</code>. Optimized for low-power boards by batching paint calls and avoiding layout churn.</p>
+            </div>
+            <div class="hero-actions">
+                <button id="clearCanvasBtn" class="ghost-btn" type="button">Clear canvas</button>
+            </div>
+        </header>
+
+        <main class="layout">
+            <section class="canvas-panel">
+                <canvas id="socketCanvas" width="512" height="512"></canvas>
+                <div class="canvas-overlay">
+                    <span id="connectionStatus" class="status-chip neutral">Connecting…</span>
+                    <span id="lastEvent" class="status-chip neutral">Waiting for strokes</span>
+                </div>
+            </section>
+
+            <section class="info-panel">
+                <h2>Instructions</h2>
+                <p>Forward QuickDraw-formatted payloads from your socket server. Supported event names:</p>
+                <ul>
+                    <li><code>quickdraw.stroke</code> – one stroke `[xs, ys, ts]`</li>
+                    <li><code>quickdraw.batch</code> – array of strokes</li>
+                    <li><code>quickdraw.drawing</code> – full drawing array of strokes</li>
+                    <li><code>quickdraw.clear</code> – reset canvas</li>
+                </ul>
+                <p>Each stroke follows the QuickDraw vector format:</p>
+                <pre class="code-block">[
+  [x0, x1, x2, ...],
+  [y0, y1, y2, ...],
+  [t0, t1, t2, ...]
+]</pre>
+                <p>Coordinate range is 0–255 (linearly scaled to the canvas resolution). Send strokes as integers or floats.</p>
+                <div class="event-log" id="eventLog"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='quickdraw-canvas.js') }}" defer></script>
+</body>
+</html>
