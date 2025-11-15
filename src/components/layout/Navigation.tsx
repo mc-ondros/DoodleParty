@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Page } from '../../App';
-import { SearchIcon, CompassIcon, UsersIcon, TrophyIcon, SettingsIcon, LibraryIcon, NotificationsIcon, StoreIcon, PlayIcon, ClockIcon } from '../../constants';
+import { SearchIcon, CompassIcon, UsersIcon, TrophyIcon, SettingsIcon, LibraryIcon, StoreIcon, PlayIcon, ClockIcon } from '../../constants';
 import ChatPanel from '../chat/ChatPanel';
 
 interface NavItemProps {

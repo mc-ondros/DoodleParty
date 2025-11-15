@@ -29,25 +29,6 @@ const LeaderboardsPage: React.FC = () => {
     { name: 'Chroma Storytellers', members: 165, growth: '+9%', icon: '📖', color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/50' },
   ];
 
-  const getMedalGradient = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600';
-      case 2:
-        return 'bg-gradient-to-br from-gray-300 via-gray-400 to-gray-500';
-      case 3:
-        return 'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800';
-      default:
-        return 'bg-zinc-800';
-    }
-  };
-
-  const getMedalSize = (rank: number) => {
-    if (rank === 1) return 'w-24 h-24';
-    if (rank === 2) return 'w-20 h-20';
-    if (rank === 3) return 'w-20 h-20';
-    return 'w-12 h-12';
-  };
 
   const topThree = weeklyLeaders.slice(0, 3);
   const restOfLeaders = weeklyLeaders.slice(3);
