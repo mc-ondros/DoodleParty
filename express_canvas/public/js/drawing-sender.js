@@ -5,8 +5,8 @@ const sendStrokeBtn = document.getElementById('sendStrokeBtn');
 const sendBatchBtn = document.getElementById('sendBatchBtn');
 const socketStatus = document.getElementById('socketStatus');
 
-const DRAW_COLOR = '#f5f7ff';
-const BACKGROUND = '#0e0e15';
+const DRAW_COLOR = '#0f172a';
+const BACKGROUND = '#ffffff';
 const QtScale = 255 / canvas.width;
 
 let isDrawing = false;
