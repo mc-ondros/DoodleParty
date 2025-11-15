@@ -10,11 +10,12 @@ const socketStatus = document.getElementById('socketStatus');
 const statusDot = document.getElementById('statusDot');
 const inkFill = document.getElementById('inkFill');
 const timerDisplay = document.getElementById('timer');
+const debugDisableTimerToggle = document.getElementById('debugDisableTimer');
 
 // Constants
 const CANVAS_BACKGROUND = '#ffffff';
 const ROUND_DURATION_SECONDS = 90;
-const INITIAL_INK = 200;
+const INITIAL_INK = 10000; // High value for testing ML detection
 const INK_CONSUMPTION_RATE = 0.04;
 const QT_SCALE = 255; // QuickDraw coordinate scale
 const DEBUG_MODE = false; // Set to true to show manual send buttons
@@ -77,8 +78,11 @@ function restoreSessionState() {
         
         // Restore state (strokes will be restored from server)
         inkAmount = sessionState.inkAmount ?? INITIAL_INK;
-        remainingTime = sessionState.remainingTime ?? ROUND_DURATION_SECONDS;
-        isLocked = sessionState.isLocked || false;
+        // Don't restore negative or zero timer values
+        const savedTime = sessionState.remainingTime ?? ROUND_DURATION_SECONDS;
+        remainingTime = savedTime > 0 ? savedTime : ROUND_DURATION_SECONDS;
+        // If we had to reset the timer, also unlock the canvas
+        isLocked = (savedTime > 0 && sessionState.isLocked) || false;
         zoomLevel = sessionState.zoomLevel ?? INITIAL_ZOOM;
         offsetX = sessionState.offsetX ?? 0;
         offsetY = sessionState.offsetY ?? 0;
@@ -105,7 +109,9 @@ function clearSessionState() {
 // Content Detection System
 const CONTENT_CHECK_INTERVAL = 3; // Check every 3 strokes
 const ML_INPUT_SIZE = 128; // Size expected by ML model (adjust as needed)
+const ML_DEBUG_VISUAL = true; // Enable visual debugging
 let strokesSinceLastCheck = 0;
+let detectionLogDiv = null; // For logging panel
 
 // Canny Edge Detection
 function cannyEdgeDetection(imageData) {
@@ -226,8 +232,20 @@ function getBoundingBox(component) {
 // Extract and prepare object for ML
 function extractObjectForML(bbox) {
     const { minX, maxX, minY, maxY } = bbox;
-    const width = maxX - minX + 1;
-    const height = maxY - minY + 1;
+    // Add padding so the ML model sees the full object (not a too-tight crop)
+    const rawWidth = maxX - minX + 1;
+    const rawHeight = maxY - minY + 1;
+    const PAD_PCT = 0.80; // pad by 12% of max dimension
+    const pad = Math.round(Math.max(rawWidth, rawHeight) * PAD_PCT);
+
+    // Expanded bbox with padding, clamped to canvas bounds
+    const exMinX = Math.max(0, minX - pad);
+    const exMinY = Math.max(0, minY - pad);
+    const exMaxX = Math.min(canvas.width - 1, maxX + pad);
+    const exMaxY = Math.min(canvas.height - 1, maxY + pad);
+
+    const width = exMaxX - exMinX + 1;
+    const height = exMaxY - exMinY + 1;
     
     // Create temporary canvas for extraction
     const tempCanvas = document.createElement('canvas');
@@ -235,8 +253,8 @@ function extractObjectForML(bbox) {
     tempCanvas.height = height;
     const tempCtx = tempCanvas.getContext('2d');
     
-    // Extract the region from main canvas
-    tempCtx.drawImage(canvas, minX, minY, width, height, 0, 0, width, height);
+    // Extract the region from main canvas using the expanded bbox
+    tempCtx.drawImage(canvas, exMinX, exMinY, width, height, 0, 0, width, height);
     
     // Resize to ML input size with padding to maintain aspect ratio
     const resizeCanvas = document.createElement('canvas');
@@ -244,24 +262,48 @@ function extractObjectForML(bbox) {
     resizeCanvas.height = ML_INPUT_SIZE;
     const resizeCtx = resizeCanvas.getContext('2d');
     
-    // Fill with white background
-    resizeCtx.fillStyle = '#ffffff';
+    // Fill with training data background color: #707170 (medium gray)
+    resizeCtx.fillStyle = '#707170';
     resizeCtx.fillRect(0, 0, ML_INPUT_SIZE, ML_INPUT_SIZE);
     
-    // Calculate scaling to fit
+    // Calculate scaling to fit while preserving aspect ratio
     const scale = Math.min(ML_INPUT_SIZE / width, ML_INPUT_SIZE / height);
-    const scaledWidth = width * scale;
-    const scaledHeight = height * scale;
-    const offsetX = (ML_INPUT_SIZE - scaledWidth) / 2;
-    const offsetY = (ML_INPUT_SIZE - scaledHeight) / 2;
+    const scaledWidth = Math.round(width * scale);
+    const scaledHeight = Math.round(height * scale);
+    const offsetX = Math.round((ML_INPUT_SIZE - scaledWidth) / 2);
+    const offsetY = Math.round((ML_INPUT_SIZE - scaledHeight) / 2);
     
-    resizeCtx.drawImage(tempCanvas, 0, 0, width, height, 
+    resizeCtx.drawImage(tempCanvas, 0, 0, width, height,
                         offsetX, offsetY, scaledWidth, scaledHeight);
+    
+    // Convert to grayscale and replace white background with #707170
+    // Training data: #707170 background (112, 113, 112), white strokes (255)
+    const imageData = resizeCtx.getImageData(0, 0, ML_INPUT_SIZE, ML_INPUT_SIZE);
+    const data = imageData.data;
+    const BACKGROUND_GRAY = 112; // #707170 in grayscale (approximately)
+    
+    for (let i = 0; i < data.length; i += 4) {
+        // Convert RGB to grayscale using luminance formula
+        const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+        
+        // Replace white/near-white background with training data gray background
+        // If pixel is very light (>240), treat as background and use #707170 gray
+        const finalGray = gray > 240 ? BACKGROUND_GRAY : gray;
+        
+        // Set RGB channels to grayscale value
+        data[i] = finalGray;     // R
+        data[i + 1] = finalGray; // G
+        data[i + 2] = finalGray; // B
+        // Alpha stays the same (data[i + 3])
+    }
+    
+    resizeCtx.putImageData(imageData, 0, 0);
     
     return {
         canvas: resizeCanvas,
-        imageData: resizeCtx.getImageData(0, 0, ML_INPUT_SIZE, ML_INPUT_SIZE),
-        bbox
+        imageData: imageData,
+        // Return the expanded bbox used for extraction so callers/visualizers know the real crop
+        bbox: { minX: exMinX, minY: exMinY, maxX: exMaxX, maxY: exMaxY }
     };
 }
 
@@ -285,47 +327,300 @@ function deleteObject(bbox) {
     console.log('Deleted object at:', bbox);
 }
 
+// Visual debugging helpers
+function createDetectionLog() {
+    if (detectionLogDiv) return;
+    
+    detectionLogDiv = document.createElement('div');
+    detectionLogDiv.id = 'ml-detection-log';
+    detectionLogDiv.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        width: 400px;
+        max-height: 600px;
+        background: rgba(0, 0, 0, 0.9);
+        color: #0f0;
+        font-family: monospace;
+        font-size: 11px;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-y: auto;
+        z-index: 10000;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    `;
+    
+    const header = document.createElement('div');
+    header.style.cssText = `
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: #0ff;
+        border-bottom: 1px solid #0ff;
+        padding-bottom: 5px;
+    `;
+    header.textContent = '🤖 ML Detection Log';
+    detectionLogDiv.appendChild(header);
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #f00;
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+    `;
+    closeBtn.onclick = () => detectionLogDiv.remove();
+    detectionLogDiv.appendChild(closeBtn);
+    
+    document.body.appendChild(detectionLogDiv);
+}
+
+function logDetection(message, type = 'info', data = null) {
+    if (!ML_DEBUG_VISUAL) return;
+    
+    createDetectionLog();
+    
+    const entry = document.createElement('div');
+    const timestamp = new Date().toLocaleTimeString();
+    
+    const colors = {
+        info: '#0f0',
+        warn: '#ff0',
+        error: '#f00',
+        success: '#0ff'
+    };
+    
+    entry.style.cssText = `
+        margin-bottom: 8px;
+        padding: 5px;
+        border-left: 3px solid ${colors[type] || '#0f0'};
+        padding-left: 8px;
+        background: rgba(255,255,255,0.05);
+    `;
+    
+    let content = `<span style="color: #888">[${timestamp}]</span> <span style="color: ${colors[type]}">${message}</span>`;
+    
+    if (data) {
+        content += `<pre style="margin: 5px 0 0 0; color: #aaa; font-size: 10px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>`;
+    }
+    
+    entry.innerHTML = content;
+    detectionLogDiv.appendChild(entry);
+    
+    // Auto-scroll to bottom
+    detectionLogDiv.scrollTop = detectionLogDiv.scrollHeight;
+    
+    // Keep only last 50 entries
+    const entries = detectionLogDiv.querySelectorAll('div');
+    if (entries.length > 52) { // 50 + header + close button
+        entries[2].remove(); // Remove oldest (skip header)
+    }
+}
+
+function visualizeDetection(bbox, extracted, result) {
+    if (!ML_DEBUG_VISUAL) return;
+    
+    // Create a temporary overlay to show detected object
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 15px;
+        border-radius: 8px;
+        z-index: 10001;
+        color: white;
+        font-family: monospace;
+        font-size: 12px;
+        border: 2px solid ${result.is_inappropriate ? '#ff0000' : '#00ff00'};
+    `;
+    
+    const title = document.createElement('div');
+    title.style.cssText = `
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: ${result.is_inappropriate ? '#ff0000' : '#00ff00'};
+    `;
+    title.textContent = result.is_inappropriate ? '⚠️ INAPPROPRIATE DETECTED' : '✓ Safe Content';
+    overlay.appendChild(title);
+    
+    // Show the extracted image (now in QuickDraw grayscale format)
+    const imgLabel = document.createElement('div');
+    imgLabel.textContent = 'ML Input (grayscale inverted):';
+    imgLabel.style.cssText = `
+        font-size: 10px;
+        color: #888;
+        margin-bottom: 5px;
+    `;
+    overlay.appendChild(imgLabel);
+    
+    const img = document.createElement('img');
+    img.src = extracted.canvas.toDataURL();
+    img.style.cssText = `
+        display: block;
+        border: 2px solid ${result.is_inappropriate ? '#ff0000' : '#00ff00'};
+        margin-bottom: 10px;
+        image-rendering: pixelated;
+    `;
+    overlay.appendChild(img);
+    
+    // Show details
+    const details = document.createElement('div');
+    details.innerHTML = `
+        <div>Confidence: <span style="color: #0ff">${(result.confidence * 100).toFixed(1)}%</span></div>
+        <div>BBox: <span style="color: #0ff">${bbox.minX},${bbox.minY} → ${bbox.maxX},${bbox.maxY}</span></div>
+        <div>Size: <span style="color: #0ff">${bbox.maxX - bbox.minX}×${bbox.maxY - bbox.minY}px</span></div>
+        <div>Category: <span style="color: #0ff">${result.category}</span></div>
+        ${result.mock ? '<div style="color: #ff0">⚠️ Mock Prediction</div>' : ''}
+    `;
+    overlay.appendChild(details);
+    
+    document.body.appendChild(overlay);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => overlay.remove(), 3000);
+}
+
 // Main content check function
 async function checkForInappropriateContent() {
+    const startTime = performance.now();
+    logDetection('🔍 Starting content check...', 'info');
     console.log('Running content check...');
     
-    // Get current canvas image data
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // Show visual indicator that check is running
+    const indicator = document.createElement('div');
+    indicator.id = 'ml-checking-indicator';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: #0ff;
+        padding: 20px 40px;
+        border-radius: 10px;
+        font-family: monospace;
+        font-size: 16px;
+        z-index: 9999;
+        border: 2px solid #0ff;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+    `;
+    indicator.innerHTML = '🔍 Checking content...';
+    document.body.appendChild(indicator);
     
-    // Run Canny edge detection
-    const edges = cannyEdgeDetection(imageData);
-    
-    // Find connected components (objects)
-    const components = findConnectedComponents(edges, canvas.width, canvas.height);
-    
-    console.log(`Found ${components.length} objects`);
-    
-    // Process each component
-    for (const component of components) {
-        const bbox = getBoundingBox(component);
-        const extracted = extractObjectForML(bbox);
+    try {
+        // Get current canvas image data
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
-        // Send to ML model for classification
-        const isInappropriate = await classifyObject(extracted);
+        // Run Canny edge detection
+        const edgeStartTime = performance.now();
+        const edges = cannyEdgeDetection(imageData);
+        const edgeTime = (performance.now() - edgeStartTime).toFixed(2);
+        logDetection(`✓ Edge detection completed in ${edgeTime}ms`, 'success');
         
-        if (isInappropriate) {
-            console.warn('Inappropriate content detected! Removing object...');
-            deleteObject(bbox);
+        // Find connected components (objects)
+        const componentStartTime = performance.now();
+        const components = findConnectedComponents(edges, canvas.width, canvas.height);
+        const componentTime = (performance.now() - componentStartTime).toFixed(2);
+        
+        logDetection(`✓ Found ${components.length} objects in ${componentTime}ms`, 'success');
+        console.log(`Found ${components.length} objects`);
+        
+        indicator.innerHTML = `🔍 Analyzing ${components.length} objects...`;
+        
+        // Process each component
+        let processedCount = 0;
+        let inappropriateCount = 0;
+        
+        for (const component of components) {
+            processedCount++;
+            indicator.innerHTML = `🔍 Checking object ${processedCount}/${components.length}...`;
             
-            // Notify server
-            socket.emit('content.violation', {
-                sessionId: getOrCreateSessionId(),
-                bbox,
-                timestamp: Date.now()
+            const bbox = getBoundingBox(component);
+            const extracted = extractObjectForML(bbox);
+            
+            logDetection(`📦 Processing object ${processedCount}/${components.length}`, 'info', {
+                bbox: `(${bbox.minX},${bbox.minY}) → (${bbox.maxX},${bbox.maxY})`,
+                size: `${bbox.maxX - bbox.minX}×${bbox.maxY - bbox.minY}px`,
+                pixels: component.length,
+                format: 'grayscale inverted (QuickDraw format)'
             });
+            
+            // Send to ML model for classification
+            const classifyStartTime = performance.now();
+            const result = await classifyObjectWithResult(extracted);
+            const classifyTime = (performance.now() - classifyStartTime).toFixed(2);
+            
+            if (result.is_inappropriate) {
+                inappropriateCount++;
+                logDetection(`⚠️ INAPPROPRIATE content detected!`, 'warn', {
+                    confidence: `${(result.confidence * 100).toFixed(1)}%`,
+                    time: `${classifyTime}ms`,
+                    action: 'Removing object'
+                });
+                console.warn('Inappropriate content detected! Removing object...');
+                deleteObject(bbox);
+                
+                // Notify server
+                socket.emit('content.violation', {
+                    sessionId: getOrCreateSessionId(),
+                    bbox,
+                    timestamp: Date.now(),
+                    confidence: result.confidence
+                });
+            } else {
+                logDetection(`✓ Object ${processedCount} classified as safe`, 'success', {
+                    confidence: `${(result.confidence * 100).toFixed(1)}%`,
+                    time: `${classifyTime}ms`
+                });
+            }
+            
+            // Visualize the detection result
+            visualizeDetection(bbox, extracted, result);
         }
+        
+        const totalTime = (performance.now() - startTime).toFixed(2);
+        const summary = {
+            totalObjects: components.length,
+            processed: processedCount,
+            inappropriate: inappropriateCount,
+            safe: processedCount - inappropriateCount,
+            totalTime: `${totalTime}ms`
+        };
+        
+        logDetection(`✅ Content check complete`, inappropriateCount > 0 ? 'warn' : 'success', summary);
+        console.log('Content check complete:', summary);
+    } finally {
+        // Remove indicator
+        indicator.remove();
     }
 }
 
 // ML Classification - Connects to local ML server
-const ML_SERVER_URL = 'http://localhost:5000/classify';
+// Use same host as the web page to work with WSL/remote access
+const ML_SERVER_HOST = window.location.hostname || 'localhost';
+const ML_SERVER_URL = `http://${ML_SERVER_HOST}:5000/classify`;
 
-async function classifyObject(extracted) {
+console.log(`ML Server URL: ${ML_SERVER_URL} (page served from ${window.location.hostname})`);
+
+async function classifyObjectWithResult(extracted) {
+    logDetection('📡 Sending to ML server...', 'info', {
+        url: ML_SERVER_URL,
+        imageSize: `${ML_INPUT_SIZE}×${ML_INPUT_SIZE}`,
+        bbox: extracted.bbox
+    });
+    
     console.log('Classifying object...', {
         size: `${ML_INPUT_SIZE}x${ML_INPUT_SIZE}`,
         bbox: extracted.bbox
@@ -333,9 +628,18 @@ async function classifyObject(extracted) {
     
     try {
         // Convert canvas to blob
-        const blob = await new Promise((resolve) => {
-            extracted.canvas.toBlob(resolve, 'image/png');
+        const blob = await new Promise((resolve, reject) => {
+            extracted.canvas.toBlob((b) => {
+                if (b) {
+                    resolve(b);
+                } else {
+                    reject(new Error('Failed to create blob from canvas'));
+                }
+            }, 'image/png');
         });
+        
+        const blobSize = (blob.size / 1024).toFixed(2);
+        logDetection(`📦 Image blob created: ${blobSize}KB`, 'info');
         
         // Create form data
         const formData = new FormData();
@@ -344,16 +648,32 @@ async function classifyObject(extracted) {
         formData.append('bbox', JSON.stringify(extracted.bbox));
         
         // Send to local ML server
+        const fetchStartTime = performance.now();
+        
+        logDetection(`🌐 Fetching ${ML_SERVER_URL}...`, 'info');
+        
         const response = await fetch(ML_SERVER_URL, {
             method: 'POST',
-            body: formData
+            body: formData,
+            mode: 'cors'
         });
+        const fetchTime = (performance.now() - fetchStartTime).toFixed(2);
+        
+        logDetection(`📨 Response status: ${response.status}`, 'info');
         
         if (!response.ok) {
-            throw new Error(`ML server error: ${response.status}`);
+            throw new Error(`ML server error: ${response.status} ${response.statusText}`);
         }
         
         const result = await response.json();
+        
+        logDetection(`✓ ML server response received (${fetchTime}ms)`, 'success', {
+            isInappropriate: result.is_inappropriate,
+            confidence: `${(result.confidence * 100).toFixed(1)}%`,
+            category: result.category,
+            mock: result.mock || false
+        });
+        
         console.log('ML Result:', result);
         
         // Notify socket server of the classification result
@@ -362,16 +682,49 @@ async function classifyObject(extracted) {
             bbox: extracted.bbox,
             isInappropriate: result.is_inappropriate,
             confidence: result.confidence,
+            category: result.category,
             timestamp: Date.now()
         });
         
-        return result.is_inappropriate;
+        return result;
         
     } catch (error) {
+        const errorDetails = {
+            message: error.message,
+            name: error.name,
+            stack: error.stack ? error.stack.split('\n')[0] : 'N/A'
+        };
+        
+        // Check for specific error types
+        if (error.message.includes('Failed to fetch')) {
+            errorDetails.likelyCause = 'ML server not reachable or CORS issue';
+            errorDetails.serverUrl = ML_SERVER_URL;
+            errorDetails.suggestion = 'Check if ML server is running on port 5000';
+        } else if (error.message.includes('NetworkError')) {
+            errorDetails.likelyCause = 'Network connection failed';
+        } else if (error.message.includes('blob')) {
+            errorDetails.likelyCause = 'Canvas to blob conversion failed';
+        }
+        
+        logDetection('❌ ML classification error', 'error', errorDetails);
         console.error('ML classification error:', error);
+        console.error('Error details:', errorDetails);
+        
         // On error, default to safe (not inappropriate)
-        return false;
+        return {
+            is_inappropriate: false,
+            confidence: 0,
+            category: 'error',
+            error: true,
+            error_message: error.message
+        };
     }
+}
+
+// Legacy wrapper for backward compatibility
+async function classifyObject(extracted) {
+    const result = await classifyObjectWithResult(extracted);
+    return result.is_inappropriate;
 }
 
 // Drawing state
@@ -493,6 +846,36 @@ window.addEventListener('orientationchange', () => {
     setTimeout(resizeCanvas, 100);
 });
 
+// Keyboard shortcuts for debugging
+window.addEventListener('keydown', (e) => {
+    // Press 'D' to toggle detection log
+    if (e.key === 'd' || e.key === 'D') {
+        if (detectionLogDiv && document.body.contains(detectionLogDiv)) {
+            detectionLogDiv.remove();
+            detectionLogDiv = null;
+            console.log('ML Detection log hidden');
+        } else {
+            createDetectionLog();
+            logDetection('🎮 Debug mode activated', 'success', {
+                'Press D': 'Toggle this log',
+                'Auto-check': `Every ${CONTENT_CHECK_INTERVAL} strokes`,
+                'ML Server': ML_SERVER_URL,
+                'Input Size': `${ML_INPUT_SIZE}×${ML_INPUT_SIZE}`
+            });
+            console.log('ML Detection log shown');
+        }
+    }
+    
+    // Press 'C' to manually trigger content check
+    if (e.key === 'c' || e.key === 'C') {
+        logDetection('🔍 Manual content check triggered', 'info');
+        console.log('Manual content check triggered');
+        checkForInappropriateContent().catch(err => {
+            console.error('Manual content check failed:', err);
+        });
+    }
+});
+
 // Color picker
 document.querySelectorAll('.color-dot').forEach(dot => {
     dot.addEventListener('click', () => {
@@ -610,10 +993,21 @@ function endStroke() {
         
         // Check for inappropriate content every N strokes
         strokesSinceLastCheck++;
+        const strokesUntilCheck = CONTENT_CHECK_INTERVAL - strokesSinceLastCheck;
+        
+        if (ML_DEBUG_VISUAL) {
+            logDetection(`✏️ Stroke completed (${strokesUntilCheck} until next check)`, 'info', {
+                totalStrokes: strokes.length,
+                strokesSinceLastCheck,
+                nextCheckIn: strokesUntilCheck
+            });
+        }
+        
         if (strokesSinceLastCheck >= CONTENT_CHECK_INTERVAL) {
             strokesSinceLastCheck = 0;
             checkForInappropriateContent().catch(err => {
                 console.error('Content check failed:', err);
+                logDetection('❌ Content check failed', 'error', { error: err.message });
             });
         }
     }
@@ -898,7 +1292,11 @@ function clearCanvas() {
     updateInkMeter();
     isLocked = false;
     remainingTime = ROUND_DURATION_SECONDS;
-    updateTimer();
+    if (timerDisabled) {
+        timerDisplay.textContent = '∞';
+    } else {
+        startTimer(false);
+    }
     clearSessionState();
     socket.emit('quickdraw.clear');
     console.log('Canvas cleared and session reset');
@@ -923,6 +1321,8 @@ function lockCanvas() {
 
 // Timer
 let remainingTime = ROUND_DURATION_SECONDS;
+let roundTimerId = null;
+let timerDisabled = debugDisableTimerToggle?.checked ?? false;
 
 function updateTimer() {
     const minutes = String(Math.floor(remainingTime / 60)).padStart(2, '0');
@@ -930,15 +1330,32 @@ function updateTimer() {
     timerDisplay.textContent = `${minutes}:${seconds}`;
 }
 
-function startTimer() {
+function stopTimer() {
+    if (roundTimerId !== null) {
+        clearInterval(roundTimerId);
+        roundTimerId = null;
+    }
+}
+
+function startTimer(resetRemaining = true) {
+    stopTimer();
+
+    if (resetRemaining) {
+        remainingTime = ROUND_DURATION_SECONDS;
+    }
+
+    if (timerDisabled) {
+        timerDisplay.textContent = '∞';
+        return;
+    }
+
     updateTimer();
-    
-    const timerId = setInterval(() => {
+    roundTimerId = setInterval(() => {
         remainingTime -= 1;
         updateTimer();
-        
+
         if (remainingTime <= 0) {
-            clearInterval(timerId);
+            stopTimer();
             lockCanvas();
             handleRoundEnd();
         }
@@ -956,6 +1373,16 @@ function handleRoundEnd() {
     }
 }
 
+debugDisableTimerToggle?.addEventListener('change', (event) => {
+    timerDisabled = event.target.checked;
+    if (timerDisabled) {
+        stopTimer();
+        timerDisplay.textContent = '∞';
+    } else {
+        startTimer();
+    }
+});
+
 // Initialize
 const sessionId = getOrCreateSessionId();
 console.log('Session ID:', sessionId);
@@ -970,11 +1397,21 @@ if (sessionRestored) {
     if (isLocked) {
         canvas.style.cursor = 'not-allowed';
     }
+    // Start timer without resetting if session was restored with valid time
+    if (!timerDisabled && remainingTime > 0) {
+        startTimer(false); // Don't reset - use restored time
+    }
 } else {
     updateInkMeter();
+    // Start fresh timer for new session
+    if (!timerDisabled) {
+        startTimer(true); // Reset to full duration
+    }
 }
 
-startTimer();
+if (timerDisabled) {
+    timerDisplay.textContent = '∞';
+}
 updateSocketStatus('connecting');
 
 // Save session state periodically (every 5 seconds)
