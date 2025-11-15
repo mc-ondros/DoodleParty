@@ -3,11 +3,7 @@
 
     const canvas = document.getElementById('socketCanvas');
     const ctx = canvas.getContext('2d');
-    const connectionStatus = document.getElementById('connectionStatus');
-    const lastEvent = document.getElementById('lastEvent');
     const clearCanvasBtn = document.getElementById('clearCanvasBtn');
-    const overlayClearBtn = document.getElementById('overlayClearBtn');
-    const eventLog = document.getElementById('eventLog');
 
     if (!canvas || !ctx) {
         console.warn('Socket canvas elements are missing');
@@ -20,8 +16,6 @@
     const scaleY = canvas.height / Math.max(coordMax, 1);
     const strokeQueue = [];
     let rafPending = false;
-    const logEntries = [];
-    const LOG_LIMIT = 3;
 
     const PAINT_STYLE = '#f5f7ff';
     const BACKGROUND = '#05050a';
@@ -36,23 +30,8 @@
         strokeQueue.length = 0;
     }
 
-    function updateStatus(message, statusClass) {
-        if (!connectionStatus) return;
-        connectionStatus.textContent = message;
-        connectionStatus.classList.remove('success', 'offline', 'neutral');
-        connectionStatus.classList.add(statusClass);
-    }
-
-    function logEvent(message) {
-        if (!eventLog) return;
-        logEntries.unshift(message);
-        if (logEntries.length > LOG_LIMIT) {
-            logEntries.splice(LOG_LIMIT);
-        }
-        eventLog.innerHTML = logEntries.map((entry) => `<span>${entry}</span>`).join('');
-        if (lastEvent) {
-            lastEvent.textContent = message;
-        }
+    function updateStatus(message) {
+        console.debug(message);
     }
 
     function drawStrokeFromArray(stroke) {
@@ -122,13 +101,11 @@
 
     function handleClearEvent() {
         resetCanvas();
-        logEvent('Canvas cleared');
     }
 
     function initializeSocket() {
         if (typeof io === 'undefined') {
-            updateStatus('socket.io missing', 'offline');
-            logEvent('Socket.IO client not loaded');
+            updateStatus('socket.io missing');
             return;
         }
 
@@ -140,33 +117,30 @@
         socket = socketUrl ? io(socketUrl, socketOpts) : io(socketOpts);
 
         socket.on('connect', () => {
-            updateStatus('Connected', 'success');
-            logEvent('Connected to socket');
+            updateStatus('Connected to socket');
         });
 
         socket.on('disconnect', (reason) => {
-            updateStatus('Disconnected', 'offline');
-            logEvent(`Disconnected (${reason})`);
+            updateStatus(`Socket disconnected (${reason})`);
         });
 
         socket.on('connect_error', (error) => {
-            updateStatus('Connect error', 'offline');
-            logEvent(`Connect error: ${error.message || error}`);
+            updateStatus(`Socket connect error: ${error.message || error}`);
         });
 
         socket.on('quickdraw.stroke', (payload) => {
             handleStrokeEvent(payload);
-            logEvent('Received quickdraw.stroke');
+            updateStatus('Received quickdraw.stroke');
         });
 
         socket.on('quickdraw.batch', (payload) => {
             handleBatchEvent(payload);
-            logEvent('Received quickdraw.batch');
+            updateStatus('Received quickdraw.batch');
         });
 
         socket.on('quickdraw.drawing', (payload) => {
             handleDrawingEvent(payload);
-            logEvent('Received quickdraw.drawing');
+            updateStatus('Received quickdraw.drawing');
         });
 
         socket.on('quickdraw.clear', () => {
@@ -176,17 +150,10 @@
 
     clearCanvasBtn.addEventListener('click', () => {
         resetCanvas();
-        logEvent('Canvas cleared (manual)');
         if (socket && socket.connected) {
             socket.emit('quickdraw.ack', { status: 'cleared' });
         }
     });
-
-    if (overlayClearBtn) {
-        overlayClearBtn.addEventListener('click', () => {
-            clearCanvasBtn.click();
-        });
-    }
 
     resetCanvas();
     initializeSocket();
