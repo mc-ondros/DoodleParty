@@ -1,14 +1,15 @@
 :root {
   /* Doodle theme adjusted: 60/30/10 */
-  --bg-primary: #F8F4EC;   /* 60% */
-  --panel-bg: rgba(67, 51, 76, 0.92);     /* 30% (a bit transparent) */
+  --bg-primary: #000000;   /* switched to dark background */
+  --panel-bg: transparent;     /* panels now border-only */
   --accent-primary: #E83C91;/* 10% */
+  --color-secondary: #43334C; /* secondary main color */
 
-  --text-primary: #2B2B2B;
-  --text-on-panel: #FFFFFF;
-  --text-inverse: #FFFFFF;
-  --text-secondary: rgba(43, 43, 43, 0.7);
-  --text-tertiary: rgba(43, 43, 43, 0.5);
+  --text-primary: #FFFFFF;
+  --text-on-panel: #FFFFFF; /* white text on panels */
+  --text-inverse: #000000;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-tertiary: rgba(255, 255, 255, 0.5);
 
   --panel-border: #35283D;
   --panel-shadow: 0 6px 18px rgba(0,0,0,0.12);
@@ -46,7 +47,7 @@ html { scroll-behavior: smooth; }
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Finger Paint', cursive;
+  font-family: 'Noto Sans', sans-serif;
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -54,11 +55,11 @@ body {
   transition: background-color var(--transition-lg), color var(--transition-lg);
 }
 
-h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.2; margin-bottom: var(--space-md); }
-h1 { font-size: 40px; font-weight: 400; }
-h2 { font-size: 28px; font-weight: 400; }
-h3 { font-size: 24px; font-weight: 400; }
-h4 { font-size: 20px; font-weight: 400; }
+h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.2; margin-bottom: var(--space-md); font-family: 'Noto Sans', sans-serif; }
+h1 { font-size: 40px; font-weight: 600; }
+h2 { font-size: 28px; font-weight: 600; }
+h3 { font-size: 24px; font-weight: 600; }
+h4 { font-size: 20px; font-weight: 600; }
 p { margin-bottom: var(--space-md); }
 small { font-size: 12px; }
 label { font-size: 16px; font-weight: 400; letter-spacing: 0.02em; color: var(--text-on-panel); }
