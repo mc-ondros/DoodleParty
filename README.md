@@ -49,6 +49,43 @@ DoodleParty uses a modern tech stack optimized for real-time collaboration and l
 - [Testing Strategy](.documentation/testing.md) - Testing approach and implementation
 - [Development Roadmap](.documentation/roadmap.md) - Future plans and features
 
+## AdminConfig.json
+
+Admin Panel selections are mirrored to a simple, human-readable JSON file that can be locked down at the OS level.
+
+- Path: `./AdminConfig.json`
+- Purpose: store current admin selections (timer, mode, limits, visibility, prompt, moderation)
+- Format: flat key/value pairs using the visible control names for easy reading
+
+Example:
+
+```
+{
+  "Timer": 300,
+  "TimerPreset": "300",
+  "Game Mode": "Speed",
+  "Max Players": 8,
+  "Ink Limit": "Medium",
+  "Teams": "disabled",
+  "Visibility": "Public",
+  "Password": "",
+  "Custom Prompt": "",
+  "Content Mode": "SFW",
+  "Session": "Open"
+}
+```
+
+Protecting the file (requires sudo):
+
+1. Make the helper script executable (one-time):
+  - `chmod +x scripts/protect_admin_config.sh`
+2. Run the script with sudo to set root ownership and 640 permissions:
+  - `sudo ./scripts/protect_admin_config.sh`
+
+Notes:
+- The file may contain a password if a private session is configured. Keep ownership root:root and permissions 640 (rw-r-----) so only root can modify it.
+- If you need a non-root process to read the file, add that process user to the `root` group or adjust the group/ACLs accordingly.
+
 ## Deployment Options
 
 **Raspberry Pi 4 (On-Premises)**
