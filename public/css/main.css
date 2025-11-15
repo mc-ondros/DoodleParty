@@ -1,134 +1,24 @@
-/* DoodleParty Main Stylesheet */
-
 :root {
-  --primary-color: #6366f1;
-  --secondary-color: #ec4899;
-  --background-color: #f8fafc;
-  --text-color: #1e293b;
-  --border-color: #e2e8f0;
+  --bg: #0f172a;
+  --panel: #0b1222;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --brand: #8b5cf6;
+  --accent: #22d3ee;
+  --border: #1f2937;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  line-height: 1.6;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial;
 }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-.app-header {
-  padding: 1rem;
-  background-color: white;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.app-header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--primary-color);
-}
-
-.app-main {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.drawing-canvas {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.drawing-canvas canvas {
-  border: 2px solid var(--border-color);
-  cursor: crosshair;
-  background-color: white;
-}
-
-.drawer-view {
-  width: 250px;
-  background-color: white;
-  border-right: 1px solid var(--border-color);
-  padding: 1rem;
-  overflow-y: auto;
-}
-
-.game-mode-selector {
-  margin-top: 1rem;
-}
-
-.modes {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.ink-meter {
-  height: 8px;
-  background-color: var(--border-color);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.ink-level {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-  transition: width 0.3s ease;
-}
-
-.timer {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--primary-color);
-}
-
-.leaderboard {
-  padding: 1rem;
-}
-
-.leaderboard h2 {
-  margin-bottom: 1rem;
-}
-
-.leaderboard ul {
-  list-style: none;
-}
-
-.leaderboard li {
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.moderation-shield {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
-}
-
-.moderation-shield.safe {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-.moderation-shield.warning {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.moderation-shield.blocked {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+.brand { color: white; font-weight: 800; letter-spacing: .2px; }
+.muted { color: var(--muted); }
+.btn { background: linear-gradient(90deg, var(--brand), var(--accent)); color: #0b1020; border: none; padding: 10px 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }

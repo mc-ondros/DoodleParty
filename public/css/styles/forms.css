@@ -1,0 +1,25 @@
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="search"], input[type="url"], input[type="date"], input[type="time"], textarea, select {
+  background: rgba(255, 255, 255, 0.10);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-on-panel);
+  transition: all var(--transition-md);
+  width: 100%;
+}
+input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="number"]:focus, input[type="search"]:focus, input[type="url"]:focus, input[type="date"]:focus, input[type="time"]:focus, textarea:focus, select:focus {
+  outline: none; border-color: #ffffff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); background: rgba(255,255,255,0.18);
+}
+input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.85); }
+textarea { resize: vertical; min-height: 120px; }
+select { cursor: pointer; appearance: none; padding-right: 36px; }
+.form-group { margin-bottom: var(--space-lg); display: flex; flex-direction: column; }
+.form-group label { margin-bottom: var(--space-sm); }
+.form-group-inline { display: flex; gap: var(--space-md); align-items: flex-end; }
+.form-group-inline .form-group { flex: 1; margin-bottom: 0; }
+.form-error { border-color: var(--accent-danger) !important; }
+.form-error-message { color: var(--accent-danger); font-size: 12px; margin-top: var(--space-sm); }
+.form-success { border-color: var(--accent-success) !important; }
+.form-success-message { color: var(--accent-success); font-size: 12px; margin-top: var(--space-sm); }

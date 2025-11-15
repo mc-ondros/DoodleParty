@@ -1,31 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-// https://vitejs.dev/config/
+const rootDir = fileURLToPath(new URL('.', import.meta.url))
+
 export default defineConfig({
+  root: 'public',
+  publicDir: false,
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/ml': {
-        target: 'http://localhost:5001',
-        changeOrigin: true,
-      },
-    },
+      '@': path.resolve(rootDir, './src')
+    }
   },
   build: {
-    outDir: 'dist',
-    sourcemap: false,
-    minify: 'terser',
-  },
+    outDir: '../dist',
+    emptyOutDir: true
+  }
 })
