@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doodleparty-ml
+  namespace: doodleparty
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: doodleparty-ml
+  template:
+    metadata:
+      labels:
+        app: doodleparty-ml
+    spec:
+      containers:
+      - name: ml
+        image: doodleparty-ml:latest
+        ports:
+        - containerPort: 5001
+        envFrom:
+        - configMapRef:
+            name: doodleparty-config
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 5

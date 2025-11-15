@@ -100,8 +100,6 @@ DoodleParty uses a modular architecture with three primary deployment targets:
 - Socket.io for real-time synchronization
 - Custom TFLite binary classifier for content moderation
 - DigitalOcean AI for LLM features (prompts, narration)
-- PostgreSQL for persistent data
-- Redis for real-time state management
 
 *For installation steps, see the [Installation Guide](installation.md).*
 
@@ -115,8 +113,6 @@ DoodleParty uses a modular architecture with three primary deployment targets:
 | **Real-Time Engine** | Socket.io | WebSocket connections, canvas sync, event broadcasting | Port 3000 | RPi4 / Cloud |
 | **ML Inference** | TensorFlow Lite | Content moderation, shape classification, confidence scoring | Port 5001 (RPi4) | RPi4 only |
 | **Frontend** | React + TypeScript | Drawing UI, game modes, real-time canvas rendering | Browser | All |
-| **Database** | PostgreSQL | User data, game history, leaderboards, analytics | Managed service | Cloud only |
-| **Cache** | Redis | Real-time state, session management, leaderboard caching | Managed service | Cloud only |
 | **LLM Integration** | DigitalOcean AI | Prompt generation, narration, creative content | API calls | Cloud only |
 
 ### Component Interactions
@@ -215,8 +211,6 @@ graph TB
     end
     
     subgraph MANAGED["Managed Services"]
-        DB["PostgreSQL<br/>Database"]
-        CACHE["Redis<br/>Cache"]
         CDN["Spaces<br/>CDN"]
     end
     
@@ -240,7 +234,6 @@ graph TB
 - Auto-scale Node.js pods: 2-20 replicas
 - Auto-scale GPU instances: 1-5 instances
 - Load balancing across all pods
-- Redis cluster for distributed caching
 
 **Advantages:**
 - Unlimited scalability
@@ -356,7 +349,7 @@ graph TD
 
 **Framework:** TensorFlow/Keras with TFLite optimization
 **Base Model:** Custom CNN (423K parameters) or transfer learning
-**Input:** 28x28 grayscale images (QuickDraw dataset format)
+**Input:** 128x128 grayscale images (QuickDraw dataset format)
 **Output:** Binary probability (0.0-1.0)
 
 *For detailed implementation, see the [ML Pipeline documentation](ml-pipeline.md) which covers the preprocessing steps, detection strategies, and Raspberry Pi 4 optimization in greater depth.*
@@ -396,7 +389,7 @@ graph TD
     C1["Convert to grayscale"]
     C2["Invert colors"]
     C3["Morphological dilation"]
-    C4["Resize to 28x28"]
+    C4["Resize to 128x128"]
     C5["Normalize to [0, 1]"]
     C6["Z-score normalization"]
     D["TFLite Inference"]
@@ -559,8 +552,6 @@ graph TD
 
 - **Horizontal Scaling:** Add more Node.js pods
 - **GPU Scaling:** Add GPU instances for ML inference
-- **Database Scaling:** Read replicas for analytics
-- **Cache Scaling:** Redis cluster for distributed state
 - **Load Balancing:** Distribute traffic across pods
 
 ## Security Architecture

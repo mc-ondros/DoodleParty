@@ -1,0 +1,20 @@
+# Raspberry Pi 4 specific dependencies
+# Use TensorFlow Lite for better performance on ARM
+tensorflow-lite==2.13.0
+numpy==1.24.3
+
+# GPIO and hardware support
+RPi.GPIO==0.7.0
+Adafruit-PureIO==1.1.9
+
+# Lightweight web server
+Flask==2.3.2
+Flask-CORS==4.0.0
+gunicorn==20.1.0
+
+# Image processing
+Pillow==9.5.0
+opencv-python-headless==4.7.0.72
+
+# Development
+pytest==7.3.1

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuickDraw Sender</title>
+    <style>
+        :root {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0b0b12;
+            color: #f5f5f7;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem;
+            font-size: clamp(1.8rem, 3vw, 2.4rem);
+        }
+        #drawingCanvas {
+            width: clamp(350px, 80vw, 520px);
+            height: clamp(350px, 80vw, 520px);
+            background: #0e0e15;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(5, 5, 10, 0.7);
+        }
+        .controls {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        button {
+            background: rgba(255, 255, 255, 0.08);
+            color: inherit;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.65rem 1.2rem;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+        .status {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .legend {
+            margin-top: 1rem;
+            width: clamp(320px, 70vw, 520px);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>QuickDraw Sender</h1>
+    <canvas id="drawingCanvas" width="512" height="512"></canvas>
+    <div class="controls">
+        <button id="clearBtn" type="button">Clear</button>
+        <button id="sendStrokeBtn" type="button">Send Last Stroke</button>
+        <button id="sendBatchBtn" type="button">Send Batch</button>
+    </div>
+    <div class="status">
+        Socket status: <span id="socketStatus">connecting…</span>
+    </div>
+    <div class="legend">
+        Draw on the canvas to capture strokes. Each stroke is sent as a QuickDraw vector (`[x[],y[],t[]]`).
+        Use "Send Batch" to replay everything you drew after a clear.
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const clearBtn = document.getElementById('clearBtn');
+        const sendStrokeBtn = document.getElementById('sendStrokeBtn');
+        const sendBatchBtn = document.getElementById('sendBatchBtn');
+        const socketStatus = document.getElementById('socketStatus');
+
+        const DRAW_COLOR = '#f5f7ff';
+        const BACKGROUND = '#0e0e15';
+        const QtScale = 255 / canvas.width;
+
+        let isDrawing = false;
+        let strokes = [];
+        let currentStroke = null;
+
+        const socket = io({ transports: ['websocket'] });
+
+        socket.on('connect', () => {
+            socketStatus.textContent = 'connected';
+            socketStatus.style.color = '#4cd964';
+        });
+
+        socket.on('disconnect', () => {
+            socketStatus.textContent = 'disconnected';
+            socketStatus.style.color = '#ff5c5c';
+        });
+
+        socket.on('connect_error', () => {
+            socketStatus.textContent = 'connect error';
+            socketStatus.style.color = '#ffb347';
+        });
+
+        function resetCanvas() {
+            ctx.fillStyle = BACKGROUND;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            strokes = [];
+            currentStroke = null;
+        }
+
+        function beginStroke(x, y) {
+            isDrawing = true;
+            currentStroke = { xs: [], ys: [], ts: [], start: performance.now() };
+            recordPoint(x, y);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function recordPoint(x, y) {
+            const t = performance.now() - currentStroke.start;
+            currentStroke.xs.push(Math.round(x * QtScale));
+            currentStroke.ys.push(Math.round(y * QtScale));
+            currentStroke.ts.push(Math.round(t));
+        }
+
+        function drawLine(x, y) {
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        function endStroke() {
+            if (!isDrawing || !currentStroke) return;
+            isDrawing = false;
+            ctx.closePath();
+            strokes.push(currentStroke);
+            currentStroke = null;
+        }
+
+        function handlePointerDown(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+            ctx.strokeStyle = DRAW_COLOR;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            beginStroke(x, y);
+        }
+
+        function handlePointerMove(event) {
+            if (!isDrawing || !currentStroke) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+            recordPoint(x, y);
+            drawLine(x, y);
+        }
+
+        function handlePointerUp() {
+            endStroke();
+        }
+
+        function sendStroke(stroke) {
+            if (!stroke || stroke.xs.length < 2) return;
+            socket.emit('quickdraw.stroke', [stroke.xs, stroke.ys, stroke.ts]);
+        }
+
+        function sendBatch() {
+            if (!strokes.length) return;
+            const batch = strokes.map((stroke) => [stroke.xs, stroke.ys, stroke.ts]);
+            socket.emit('quickdraw.batch', batch);
+        }
+
+        clearBtn.addEventListener('click', () => {
+            resetCanvas();
+            socket.emit('quickdraw.clear');
+        });
+
+        sendStrokeBtn.addEventListener('click', () => {
+            if (strokes.length === 0) return;
+            sendStroke(strokes[strokes.length - 1]);
+        });
+
+        sendBatchBtn.addEventListener('click', () => {
+            sendBatch();
+        });
+
+        canvas.addEventListener('pointerdown', handlePointerDown);
+        canvas.addEventListener('pointermove', handlePointerMove);
+        canvas.addEventListener('pointerup', handlePointerUp);
+        canvas.addEventListener('pointerleave', handlePointerUp);
+
+        resetCanvas();
+    </script>
+</body>
+</html>

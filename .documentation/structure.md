@@ -14,10 +14,10 @@
     - [Components (`src/components/`)](#components-srccomponents)
     - [Hooks (`src/hooks/`)](#hooks-srchooks)
     - [Services (`src/services/`)](#services-srcservices)
-  - [Backend (`src-py/`)](#backend-src-py)
-    - [Core ML (`src-py/core/`)](#core-ml-src-pycore)
-    - [Data (`src-py/data/`)](#data-src-pydata)
-    - [Web (`src-py/web/`)](#web-src-pyweb)
+  - [Backend (`src_py/`)](#backend-src_py)
+    - [Core ML (`src_py/core/`)](#core-ml-src_pycore)
+    - [Data (`src_py/data/`)](#data-src_pydata)
+    - [Web (`src_py/web/`)](#web-src_pyweb)
   - [Scripts (`scripts/`)](#scripts-scripts)
     - [Training (`scripts/training/`)](#training-scriptstraining)
     - [Evaluation (`scripts/evaluation/`)](#evaluation-scriptsevaluation)
@@ -70,10 +70,10 @@ DoodleParty/
 │   │   ├── useGameMode.tsx    # Game mode logic
 │   │   └── useLeaderboard.tsx # Leaderboard state
 │   ├── services/              # Business logic
-│   │   ├── socketService.tsx  # WebSocket client
-│   │   ├── moderationService.ts # ML integration
-│   │   ├── gameService.ts     # Game mode logic
-│   │   └── analyticsService.ts # Event tracking
+│   │   ├── socket-service.tsx  # WebSocket client
+│   │   ├── moderation-service.ts # ML integration
+│   │   ├── game-service.ts     # Game mode logic
+│   │   └── analytics-service.ts # Event tracking
 │   ├── App.tsx                # Root component
 │   ├── index.tsx              # Entry point
 │   └── types.ts               # TypeScript types
@@ -88,21 +88,31 @@ DoodleParty/
 │   └── index.html
 ├── scripts/                   # Utility scripts
 │   ├── training/              # ML training scripts
+│   │   ├── train.py           # Main training CLI
+│   │   ├── train_binary_classifier.py
+│   │   └── train_mixed_dataset.py
 │   ├── evaluation/            # Model evaluation
 │   ├── data_processing/       # Data download/processing
+│   │   ├── download_quickdraw_npy.py  # Download safe categories
+│   │   ├── download_appendix.py       # Download explicit content
+│   │   └── download_with_curl.sh      # Alternative curl-based downloader
 │   └── deployment/            # Deployment scripts
-├── src-py/                    # Python ML backend
+├── src_py/                    # Python ML backend (renamed from src-py for Python compatibility)
+│   ├── __init__.py            # Package init
 │   ├── core/                  # ML core
-│   │   ├── models.py          # CNN architectures
-│   │   ├── training.py        # Training logic
+│   │   ├── __init__.py
+│   │   ├── models.py          # CNN architectures (Keras 3 compatible)
+│   │   ├── training.py        # Training logic with Rich TUI
 │   │   ├── inference.py       # Prediction
 │   │   ├── shape_detection.py # Shape-based detection
 │   │   ├── tile_detection.py  # Tile-based detection
 │   │   └── optimization.py    # Model optimization
 │   ├── data/                  # Data handling
-│   │   ├── loaders.py         # Dataset loading
+│   │   ├── __init__.py
+│   │   ├── loaders.py         # QuickDraw & Appendix dataset loading
 │   │   └── augmentation.py    # Data augmentation
 │   └── web/                   # Flask ML service
+│       ├── __init__.py
 │       ├── app.py             # Flask server
 │       └── routes.py          # API routes
 ├── models/                    # Trained models
@@ -136,7 +146,8 @@ DoodleParty/
 ├── requirements.txt           # Python dependencies
 ├── requirements-rpi4.txt      # RPi4-specific deps
 ├── vite.config.ts             # Vite config
-├── flake.nix                  # Nix flake
+├── flake.nix                  # Nix flake (TensorFlow 2.20 + Keras 3)
+├── shell.nix                  # Nix shell for non-flake users
 ├── module.nix                 # NixOS module
 ├── STYLE_GUIDE.md             # Code standards
 └── README.md                  # Project overview
@@ -145,12 +156,13 @@ DoodleParty/
 ## Structure Benefits
 
 1. ✅ **Organized `src/` directory** - Clear separation by functionality
-2. ✅ **Proper package structure** - Can import as `from src.core import models`
-3. ✅ **Separated scripts** - Utility scripts in `scripts/`, library code in `src/`
+2. ✅ **Proper package structure** - Can import as `from src_py.core import models`
+3. ✅ **Separated scripts** - Utility scripts in `scripts/`, library code in `src_py/`
 4. ✅ **TypeScript support** - Full type safety for React components
-5. ✅ **Python ML backend** - Separate `src-py/` for ML pipeline
+5. ✅ **Python ML backend** - Separate `src_py/` for ML pipeline (Python-compatible naming)
 6. ✅ **Kubernetes ready** - K8s manifests for cloud deployment
 7. ✅ **Modern tooling** - Vite for fast development, TypeScript for type safety
+8. ✅ **NixOS support** - Reproducible development environment with Keras 3 compatibility
 
 ## Directory Details
 
@@ -172,26 +184,28 @@ DoodleParty/
 - `useSocket.tsx` - WebSocket connection management
 
 **Services (`src/services/`):**
-- `socketService.tsx` - Socket.io client wrapper
-- `moderationService.ts` - ML inference API calls
-- `gameService.ts` - Game mode logic
-- `analyticsService.ts` - Event tracking
+- `socket-service.tsx` - Socket.io client wrapper
+- `moderation-service.ts` - ML inference API calls
+- `game-service.ts` - Game mode logic
+- `analytics-service.ts` - Event tracking
 
-### Backend (`src-py/`)
+### Backend (`src_py/`)
 
-**Core ML (`src-py/core/`):**
-- `models.py` - CNN architectures (Custom, ResNet50, MobileNetV3, EfficientNet)
-- `training.py` - Training loops and callbacks
+**Note:** Renamed from `src-py/` to `src_py/` for Python import compatibility (hyphens not allowed in module names).
+
+**Core ML (`src_py/core/`):**
+- `models.py` - CNN architectures with Keras 3 compatibility (Custom, ResNet50, MobileNetV3, EfficientNet)
+- `training.py` - Training loops with Rich TUI progress and callbacks
 - `inference.py` - Single/batch prediction
 - `shape_detection.py` - Shape-based detection with stroke awareness
 - `tile_detection.py` - Tile-based grid detection
 - `optimization.py` - Model quantization and optimization
 
-**Data (`src-py/data/`):**
-- `loaders.py` - QuickDraw dataset loading
+**Data (`src_py/data/`):**
+- `loaders.py` - QuickDraw & Quickdraw Appendix dataset loading
 - `augmentation.py` - Data augmentation pipeline
 
-**Web (`src-py/web/`):**
+**Web (`src_py/web/`):**
 - `app.py` - Flask ML service with REST endpoints
 - `routes.py` - API route definitions
 
@@ -206,7 +220,10 @@ DoodleParty/
 - `benchmark_tile_detection.py` - Performance benchmarking
 
 **Data Processing (`scripts/data_processing/`):**
-- `download_quickdraw_npy.py` - Download QuickDraw dataset
+- `download_quickdraw_npy.py` - Download safe QuickDraw categories (Python)
+- `download_appendix.py` - Download/convert explicit content from Quickdraw Appendix (Python)
+- `download_with_curl.sh` - Bash downloader for safe categories (better NixOS compatibility)
+- `download_appendix.sh` - Bash downloader for explicit content (recommended for NixOS)
 - `process_all_data_128x128.py` - Data preprocessing
 
 **Deployment (`scripts/deployment/`):**
@@ -243,7 +260,7 @@ DoodleParty/
 ```typescript
 import { DrawingCanvas } from '@/components/DrawingCanvas';
 import { useDraggable } from '@/hooks/useDraggable';
-import { socketService } from '@/services/socketService';
+import { socketService } from '@/services/socket-service';
 ```
 
 **Python ML:**

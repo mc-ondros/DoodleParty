@@ -79,7 +79,7 @@
 
 **Framework:** TensorFlow/Keras with TFLite optimization
 **Base Model:** Custom CNN (423K parameters) or transfer learning
-**Input:** 28x28 grayscale images (QuickDraw dataset format)
+**Input:** 28x28 grayscale images (QuickDraw native format)
 **Output:** Binary probability (0.0-1.0)
 
 ### Custom CNN Architecture
@@ -87,15 +87,15 @@
 ```
 Input (28x28x1 grayscale)
     ↓
-Conv2D 32 filters, 3x3 kernel
+Conv2D 32 filters, 3x3 kernel (padding='same')
 ReLU + BatchNorm + MaxPool(2x2) + Dropout(0.25)
-    ↓
-Conv2D 64 filters, 3x3 kernel
+    ↓ (14x14x32)
+Conv2D 64 filters, 3x3 kernel (padding='same')
 ReLU + BatchNorm + MaxPool(2x2) + Dropout(0.25)
-    ↓
-Conv2D 128 filters, 3x3 kernel
+    ↓ (7x7x64)
+Conv2D 128 filters, 3x3 kernel (padding='same')
 ReLU + BatchNorm + Dropout(0.25)
-    ↓
+    ↓ (7x7x128)
 Flatten
     ↓
 Dense 256 units
@@ -134,8 +134,27 @@ model.compile(
 
 ### Image Preprocessing Pipeline
 
+**Training Data (QuickDraw):**
 ```python
-def preprocess_image(image):
+def load_quickdraw_category(file_path):
+    # QuickDraw .npy files are already 28x28 grayscale bitmaps
+    data = np.load(file_path)  # Shape: (N, 784) or (N, 28, 28)
+    
+    # Normalize to [0, 1]
+    data = data.astype(np.float32) / 255.0
+    
+    # Reshape to (N, 28, 28, 1) if needed
+    if data.ndim == 2:
+        data = data.reshape(-1, 28, 28, 1)
+    elif data.ndim == 3:
+        data = np.expand_dims(data, axis=-1)
+    
+    return data
+```
+
+**Inference (Canvas → 28x28):**
+```python
+def preprocess_canvas_image(image):
     # 1. Convert to grayscale
     image = image.convert('L')
 
@@ -143,36 +162,27 @@ def preprocess_image(image):
     img_array = 255 - np.array(image)
 
     # 3. Apply morphological dilation to thicken strokes
-    # Prevents thin lines from disappearing
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     img_array = cv2.dilate(img_array, kernel, iterations=1)
 
     # 4. Resize to 28x28 (model input size)
-    image = Image.fromarray(img_array).resize((28, 28))
+    image = Image.fromarray(img_array).resize((28, 28), Image.LANCZOS)
 
     # 5. Normalize to [0, 1]
     img_array = np.array(image, dtype=np.float32) / 255.0
 
-    # 6. Apply z-score normalization (only if sufficient variation)
-    if img_array.std() > 0.01:
-        img_array = (img_array - img_array.mean()) / (img_array.std() + 1e-7)
-        img_array = (img_array + 2) / 4  # Rescale to [0, 1]
-        img_array = np.clip(img_array, 0, 1)
-
-    # 7. Add batch and channel dimensions
+    # 6. Add batch and channel dimensions
     img_array = np.expand_dims(img_array, axis=(0, -1))
 
     return img_array
 ```
 
 **Key Steps:**
-1. Grayscale conversion for model compatibility
-2. Color inversion (white canvas → black background)
-3. Morphological dilation to preserve thin strokes
-4. Resize to 28x28 (model input size)
+1. **Training:** Use native 28x28 QuickDraw .npy format (no preprocessing needed)
+2. **Inference:** Resize canvas to 28x28 to match model input
+3. Grayscale conversion and color inversion
+4. Morphological dilation to preserve thin strokes
 5. Normalization to [0, 1] range
-6. Z-score normalization for better training
-7. Batch and channel dimension addition
 
 ## Detection Strategies
 
@@ -404,7 +414,7 @@ model = tf.keras.models.load_model('quickdraw_model.h5')
 # Create representative dataset for calibration
 def representative_dataset():
     for _ in range(100):
-        yield [np.random.rand(1, 28, 28, 1).astype(np.float32)]
+        yield [np.random.rand(1, 128, 128, 1).astype(np.float32)]
 
 # Convert with INT8 quantization
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
@@ -510,19 +520,33 @@ python scripts/data_processing/download_quickdraw_npy.py
 
 **Data Organization:**
 - `data/raw/` - Downloaded NumPy bitmap files (penis.npy, circle.npy, etc.)
-- `data/processed/` - Processed data and class_mapping.pkl
-- Format: Pre-processed 28x28 grayscale bitmaps from Google's QuickDraw dataset
+- Format: Native 28x28 grayscale bitmaps from Google's QuickDraw dataset (no preprocessing needed)
 
 ### Phase 2: Model Training
 
+**Option A: Train with .npy only (28x28 native)**
 ```bash
-python scripts/train.py \
-  --epochs 50 \
+python scripts/training/train_binary_classifier.py \
+  --data-dir data/raw \
+  --epochs 30 \
   --batch-size 32 \
-  --learning-rate 0.001
+  --max-samples 10000
 ```
 
-**Output:** `models/quickdraw_model.h5`
+**Option B: Train with mixed datasets (.npy + appendix)**
+```bash
+# Combines QuickDraw .npy (28x28) + Appendix (128x128→28x28)
+python scripts/training/train_mixed_dataset.py \
+  --npy-dir data/raw \
+  --appendix-dir data/appendix \
+  --epochs 30 \
+  --max-npy-samples 10000 \
+  --max-appendix-samples 5000
+```
+
+**Outputs:** `models/quickdraw_binary_28x28.h5` or `models/quickdraw_mixed_28x28.h5`
+
+**Note:** Appendix images (128x128) are automatically downscaled to 28x28 using `cv2.INTER_AREA` for optimal quality while maintaining model efficiency.
 
 ### Phase 3: Evaluation
 
@@ -544,10 +568,11 @@ python scripts/evaluate.py \
 - Zoom: 90-110%
 - Horizontal flip: 50% probability
 
-**Data Source:**
-- Google QuickDraw Dataset (NumPy bitmap format)
-- Pre-processed 28x28 grayscale images
+**Data Sources:**
+- **QuickDraw .npy:** Native 28x28 grayscale bitmaps (primary source)
+- **QuickDraw Appendix:** 128x128 images (automatically downscaled to 28x28)
 - Categories: penis (positive) + 21 common shapes (negative)
+- See `docs/MIXED_DATASET_TRAINING.md` for mixed dataset details
 
 ## Inference API
 

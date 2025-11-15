@@ -41,8 +41,6 @@
 - [Cloud Deployment (DigitalOcean)](#cloud-deployment-digitalocean)
   - [1. Create Kubernetes Cluster](#1-create-kubernetes-cluster)
   - [2. Deploy Application](#2-deploy-application)
-  - [3. Setup Database](#3-setup-database)
-  - [4. Setup Redis Cache](#4-setup-redis-cache)
 
 
 ### Next Steps
@@ -104,20 +102,34 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Download ML Model
+### 3. Train ML Model
 
 The ML model is required for content moderation. For detailed information about the model architecture and performance, see the [ML Pipeline documentation](ml-pipeline.md).
 
 ```bash
-python scripts/data_processing/download_quickdraw_npy.py
-python scripts/train.py --epochs 50 --batch-size 32
+# Download QuickDraw dataset (28x28 native format)
+# Note: Scripts feature professional TUI with progress bars and colored output
+python scripts/data_processing/download_quickdraw_npy.py --output-dir data/raw
+
+# Train binary classifier (option A: .npy only)
+python scripts/training/train_binary_classifier.py \
+  --data-dir data/raw \
+  --epochs 30 \
+  --batch-size 32
+
+# Or train with mixed datasets (option B: .npy + appendix)
+# Automatically downscales 128x128 appendix images to 28x28
+python scripts/training/train_mixed_dataset.py \
+  --npy-dir data/raw \
+  --appendix-dir data/appendix \
+  --epochs 30
 ```
 
 Or download pre-trained model:
 ```bash
-wget https://releases.doodleparty.io/models/quickdraw_model_int8.tflite
+wget https://releases.doodleparty.io/models/quickdraw_binary_28x28_int8.tflite
 mkdir -p models
-mv quickdraw_model_int8.tflite models/
+mv quickdraw_binary_28x28_int8.tflite models/
 ```
 
 ### 4. Start Development Server
@@ -132,7 +144,11 @@ Access at `http://localhost:3000`
 
 In a separate terminal:
 ```bash
-python src/web/app.py
+# Set model path
+export DOODLEPARTY_MODEL=models/quickdraw_binary_28x28.h5
+
+# Start ML service
+python src-py/web/app.py
 ```
 
 ML service runs on `http://localhost:5001`
@@ -150,13 +166,9 @@ PORT=3000
 ML_SERVICE_URL=http://localhost:5001
 
 # ML Model
-MODEL_PATH=models/quickdraw_model_int8.tflite
-IMAGE_SIZE=28
+DOODLEPARTY_MODEL=models/quickdraw_binary_28x28.h5
 THRESHOLD=0.5
 
-# Database (if using cloud)
-DATABASE_URL=postgresql://user:password@localhost/doodleparty
-REDIS_URL=redis://localhost:6379
 
 # DigitalOcean AI (optional)
 DIGITALOCEAN_API_KEY=your_api_key_here
@@ -380,23 +392,6 @@ kubectl apply -f k8s/deployment-ml.yaml
 kubectl apply -f k8s/service.yaml
 ```
 
-### 3. Setup Database
-
-```bash
-doctl databases create doodleparty-db \
-  --engine pg \
-  --region nyc3 \
-  --num-nodes 1
-```
-
-### 4. Setup Redis Cache
-
-```bash
-doctl databases create doodleparty-redis \
-  --engine redis \
-  --region nyc3 \
-  --num-nodes 1
-```
 
 
 ## Next Steps

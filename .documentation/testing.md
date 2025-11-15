@@ -27,7 +27,6 @@
 - [Integration Testing](#integration-testing)
   - [WebSocket Communication](#websocket-communication)
     - [Key Test Cases](#key-test-cases-4)
-  - [Database Integration](#database-integration)
     - [Key Test Cases](#key-test-cases-5)
   - [ML Pipeline Integration](#ml-pipeline-integration)
     - [Key Test Cases](#key-test-cases-6)
@@ -90,7 +89,6 @@ tests/
 │   └── leaderboard.test.ts
 ├── integration/
 │   ├── websocket.test.ts
-│   ├── database.test.ts
 │   └── mlPipeline.test.ts
 ├── e2e/
 │   ├── speedSketch.spec.ts
@@ -174,19 +172,9 @@ Tests real-time communication between clients and server. Verifies stroke broadc
 - Handle reconnection scenarios
 - Verify message ordering
 
-### Database Integration
 
-**File:** `tests/integration/database.test.ts`
 
-Tests database operations for player management, game results, and leaderboard persistence. Ensures data integrity and query performance.
 
-**Key Test Cases:**
-- Create and retrieve player records
-- Update player scores
-- Store and retrieve game results
-- Query top players by score
-- Handle concurrent database operations
-- Verify transaction integrity
 
 ### ML Pipeline Integration
 
@@ -235,7 +223,6 @@ Uses K6 to simulate 100 concurrent virtual users over 5 minutes. Measures respon
 
 **File:** `tests/performance/stressTest.ts`
 
-Tests system behavior under extreme load. Simulates 100 concurrent users drawing simultaneously, 1000 moderation inferences, and database operations.
 
 **Targets:**
 - Handle 100 concurrent users drawing
@@ -267,7 +254,6 @@ Validates WCAG AA compliance, keyboard navigation, color contrast, and screen re
 | Moderation Service | 95% | Critical |
 | Game Modes | 85% | High |
 | WebSocket Handlers | 90% | Critical |
-| Database Layer | 80% | High |
 | UI Components | 70% | Medium |
 
 ## Running Tests

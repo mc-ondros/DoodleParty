@@ -1,0 +1,86 @@
+:root {
+    font-family: 'Inter', system-ui, sans-serif;
+    --bg-page: #f5f6fb;
+    --panel-bg: #ffffff;
+    --border-color: rgba(15, 23, 42, 0.12);
+    --text-primary: #0f172a;
+    --text-secondary: rgba(15, 23, 42, 0.65);
+    --button-bg: rgba(37, 99, 235, 0.1);
+    --button-border: rgba(37, 99, 235, 0.4);
+    --button-hover: rgba(37, 99, 235, 0.2);
+    --canvas-shadow: 0 25px 40px rgba(15, 23, 42, 0.15);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg-page);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    color: var(--text-primary);
+}
+
+h1 {
+    margin: 0 0 0.75rem;
+    font-size: clamp(1.9rem, 3vw, 2.6rem);
+}
+
+#drawingCanvas {
+    width: clamp(320px, 80vw, 520px);
+    height: clamp(320px, 80vw, 520px);
+    background: #ffffff;
+    border-radius: 24px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--canvas-shadow);
+    display: block;
+}
+
+.controls {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+button {
+    padding: 0.75rem 1.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--button-border);
+    background: var(--button-bg);
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    border-color: var(--text-primary);
+    background: var(--button-hover);
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+.status {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.legend {
+    margin-top: 1rem;
+    width: clamp(320px, 70vw, 520px);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}

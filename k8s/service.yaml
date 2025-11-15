@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: doodleparty-web
+  namespace: doodleparty
+  labels:
+    app: doodleparty-web
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: doodleparty-web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: doodleparty-ml
+  namespace: doodleparty
+  labels:
+    app: doodleparty-ml
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5001
+    targetPort: 5001
+    protocol: TCP
+    name: http
+  selector:
+    app: doodleparty-ml

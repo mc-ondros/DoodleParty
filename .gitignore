@@ -1,17 +1,178 @@
+# Node.js
 node_modules/
-dist/
-.vite/
-.cache/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.DS_Store
-.idea/
-.vscode/
-.env
-.env.*
-coverage/
+dist/
+.vite/
+.cache/
+
+# Python artifacts
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*$py.class
+*.so
+.Python
 build/
-*.local
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.env/
+
+# Training artifacts and datasets
+models/
+models/*.h5
+models/*.keras
+models/*.tflite
+models/*.pb
+models/*.ckpt*
+models/*.pth
+models/*.pt
+models/*.onnx
+models/checkpoint/
+data/raw/*.npy
+data/raw/*.ndjson
+data/raw/
+*.tfrecord
+data/processed/
+data/temp/
+data/cache/
+*.npz
+*.hdf5
+*.pkl
+*.pickle
+
+# TensorFlow
+tensorboard/
+logs/
+runs/
+checkpoints/
+.tensorboard/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.flaskenv
+
+# Nix
+result
+result-*
+.direnv/
+.envrc.cache
+shell.nix.drv
+
+# Testing
+coverage/
+.nyc_output/
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+*.cover
+.hypothesis/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
 *.tmp
+*.temp
+*.bak
+*.swp
+*~.nib
+.lock-wscript
+
+# Build artifacts
+*.o
+*.a
+*.exe
+*.dll
+*.dylib
+
+# Docker
+.dockerignore
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets
+*.pem
+*.key
+*.crt
+*.p12
+secrets.yaml
+secrets.json
+
+# Large dataset files (keep structure, ignore content)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Model checkpoints (keep best model only)
+models/checkpoint/
+models/*_backup.*
+models/temp_*
+
+# Exclude temporary download files
+*_temp.ndjson
+*_temp.npy
