@@ -73,6 +73,10 @@ const heartbeatStroke = [
     ]
 ];
 
+// Store all strokes for syncing new clients
+const strokeHistory = [];
+const MAX_HISTORY = 5000; // Limit history to prevent memory issues
+
 io.on('connection', (socket) => {
     console.log(`socket.io - client connected (${socket.id})`);
     let heartbeatId = null;
@@ -86,15 +90,66 @@ io.on('connection', (socket) => {
         }, 8000);
     }
 
+    // Send existing strokes to new client
+    if (strokeHistory.length > 0) {
+        console.log(`Sending ${strokeHistory.length} strokes to new client ${socket.id}`);
+        socket.emit('quickdraw.sync', strokeHistory);
+    }
+
     socket.on('quickdraw.ack', (payload) => {
         console.log('Received ack from client', payload);
     });
 
-    ['stroke', 'batch', 'drawing', 'clear'].forEach((eventName) => {
-        socket.on(`quickdraw.${eventName}`, (payload) => {
-            socket.broadcast.emit(`quickdraw.${eventName}`, payload);
-            console.log(`Relayed quickdraw.${eventName} from ${socket.id}`);
-        });
+    socket.on('quickdraw.requestSync', () => {
+        console.log(`Client ${socket.id} requested sync, sending ${strokeHistory.length} strokes`);
+        socket.emit('quickdraw.sync', strokeHistory);
+    });
+
+    socket.on('quickdraw.stroke', (payload) => {
+        socket.broadcast.emit('quickdraw.stroke', payload);
+        // Store stroke in history
+        strokeHistory.push(payload);
+        if (strokeHistory.length > MAX_HISTORY) {
+            strokeHistory.shift(); // Remove oldest stroke
+        }
+        console.log(`Relayed quickdraw.stroke from ${socket.id} (history: ${strokeHistory.length})`);
+    });
+
+    socket.on('quickdraw.batch', (payload) => {
+        socket.broadcast.emit('quickdraw.batch', payload);
+        // Add batch strokes to history
+        if (Array.isArray(payload)) {
+            payload.forEach(stroke => {
+                strokeHistory.push(stroke);
+            });
+            // Trim if needed
+            while (strokeHistory.length > MAX_HISTORY) {
+                strokeHistory.shift();
+            }
+        }
+        console.log(`Relayed quickdraw.batch from ${socket.id} (history: ${strokeHistory.length})`);
+    });
+
+    socket.on('quickdraw.drawing', (payload) => {
+        socket.broadcast.emit('quickdraw.drawing', payload);
+        // Add drawing strokes to history
+        if (Array.isArray(payload)) {
+            payload.forEach(stroke => {
+                strokeHistory.push(stroke);
+            });
+            while (strokeHistory.length > MAX_HISTORY) {
+                strokeHistory.shift();
+            }
+        }
+        console.log(`Relayed quickdraw.drawing from ${socket.id} (history: ${strokeHistory.length})`);
+    });
+
+    socket.on('quickdraw.clear', (payload) => {
+        // Broadcast to ALL clients including sender
+        io.emit('quickdraw.clear', payload);
+        // Clear history when canvas is cleared
+        strokeHistory.length = 0;
+        console.log(`Relayed quickdraw.clear from ${socket.id} to all clients, history cleared`);
     });
 
     socket.on('disconnect', (reason) => {
