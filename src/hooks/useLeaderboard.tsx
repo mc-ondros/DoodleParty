@@ -7,7 +7,7 @@ interface LeaderboardEntry {
 }
 
 export const useLeaderboard = () => {
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [entries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

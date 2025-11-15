@@ -44,7 +44,7 @@ class SocketService {
     }
   }
 
-  off(event: string): void {
+  off(_event: string): void {
     // TODO: Implement event listener removal
   }
 }

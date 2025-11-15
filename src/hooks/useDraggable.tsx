@@ -4,7 +4,7 @@ export const useDraggable = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
 
-  const startDrawing = useCallback((e: MouseEvent | TouchEvent) => {
+  const startDrawing = useCallback((_e: MouseEvent | TouchEvent) => {
     isDrawing.current = true;
   }, []);
 
@@ -12,7 +12,7 @@ export const useDraggable = () => {
     isDrawing.current = false;
   }, []);
 
-  const draw = useCallback((e: MouseEvent | TouchEvent) => {
+  const draw = useCallback((_e: MouseEvent | TouchEvent) => {
     if (!isDrawing.current) return;
     // Drawing logic
   }, []);

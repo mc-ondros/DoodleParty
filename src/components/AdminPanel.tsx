@@ -44,7 +44,7 @@ function useDemoTimer(initialSeconds = 300) {
 }
 
 export default function AdminPanel() {
-  const { minutes, rem, state, setState, reset } = useDemoTimer(DEFAULT_GAME_DURATION)
+  const { minutes, rem, setState, reset } = useDemoTimer(DEFAULT_GAME_DURATION)
   const [duration, setDuration] = useState(DEFAULT_GAME_DURATION)
 
   // configuration + moderation + prompts (demo state)
@@ -69,8 +69,7 @@ export default function AdminPanel() {
   useEffect(() => {
     setDuration(config.roundTimer)
     reset(config.roundTimer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.roundTimer])
+  }, [config.roundTimer, reset])
 
   const [customTimer, setCustomTimer] = useState(DEFAULT_CUSTOM_TIMER)
   const [timerPreset, setTimerPreset] = useState<string>(DEFAULT_TIMER_PRESET)
