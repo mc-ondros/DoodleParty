@@ -1,0 +1,12 @@
+{
+  "Timer": 300,
+  "TimerPreset": "300",
+  "Game Mode": "Classic",
+  "Max Players": 8,
+  "Ink Limit": "Medium",
+  "Teams": "disabled",
+  "Visibility": "Public",
+  "Custom Prompt": "",
+  "Content Mode": "SFW",
+  "Session": "Open"
+}

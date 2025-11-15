@@ -1,16 +1,16 @@
 input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="search"], input[type="url"], input[type="date"], input[type="time"], textarea, select {
-  background: rgba(255, 255, 255, 0.10);
-  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: var(--color-secondary);
+  border: 3px solid var(--color-secondary);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 15px;
   font-family: inherit;
-  color: var(--text-on-panel);
+  color: #FFFFFF;
   transition: all var(--transition-md);
   width: 100%;
 }
 input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="number"]:focus, input[type="search"]:focus, input[type="url"]:focus, input[type="date"]:focus, input[type="time"]:focus, textarea:focus, select:focus {
-  outline: none; border-color: #ffffff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); background: rgba(255,255,255,0.18);
+  outline: none; border-color: #E83C91; box-shadow: 0 0 0 3px rgba(232,60,145,0.3); background: #43334C;
 }
 input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.85); }
 textarea { resize: vertical; min-height: 120px; }

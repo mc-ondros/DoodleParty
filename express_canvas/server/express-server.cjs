@@ -1,4 +1,6 @@
 const path = require('path');
+const fs = require('fs');
+const fsp = require('fs/promises');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -15,15 +17,173 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const DEMO_MODE = process.env.DEMO_MODE === '1';
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+// Existing canvas/static assets
 const staticDir = path.join(__dirname, '..', 'public');
 const indexPath = path.join(staticDir, 'index.html');
 const senderPath = path.join(staticDir, 'drawing_sender.html');
 const doodlepartyPath = path.join(staticDir, 'doodleparty.html');
 
+// Admin React build (served from root dist)
+const adminDistDir = path.join(__dirname, '..', '..', 'dist');
+const adminIndexPath = path.join(adminDistDir, 'index.html');
+
+// Admin config file (repo root)
+const adminConfigPath = path.join(__dirname, '..', '..', 'AdminConfig.json');
+
+// Helpers: read/write AdminConfig.json atomically
+async function readAdminConfig() {
+    try {
+        const raw = await fsp.readFile(adminConfigPath, 'utf-8');
+        return JSON.parse(raw);
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            // Seed with defaults if missing
+            const defaults = {
+                Timer: 300,
+                TimerPreset: '300',
+                'Game Mode': 'Speed',
+                'Max Players': 8,
+                'Ink Limit': 'Medium',
+                Teams: 'disabled',
+                Visibility: 'Public',
+                Password: '',
+                'Custom Prompt': '',
+                'Content Mode': 'SFW',
+                Session: 'Open'
+            };
+            await writeAdminConfig(defaults);
+            return defaults;
+        }
+        throw err;
+    }
+}
+
+async function writeAdminConfig(data) {
+    const dir = path.dirname(adminConfigPath);
+    const tmpPath = path.join(dir, `.AdminConfig.json.tmp-${Date.now()}`);
+    const json = JSON.stringify(data, null, 2) + '\n';
+    await fsp.writeFile(tmpPath, json, { encoding: 'utf-8' });
+    await fsp.rename(tmpPath, adminConfigPath);
+}
+
+// --- Simple session id (ephemeral on boot) ---
+function makeSessionId() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let out = 'DP-';
+    for (let i = 0; i < 4; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+    return out;
+}
+const SESSION_ID = makeSessionId();
+
+// --- Players tracking ---
+const players = new Map(); // id -> { id, address }
+
+function emitPlayersUpdate() {
+    io.emit('players:update', { count: players.size });
+}
+
+// --- Timer (server-authoritative) ---
+const timer = {
+    state: 'paused', // 'running' | 'paused' | 'expired'
+    duration: 300,   // seconds
+    remaining: 300,
+    _interval: null,
+};
+
+function emitTimerUpdate() {
+    io.emit('timer:update', { state: timer.state, remaining: timer.remaining, duration: timer.duration });
+}
+
+function startTimer() {
+    if (timer._interval) clearInterval(timer._interval);
+    timer.state = 'running';
+    timer._interval = setInterval(() => {
+        timer.remaining = Math.max(0, timer.remaining - 1);
+        emitTimerUpdate();
+        if (timer.remaining <= 0) {
+            clearInterval(timer._interval);
+            timer._interval = null;
+            timer.state = 'expired';
+            emitTimerUpdate();
+        }
+    }, 1000);
+    emitTimerUpdate();
+}
+
+function pauseTimer() {
+    if (timer._interval) {
+        clearInterval(timer._interval);
+        timer._interval = null;
+    }
+    timer.state = 'paused';
+    emitTimerUpdate();
+}
+
+function resetTimer(seconds) {
+    const s = Number.isFinite(Number(seconds)) && Number(seconds) > 0 ? Number(seconds) : timer.duration;
+    timer.duration = s;
+    timer.remaining = s;
+    timer.state = 'paused';
+    if (timer._interval) {
+        clearInterval(timer._interval);
+        timer._interval = null;
+    }
+    emitTimerUpdate();
+}
+
+function stopTimer() {
+    if (timer._interval) {
+        clearInterval(timer._interval);
+        timer._interval = null;
+    }
+    timer.state = 'expired';
+    timer.remaining = 0;
+    emitTimerUpdate();
+}
+
+function getTimerSnapshot() {
+    return { state: timer.state, remaining: timer.remaining, duration: timer.duration };
+}
+
+// Serve canvas/static assets
+app.use(express.json({ limit: '256kb' }));
+
 app.use(express.static(staticDir, {
-    maxAge: '1d',
-    immutable: true
+        maxAge: '1d',
+        immutable: true
 }));
+
+// Serve admin build assets under /admin (JS, CSS, etc.)
+if (require('fs').existsSync(adminDistDir)) {
+    // Optional Basic Auth for /admin and admin APIs
+    const authEnabled = ADMIN_PASSWORD && ADMIN_PASSWORD.length > 0;
+    const basicAuth = (req, res, next) => {
+        if (!authEnabled) return next();
+        const header = req.headers['authorization'] || '';
+        if (!header.startsWith('Basic ')) {
+            res.set('WWW-Authenticate', 'Basic realm="DoodleParty Admin"');
+            return res.status(401).send('Authentication required');
+        }
+        const b64 = header.slice(6);
+        let userpass = '';
+        try { userpass = Buffer.from(b64, 'base64').toString('utf8'); } catch (_) {}
+        const idx = userpass.indexOf(':');
+        const user = idx >= 0 ? userpass.slice(0, idx) : '';
+        const pass = idx >= 0 ? userpass.slice(idx + 1) : '';
+        if (user === ADMIN_USER && pass === ADMIN_PASSWORD) return next();
+        res.set('WWW-Authenticate', 'Basic realm="DoodleParty Admin"');
+        return res.status(401).send('Invalid credentials');
+    };
+
+    app.use('/admin', basicAuth, express.static(adminDistDir, {
+        maxAge: '1h'
+    }));
+    // Protect admin APIs too
+    const adminApiProtected = ['/api/admin-config', '/api/timer', '/api/players/kick'];
+    app.use(adminApiProtected, basicAuth);
+}
 
 app.get('/', (req, res) => res.sendFile(indexPath));
 
@@ -37,6 +197,149 @@ app.get('/quickdraw-sender', (req, res) => {
 
 app.get('/doodleparty', (req, res) => {
     res.sendFile(doodlepartyPath);
+});
+
+// Admin config API
+app.get('/api/admin-config', async (req, res) => {
+    try {
+        const cfg = await readAdminConfig();
+        res.json(cfg);
+    } catch (err) {
+        console.error('Failed to read AdminConfig.json:', err.code || err.message);
+        res.status(500).json({ error: 'Failed to read AdminConfig.json', code: err.code || 'READ_ERROR' });
+    }
+});
+
+app.post('/api/admin-config', async (req, res) => {
+    try {
+        const incoming = req.body || {};
+        // Read current config, merge shallowly with incoming known keys only
+        const current = await readAdminConfig();
+        const allowedKeys = [
+            'Timer',
+            'TimerPreset',
+            'Game Mode',
+            'Max Players',
+            'Ink Limit',
+            'Teams',
+            'Visibility',
+            'Password',
+            'Custom Prompt',
+            'Content Mode',
+            'Session'
+        ];
+        const next = { ...current };
+        for (const k of allowedKeys) {
+            if (Object.prototype.hasOwnProperty.call(incoming, k)) {
+                next[k] = incoming[k];
+            }
+        }
+
+    await writeAdminConfig(next);
+    io.emit('admin-config:update', next);
+    io.emit('config:update', next); // alias event for UIs
+        res.json({ ok: true });
+    } catch (err) {
+        const code = err && err.code ? err.code : 'WRITE_ERROR';
+        console.error('Failed to write AdminConfig.json:', code, err.message);
+        if (code === 'EACCES' || code === 'EPERM') {
+            return res.status(403).json({ error: 'Permission denied writing AdminConfig.json. See README AdminConfig section.', code });
+        }
+        res.status(500).json({ error: 'Failed to write AdminConfig.json', code });
+    }
+});
+
+// Players count API
+app.get('/api/players/count', (req, res) => {
+    try {
+        const count = io.sockets.sockets.size;
+        res.json({ count });
+    } catch (err) {
+        console.error('Failed to get players count:', err.message);
+        res.status(500).json({ error: 'Failed to get players count' });
+    }
+});
+
+// Players list (optional for future UI)
+app.get('/api/players', (req, res) => {
+    const list = Array.from(players.values());
+    res.json({ count: players.size, list });
+});
+
+// Kick a player by socket id
+app.post('/api/players/kick', (req, res) => {
+    try {
+        const { id } = req.body || {};
+        if (!id) return res.status(400).json({ error: 'Missing player id' });
+        const sock = io.sockets.sockets.get(id);
+        if (!sock) return res.status(404).json({ error: 'Player not found' });
+        sock.emit('kicked', { reason: 'removed_by_admin' });
+        sock.disconnect(true);
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error('Kick failed:', err.message);
+        res.status(500).json({ error: 'Kick failed' });
+    }
+});
+
+// Timer control (server-authoritative)
+app.post('/api/timer', (req, res) => {
+    try {
+        const { action, seconds } = req.body || {};
+        switch (action) {
+            case 'start':
+                if (timer.state !== 'running' && timer.remaining <= 0) {
+                    // If expired, reset to duration before starting
+                    resetTimer(timer.duration);
+                }
+                startTimer();
+                return res.json({ ok: true });
+            case 'pause':
+                pauseTimer();
+                return res.json({ ok: true });
+            case 'reset':
+                resetTimer(seconds);
+                return res.json({ ok: true });
+            case 'stop':
+                stopTimer();
+                return res.json({ ok: true });
+            default:
+                return res.status(400).json({ error: 'Invalid action' });
+        }
+    } catch (err) {
+        console.error('Timer action failed:', err.message);
+        res.status(500).json({ error: 'Timer action failed' });
+    }
+});
+
+// Combined state for bootstrapping clients
+app.get('/api/state', async (req, res) => {
+    try {
+        const cfg = await readAdminConfig();
+        res.json({
+            sessionId: SESSION_ID,
+            config: cfg,
+            timer: getTimerSnapshot(),
+            players: { count: players.size }
+        });
+    } catch (err) {
+        console.error('Failed to get state:', err.message);
+        res.status(500).json({ error: 'Failed to get state' });
+    }
+});
+
+// Timer snapshot
+app.get('/api/timer', (req, res) => {
+    res.json(getTimerSnapshot());
+});
+
+// Admin SPA fallback routes
+app.get(['/admin', '/admin/*'], (req, res) => {
+    if (require('fs').existsSync(adminIndexPath)) {
+        res.sendFile(adminIndexPath);
+    } else {
+        res.status(503).send('Admin UI not built yet. Run: npm run build');
+    }
 });
 
 const drawingSample = [
@@ -75,6 +378,22 @@ const heartbeatStroke = [
 
 io.on('connection', (socket) => {
     console.log(`socket.io - client connected (${socket.id})`);
+    const address = (socket.handshake && socket.handshake.address) || 'unknown';
+    players.set(socket.id, { id: socket.id, address });
+    emitPlayersUpdate();
+    // Send initial state snapshot to the newly connected client
+    readAdminConfig()
+        .then((cfg) => {
+            socket.emit('state:init', {
+                sessionId: SESSION_ID,
+                config: cfg,
+                timer: getTimerSnapshot(),
+                players: { count: players.size },
+            });
+        })
+        .catch((err) => {
+            console.error('state:init readAdminConfig failed:', err.message);
+        });
     let heartbeatId = null;
 
     if (DEMO_MODE) {
@@ -98,6 +417,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', (reason) => {
+        players.delete(socket.id);
+        emitPlayersUpdate();
         if (heartbeatId) {
             clearInterval(heartbeatId);
         }
@@ -107,11 +428,12 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, HOST, () => {
     const hostDisplay = HOST === '0.0.0.0' ? '0.0.0.0 (all interfaces)' : HOST;
-    console.log(`Express QuickDraw server listening on http://${hostDisplay}:${PORT}`);
+    console.log(`Express server listening on http://${hostDisplay}:${PORT}`);
     console.log('');
     console.log('Access from WSL/localhost:');
     console.log(`  http://localhost:${PORT}`);
     console.log(`  http://localhost:${PORT}/doodleparty`);
+    console.log(`  http://localhost:${PORT}/admin`);
     console.log('');
     
     // Get local network IP addresses
@@ -137,6 +459,7 @@ server.listen(PORT, HOST, () => {
         wslAddresses.forEach(addr => {
             console.log(`  http://${addr}:${PORT}`);
             console.log(`  http://${addr}:${PORT}/doodleparty`);
+            console.log(`  http://${addr}:${PORT}/admin`);
         });
         console.log('');
     }
@@ -146,6 +469,7 @@ server.listen(PORT, HOST, () => {
         addresses.forEach(addr => {
             console.log(`  http://${addr}:${PORT}`);
             console.log(`  http://${addr}:${PORT}/doodleparty`);
+            console.log(`  http://${addr}:${PORT}/admin`);
         });
         console.log('');
         console.log('Note: If running in WSL2, you may need to:');

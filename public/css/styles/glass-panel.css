@@ -1,21 +1,17 @@
 .glass-panel {
-  background: var(--panel-bg);
-  border: 2px solid var(--panel-border);
-  box-shadow: var(--panel-shadow);
+  background: transparent; /* no fill */
+  border: 3px solid #43334C; /* wider border in secondary color */
+  box-shadow: none; /* remove shadow per border-only style */
   border-radius: var(--radius-lg);
-  transition: transform var(--transition-md), box-shadow var(--transition-md), filter var(--transition-md);
+  transition: transform var(--transition-md), border-color var(--transition-md);
   color: var(--text-on-panel);
 }
 
-.glass-panel:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.02);
-}
-
+.glass-panel:hover { transform: translateY(-2px); }
 .glass-panel:active { transform: translateY(0); }
 
-.glass-panel-sm { border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
-.glass-panel-lg { border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); }
+.glass-panel-sm { border-radius: var(--radius-md); }
+.glass-panel-lg { border-radius: var(--radius-xl); }
 
 .glass-panel.p-4 { padding: var(--space-md); }
 .glass-panel.p-6 { padding: var(--space-lg); }
