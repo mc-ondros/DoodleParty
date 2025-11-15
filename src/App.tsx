@@ -7,7 +7,7 @@ export default function App() {
       {/* Repeating Banner */}
       <div className="bg-[#FF1744] text-white py-2 overflow-hidden">
         <div className="flex animate-marquee">
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex">
             <span className="text-sm font-black tracking-wider mx-8">REAL-TIME COLLABORATIVE DRAWING</span>
             <span className="text-sm font-black tracking-wider mx-8">★</span>
             <span className="text-sm font-black tracking-wider mx-8">100+ CONCURRENT USERS</span>
@@ -15,7 +15,23 @@ export default function App() {
             <span className="text-sm font-black tracking-wider mx-8">AI-POWERED MODERATION</span>
             <span className="text-sm font-black tracking-wider mx-8">★</span>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex">
+            <span className="text-sm font-black tracking-wider mx-8">REAL-TIME COLLABORATIVE DRAWING</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+            <span className="text-sm font-black tracking-wider mx-8">100+ CONCURRENT USERS</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+            <span className="text-sm font-black tracking-wider mx-8">AI-POWERED MODERATION</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+          </div>
+          <div className="flex-shrink-0 flex">
+            <span className="text-sm font-black tracking-wider mx-8">REAL-TIME COLLABORATIVE DRAWING</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+            <span className="text-sm font-black tracking-wider mx-8">100+ CONCURRENT USERS</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+            <span className="text-sm font-black tracking-wider mx-8">AI-POWERED MODERATION</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+          </div>
+          <div className="flex-shrink-0 flex">
             <span className="text-sm font-black tracking-wider mx-8">REAL-TIME COLLABORATIVE DRAWING</span>
             <span className="text-sm font-black tracking-wider mx-8">★</span>
             <span className="text-sm font-black tracking-wider mx-8">100+ CONCURRENT USERS</span>
