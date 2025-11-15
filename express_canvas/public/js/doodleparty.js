@@ -692,7 +692,6 @@ if (sessionRestored) {
 } else {
     updateInkMeter();
 }
-
 startTimer();
 updateSocketStatus('connecting');
 
@@ -711,3 +710,5 @@ if (!DEBUG_MODE) {
         controlButtons.style.display = 'none';
     }
 }
+
+// No admin hooks; local UI remains independent of admin settings
