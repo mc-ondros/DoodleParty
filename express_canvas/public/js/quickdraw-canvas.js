@@ -17,8 +17,8 @@
     const strokeQueue = [];
     let rafPending = false;
 
-    const PAINT_STYLE = '#f5f7ff';
-    const BACKGROUND = '#05050a';
+    const PAINT_STYLE = '#0e1726';
+    const BACKGROUND = '#ffffff';
 
     let socket = null;
 

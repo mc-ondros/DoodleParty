@@ -1,0 +1,336 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', Roboto, Arial, sans-serif;
+    background: #f7f8fb;
+    color: #0f172a;
+    -webkit-text-size-adjust: 100%;
+}
+
+:root {
+    --selected-color: #3b82f6;
+    --selected-color-rgb: 59, 130, 246;
+    --status-connected: #22c55e;
+    --status-disconnected: #ef4444;
+    --status-connecting: #f59e0b;
+}
+
+.canvas-shell {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+#drawingCanvas {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    background: #fff;
+    touch-action: none;
+    object-fit: contain;
+    cursor: crosshair;
+}
+
+.toolbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    height: auto;
+    flex-shrink: 0;
+    z-index: 10;
+    pointer-events: none;
+    flex-wrap: wrap;
+}
+
+.toolbar > * {
+    pointer-events: auto;
+}
+
+.color-row {
+    display: flex;
+    gap: 8px;
+    background: #fff;
+    padding: 8px 12px;
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    flex-wrap: wrap;
+}
+
+.color-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    background: var(--dot-color, #94a3b8);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.color-dot:hover {
+    transform: scale(1.1);
+}
+
+.color-dot.active {
+    border-color: #0f172a;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+}
+
+.icon-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.icon-control span {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.icon-control input[type="range"] {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+#brushSize {
+    accent-color: var(--selected-color);
+    width: 100px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    outline: none;
+}
+
+#brushSize::-webkit-slider-runnable-track {
+    background: #e2e8f0;
+    height: 6px;
+    border-radius: 999px;
+}
+
+#brushSize::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--selected-color);
+    cursor: pointer;
+    margin-top: -5px;
+}
+
+#brushSize::-moz-range-track {
+    background: #e2e8f0;
+    height: 6px;
+    border-radius: 999px;
+}
+
+#brushSize::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--selected-color);
+    cursor: pointer;
+    border: none;
+}
+
+.socket-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--status-connecting);
+    transition: background 0.3s ease;
+}
+
+.status-dot.connected {
+    background: var(--status-connected);
+    box-shadow: 0 0 8px var(--status-connected);
+}
+
+.status-dot.disconnected {
+    background: var(--status-disconnected);
+}
+
+.ink-meter {
+    width: 120px;
+    height: 24px;
+    border-radius: 12px;
+    background: #e2e8f0;
+    padding: 3px;
+    box-shadow: inset 0 0 6px rgba(15, 23, 42, 0.15);
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: stretch;
+    overflow: hidden;
+    position: relative;
+}
+
+.ink-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: 9px;
+    background: var(--selected-color, #60a5fa);
+    transition: width 0.3s ease-out;
+}
+
+.timer {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 8px;
+    background: #fff;
+    padding: 6px;
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.pill-btn {
+    border: none;
+    border-radius: 16px;
+    padding: 8px 12px;
+    background: rgba(15, 23, 42, 0.05);
+    font-size: 0.875rem;
+    color: #0f172a;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.pill-btn:hover {
+    background: rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
+}
+
+.pill-btn:active {
+    transform: translateY(0);
+}
+
+.pill-btn span {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .toolbar {
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .pill-btn {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+
+    .color-row {
+        gap: 6px;
+        padding: 6px 10px;
+    }
+
+    .color-dot {
+        width: 18px;
+        height: 18px;
+    }
+
+    .icon-control {
+        padding: 6px 10px;
+    }
+
+    #brushSize {
+        width: 80px;
+    }
+
+    .ink-meter {
+        width: 80px;
+        height: 20px;
+    }
+
+    .timer {
+        width: 40px;
+        height: 40px;
+        font-size: 0.75rem;
+    }
+
+    .socket-status-badge {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+
+    .control-buttons {
+        gap: 6px;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+    .toolbar {
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .color-row {
+        order: 2;
+        width: 100%;
+        justify-content: center;
+    }
+
+    #brushSize {
+        width: 60px;
+    }
+
+    .pill-btn span {
+        display: none;
+    }
+}
