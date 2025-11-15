@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuickDraw Sender</title>
+    <link rel="stylesheet" href="css/drawing-sender.css">
+</head>
+<body>
+    <h1>QuickDraw Sender</h1>
+    <canvas id="drawingCanvas" width="512" height="512"></canvas>
+    <div class="controls">
+        <button id="clearBtn" type="button">Clear</button>
+        <button id="sendStrokeBtn" type="button">Send Last Stroke</button>
+        <button id="sendBatchBtn" type="button">Send Batch</button>
+    </div>
+    <div class="status">
+        Socket status: <span id="socketStatus">connecting…</span>
+    </div>
+    <div class="legend">
+        Draw on the canvas to capture strokes. Each stroke is sent as a QuickDraw vector (`[x[],y[],t[]]`).
+        Use "Send Batch" to replay everything you drew after a clear.
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/drawing-sender.js"></script>
+</body>
+</html>

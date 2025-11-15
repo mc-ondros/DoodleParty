@@ -93,6 +93,28 @@ python scripts/evaluate.py --model models/quickdraw_model.h5
 python scripts/data_processing/download_quickdraw_npy.py
 ```
 
+### Lightweight QuickDraw Socket Canvas
+
+For deployments where drawing events stream over `socket.io`, visit `http://localhost:5000/quickdraw-socket`. The viewer expects QuickDraw stroke vectors (`[[x...], [y...], [t...]]`) and listens on the `quickdraw.stroke`, `quickdraw.batch`, and `quickdraw.drawing` events. Use the `socketUrl` query parameter (for example `?socketUrl=http://your-host:3000`) if the socket server is hosted separately.
+
+### Express-hosted Canvas Demo
+
+If you prefer a vanilla Node + Express stack, run `npm install` (once) and then either `npm run serve:canvas` or `./start_express_canvas.sh` (make sure the script is executable). Both commands start a lightweight server on http://localhost:3000 that serves the same `quickdraw-canvas` page, serves the static assets from `src/web/static`, and emits sample QuickDraw strokes via `socket.io`. The canvas will automatically connect to the local socket server, but you can override it via `http://localhost:3000/?socketUrl=http://your-supplier:3000`.
+
+To expose the canvas to other devices on your LAN, bind the server to `0.0.0.0` and set the port if needed (for example on a Raspberry Pi):
+
+```bash
+HOST=0.0.0.0 PORT=3000 npm run serve:canvas
+```
+
+Then open `http://<raspberry-pi-ip>:3000` from any machine on the same network. Make sure the port is allowed through any local firewalls.
+
+### Drawing Sender Test Page
+
+Use `http://<pi-ip>:3000/quickdraw-sender` to draw a sketch in the browser and emit the QuickDraw vectors (`[x[], y[], t[]]`) via `quickdraw.stroke`, `quickdraw.batch`, or `quickdraw.drawing`. This Express server relays those events to all connected clients (including the canvas) so the receiver renders them in real-time, and `quickdraw.clear` resets the canvas.
+
+By default the canvas starts empty. Set `DEMO_MODE=1` before starting (e.g., `DEMO_MODE=1 ./start_express_canvas.sh`) to replay the built-in sample strokes and heartbeat line for demos.
+
 See [API Reference](.documentation/api.md) for detailed usage.
 
 ## Contributing
