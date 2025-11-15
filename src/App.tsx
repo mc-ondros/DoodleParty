@@ -5,18 +5,24 @@ export default function App() {
   return (
     <div className="relative min-h-screen bg-[#F5F1E8] text-gray-900">
       {/* Repeating Banner */}
-      <div className="bg-[#FF1744] text-white py-2 overflow-hidden whitespace-nowrap">
-        <div className="inline-block animate-marquee">
-          <span className="text-sm font-black tracking-wider mx-8">REAL-TIME COLLABORATIVE DRAWING</span>
-          <span className="text-sm font-black tracking-wider mx-8">★</span>
-          <span className="text-sm font-black tracking-wider mx-8">100+ CONCURRENT USERS</span>
-          <span className="text-sm font-black tracking-wider mx-8">★</span>
-          <span className="text-sm font-black tracking-wider mx-8">AI-POWERED MODERATION</span>
-          <span className="text-sm font-black tracking-wider mx-8">★</span>
-          <span className="text-sm font-black tracking-wider mx-8">REAL-TIME COLLABORATIVE DRAWING</span>
-          <span className="text-sm font-black tracking-wider mx-8">★</span>
-          <span className="text-sm font-black tracking-wider mx-8">100+ CONCURRENT USERS</span>
-          <span className="text-sm font-black tracking-wider mx-8">★</span>
+      <div className="bg-[#FF1744] text-white py-2 overflow-hidden">
+        <div className="flex animate-marquee">
+          <div className="flex-shrink-0">
+            <span className="text-sm font-black tracking-wider mx-8">REAL-TIME COLLABORATIVE DRAWING</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+            <span className="text-sm font-black tracking-wider mx-8">100+ CONCURRENT USERS</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+            <span className="text-sm font-black tracking-wider mx-8">AI-POWERED MODERATION</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+          </div>
+          <div className="flex-shrink-0">
+            <span className="text-sm font-black tracking-wider mx-8">REAL-TIME COLLABORATIVE DRAWING</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+            <span className="text-sm font-black tracking-wider mx-8">100+ CONCURRENT USERS</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+            <span className="text-sm font-black tracking-wider mx-8">AI-POWERED MODERATION</span>
+            <span className="text-sm font-black tracking-wider mx-8">★</span>
+          </div>
         </div>
       </div>
 
@@ -37,7 +43,7 @@ export default function App() {
             TURN YOUR EVENTS INTO<br/>EPIC ART EXPERIENCES
           </p>
           
-          <button className="bg-black text-white font-black text-xl px-16 py-6 hover:bg-gray-900 transition-colors border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <button className="bg-[#FF1744] text-white font-black text-xl px-16 py-6 hover:bg-[#E01333] transition-colors border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
             START DRAWING NOW
           </button>
         </div>
