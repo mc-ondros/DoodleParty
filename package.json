@@ -1,0 +1,30 @@
+{
+  "name": "ml",
+  "version": "1.0.0",
+  "description": "**Binary classification for drawing content moderation**",
+  "main": "express-server.js",
+  "directories": {
+    "test": "tests",
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve:canvas": "node express-server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mc-ondros/DoodleHunter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mc-ondros/DoodleHunter/issues"
+  },
+  "homepage": "https://github.com/mc-ondros/DoodleHunter#readme",
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "socketio": "^1.0.0"
+  }
+}

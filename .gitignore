@@ -90,3 +90,6 @@ notebooks/**/*.ipynb
 result
 result-*
 .direnv/
+
+#node
+node_modules/

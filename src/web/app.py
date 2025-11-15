@@ -682,6 +682,19 @@ def index() -> str:
     return render_template('index.html')
 
 
+@app.route('/quickdraw-socket')
+def quickdraw_socket() -> str:
+    """
+    Serve the lightweight QuickDraw viewer that listens for socket.io strokes.
+
+    This endpoint is intended for deployments where the drawing data arrives over
+    socket.io in the QuickDraw vector format so the UI can remain minimal on
+    constrained hardware such as Raspberry Pi 4.
+    """
+    logger.debug("quickdraw_socket() - Serving QuickDraw socket canvas")
+    return render_template('quickdraw_socket.html')
+
+
 @app.route('/api/predict/region', methods=['POST'])
 def api_predict_region() -> Tuple[Union[Dict[str, Any], Any], int]:
     """
