@@ -19,6 +19,8 @@
 
     const PAINT_STYLE = '#0e1726';
     const BACKGROUND = '#ffffff';
+    const DEFAULT_WIDTH = 3;
+    const SOURCE_CANVAS_WIDTH = 1024;
 
     let socket = null;
 
@@ -34,11 +36,11 @@
         console.debug(message);
     }
 
-    function drawStrokeFromArray(stroke) {
-        if (!Array.isArray(stroke) || stroke.length < 2) return;
-        const xs = stroke[0];
-        const ys = stroke[1];
-        if (!xs || !ys) return;
+    function drawNormalizedStroke(stroke) {
+        if (!stroke) return;
+        const xs = stroke.xs;
+        const ys = stroke.ys;
+        if (!Array.isArray(xs) || !Array.isArray(ys)) return;
         const count = Math.min(xs.length, ys.length);
         if (count < 2) return;
 
@@ -50,17 +52,59 @@
         ctx.stroke();
     }
 
+    function normalizeStroke(stroke) {
+        if (!stroke) return null;
+
+        // Legacy array format [xs, ys, ts]
+        if (Array.isArray(stroke)) {
+            const xs = Array.isArray(stroke[0]) ? stroke[0] : null;
+            const ys = Array.isArray(stroke[1]) ? stroke[1] : null;
+            if (!xs || !ys) return null;
+            return {
+                xs,
+                ys,
+                color: PAINT_STYLE,
+                width: DEFAULT_WIDTH
+            };
+        }
+
+        if (typeof stroke !== 'object') return null;
+
+        let xs = null;
+        let ys = null;
+
+        if (Array.isArray(stroke.points)) {
+            xs = Array.isArray(stroke.points[0]) ? stroke.points[0] : null;
+            ys = Array.isArray(stroke.points[1]) ? stroke.points[1] : null;
+        } else if (stroke.points && typeof stroke.points === 'object') {
+            xs = Array.isArray(stroke.points.xs) ? stroke.points.xs : null;
+            ys = Array.isArray(stroke.points.ys) ? stroke.points.ys : null;
+        }
+
+        if (!xs || !ys) return null;
+
+        return {
+            xs,
+            ys,
+            color: stroke.color || PAINT_STYLE,
+            width: typeof stroke.width === 'number' ? stroke.width : DEFAULT_WIDTH
+        };
+    }
+
     function flushQueue() {
         rafPending = false;
         if (strokeQueue.length === 0) return;
         ctx.save();
-        ctx.strokeStyle = PAINT_STYLE;
-        ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+        const widthScale = canvas.width / SOURCE_CANVAS_WIDTH;
         while (strokeQueue.length) {
             const stroke = strokeQueue.shift();
-            drawStrokeFromArray(stroke);
+            if (!stroke) continue;
+            ctx.strokeStyle = stroke.color || PAINT_STYLE;
+            const strokeWidth = Math.max(1, (stroke.width || DEFAULT_WIDTH) * widthScale);
+            ctx.lineWidth = strokeWidth;
+            drawNormalizedStroke(stroke);
         }
         ctx.restore();
     }
@@ -72,13 +116,17 @@
         }
     }
 
-    function queueStroke(stroke) {
-        strokeQueue.push(stroke);
+    function queueStroke(rawStroke) {
+        const normalized = normalizeStroke(rawStroke);
+        if (!normalized) return;
+        strokeQueue.push(normalized);
         scheduleFlush();
     }
 
     function handleStrokeEvent(payload) {
-        const stroke = Array.isArray(payload) ? payload : payload && payload.stroke;
+        const stroke = Array.isArray(payload)
+            ? payload
+            : (payload && (payload.stroke || payload));
         if (!stroke) return;
         queueStroke(stroke);
     }

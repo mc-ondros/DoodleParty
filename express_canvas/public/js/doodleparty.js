@@ -75,10 +75,20 @@ function restoreSessionState() {
             return false;
         }
         
+        // If prior session ended (timer depleted or locked), start fresh
+        const restoredTime = sessionState.remainingTime ?? ROUND_DURATION_SECONDS;
+        const restoredLocked = sessionState.isLocked || false;
+
+        if (restoredTime <= 0 || restoredLocked) {
+            console.log('Previous session ended, starting fresh');
+            clearSessionState();
+            return false;
+        }
+
         // Restore state (strokes will be restored from server)
         inkAmount = sessionState.inkAmount ?? INITIAL_INK;
-        remainingTime = sessionState.remainingTime ?? ROUND_DURATION_SECONDS;
-        isLocked = sessionState.isLocked || false;
+        remainingTime = restoredTime;
+        isLocked = restoredLocked;
         zoomLevel = sessionState.zoomLevel ?? INITIAL_ZOOM;
         offsetX = sessionState.offsetX ?? 0;
         offsetY = sessionState.offsetY ?? 0;
