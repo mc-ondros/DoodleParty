@@ -16,11 +16,11 @@ export default function App() {
           </h1>
           
           <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-4 max-w-3xl mx-auto">
-            Can a neural network learn your doodles?
+            Draw together. Create together. Celebrate together.
           </p>
           
           <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Transform events into collaborative art experiences! Draw together in real-time with AI-powered moderation keeping everyone safe and creative.
+            Turn your events into collaborative art experiences! Real-time drawing for concerts, festivals, and gatherings with built-in AI moderation.
           </p>
           
           <button className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold text-lg px-12 py-5 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
@@ -93,7 +93,7 @@ export default function App() {
               From hobby projects to massive events, we've got you covered
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto justify-center">
             {[
               { 
                 plan: 'Hobby', 
@@ -205,12 +205,12 @@ export default function App() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 md:px-10 bg-gray-900 text-white">
+      <footer className="py-12 px-6 md:px-10 bg-gradient-to-r from-purple-50 via-pink-50 to-yellow-50 border-t-4 border-yellow-400">
         <div className="max-w-7xl mx-auto text-center">
-          <p className="mb-3 font-bold text-xl">
+          <p className="mb-3 font-black text-2xl text-gray-900">
             DoodleParty - Where creativity meets community! 🎨
           </p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-600 font-medium">
             Open source under GNU GPL • Built with Node.js, React & TensorFlow Lite
           </p>
         </div>
