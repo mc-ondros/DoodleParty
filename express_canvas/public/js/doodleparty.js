@@ -102,6 +102,278 @@ function clearSessionState() {
     console.log('Session state cleared');
 }
 
+// Content Detection System
+const CONTENT_CHECK_INTERVAL = 3; // Check every 3 strokes
+const ML_INPUT_SIZE = 128; // Size expected by ML model (adjust as needed)
+let strokesSinceLastCheck = 0;
+
+// Canny Edge Detection
+function cannyEdgeDetection(imageData) {
+    const width = imageData.width;
+    const height = imageData.height;
+    const data = imageData.data;
+    
+    // Convert to grayscale
+    const gray = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < data.length; i += 4) {
+        gray[i / 4] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    }
+    
+    // Gaussian blur (simple 3x3)
+    const blurred = new Uint8ClampedArray(width * height);
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            const idx = y * width + x;
+            blurred[idx] = Math.round(
+                (gray[idx - width - 1] + 2 * gray[idx - width] + gray[idx - width + 1] +
+                 2 * gray[idx - 1] + 4 * gray[idx] + 2 * gray[idx + 1] +
+                 gray[idx + width - 1] + 2 * gray[idx + width] + gray[idx + width + 1]) / 16
+            );
+        }
+    }
+    
+    // Sobel operator for gradients
+    const gradX = new Float32Array(width * height);
+    const gradY = new Float32Array(width * height);
+    const magnitude = new Uint8ClampedArray(width * height);
+    
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            const idx = y * width + x;
+            
+            gradX[idx] = (
+                -blurred[idx - width - 1] + blurred[idx - width + 1] +
+                -2 * blurred[idx - 1] + 2 * blurred[idx + 1] +
+                -blurred[idx + width - 1] + blurred[idx + width + 1]
+            );
+            
+            gradY[idx] = (
+                -blurred[idx - width - 1] - 2 * blurred[idx - width] - blurred[idx - width + 1] +
+                blurred[idx + width - 1] + 2 * blurred[idx + width] + blurred[idx + width + 1]
+            );
+            
+            magnitude[idx] = Math.min(255, Math.sqrt(gradX[idx] ** 2 + gradY[idx] ** 2));
+        }
+    }
+    
+    // Threshold
+    const threshold = 50;
+    const edges = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < magnitude.length; i++) {
+        edges[i] = magnitude[i] > threshold ? 255 : 0;
+    }
+    
+    return edges;
+}
+
+// Find connected components (objects) in edge image
+function findConnectedComponents(edges, width, height) {
+    const visited = new Uint8ClampedArray(width * height);
+    const components = [];
+    
+    function floodFill(startX, startY) {
+        const pixels = [];
+        const stack = [[startX, startY]];
+        
+        while (stack.length > 0) {
+            const [x, y] = stack.pop();
+            const idx = y * width + x;
+            
+            if (x < 0 || x >= width || y < 0 || y >= height) continue;
+            if (visited[idx] || edges[idx] === 0) continue;
+            
+            visited[idx] = 1;
+            pixels.push([x, y]);
+            
+            // 8-connectivity
+            stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+            stack.push([x + 1, y + 1], [x - 1, y - 1], [x + 1, y - 1], [x - 1, y + 1]);
+        }
+        
+        return pixels;
+    }
+    
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            if (edges[idx] > 0 && !visited[idx]) {
+                const component = floodFill(x, y);
+                if (component.length > 50) { // Minimum size filter
+                    components.push(component);
+                }
+            }
+        }
+    }
+    
+    return components;
+}
+
+// Get bounding box for a component
+function getBoundingBox(component) {
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    
+    for (const [x, y] of component) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+    }
+    
+    return { minX, maxX, minY, maxY };
+}
+
+// Extract and prepare object for ML
+function extractObjectForML(bbox) {
+    const { minX, maxX, minY, maxY } = bbox;
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+    
+    // Create temporary canvas for extraction
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // Extract the region from main canvas
+    tempCtx.drawImage(canvas, minX, minY, width, height, 0, 0, width, height);
+    
+    // Resize to ML input size with padding to maintain aspect ratio
+    const resizeCanvas = document.createElement('canvas');
+    resizeCanvas.width = ML_INPUT_SIZE;
+    resizeCanvas.height = ML_INPUT_SIZE;
+    const resizeCtx = resizeCanvas.getContext('2d');
+    
+    // Fill with white background
+    resizeCtx.fillStyle = '#ffffff';
+    resizeCtx.fillRect(0, 0, ML_INPUT_SIZE, ML_INPUT_SIZE);
+    
+    // Calculate scaling to fit
+    const scale = Math.min(ML_INPUT_SIZE / width, ML_INPUT_SIZE / height);
+    const scaledWidth = width * scale;
+    const scaledHeight = height * scale;
+    const offsetX = (ML_INPUT_SIZE - scaledWidth) / 2;
+    const offsetY = (ML_INPUT_SIZE - scaledHeight) / 2;
+    
+    resizeCtx.drawImage(tempCanvas, 0, 0, width, height, 
+                        offsetX, offsetY, scaledWidth, scaledHeight);
+    
+    return {
+        canvas: resizeCanvas,
+        imageData: resizeCtx.getImageData(0, 0, ML_INPUT_SIZE, ML_INPUT_SIZE),
+        bbox
+    };
+}
+
+// Delete/white out object from canvas
+function deleteObject(bbox) {
+    const { minX, maxX, minY, maxY } = bbox;
+    
+    ctx.save();
+    
+    // Apply current transformations
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(zoomLevel, zoomLevel);
+    ctx.translate(-canvas.width / 2 + offsetX, -canvas.height / 2 + offsetY);
+    
+    // Fill the bounding box with white
+    ctx.fillStyle = CANVAS_BACKGROUND;
+    ctx.fillRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+    
+    ctx.restore();
+    
+    console.log('Deleted object at:', bbox);
+}
+
+// Main content check function
+async function checkForInappropriateContent() {
+    console.log('Running content check...');
+    
+    // Get current canvas image data
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Run Canny edge detection
+    const edges = cannyEdgeDetection(imageData);
+    
+    // Find connected components (objects)
+    const components = findConnectedComponents(edges, canvas.width, canvas.height);
+    
+    console.log(`Found ${components.length} objects`);
+    
+    // Process each component
+    for (const component of components) {
+        const bbox = getBoundingBox(component);
+        const extracted = extractObjectForML(bbox);
+        
+        // Send to ML model for classification
+        const isInappropriate = await classifyObject(extracted);
+        
+        if (isInappropriate) {
+            console.warn('Inappropriate content detected! Removing object...');
+            deleteObject(bbox);
+            
+            // Notify server
+            socket.emit('content.violation', {
+                sessionId: getOrCreateSessionId(),
+                bbox,
+                timestamp: Date.now()
+            });
+        }
+    }
+}
+
+// ML Classification - Connects to local ML server
+const ML_SERVER_URL = 'http://localhost:5000/classify';
+
+async function classifyObject(extracted) {
+    console.log('Classifying object...', {
+        size: `${ML_INPUT_SIZE}x${ML_INPUT_SIZE}`,
+        bbox: extracted.bbox
+    });
+    
+    try {
+        // Convert canvas to blob
+        const blob = await new Promise((resolve) => {
+            extracted.canvas.toBlob(resolve, 'image/png');
+        });
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('image', blob, 'drawing.png');
+        formData.append('sessionId', getOrCreateSessionId());
+        formData.append('bbox', JSON.stringify(extracted.bbox));
+        
+        // Send to local ML server
+        const response = await fetch(ML_SERVER_URL, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`ML server error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('ML Result:', result);
+        
+        // Notify socket server of the classification result
+        socket.emit('ml.classification', {
+            sessionId: getOrCreateSessionId(),
+            bbox: extracted.bbox,
+            isInappropriate: result.is_inappropriate,
+            confidence: result.confidence,
+            timestamp: Date.now()
+        });
+        
+        return result.is_inappropriate;
+        
+    } catch (error) {
+        console.error('ML classification error:', error);
+        // On error, default to safe (not inappropriate)
+        return false;
+    }
+}
+
 // Drawing state
 let isDrawing = false;
 let currentColor = '#3b82f6';
@@ -335,6 +607,15 @@ function endStroke() {
         
         // Save session state after each completed stroke
         saveSessionState();
+        
+        // Check for inappropriate content every N strokes
+        strokesSinceLastCheck++;
+        if (strokesSinceLastCheck >= CONTENT_CHECK_INTERVAL) {
+            strokesSinceLastCheck = 0;
+            checkForInappropriateContent().catch(err => {
+                console.error('Content check failed:', err);
+            });
+        }
     }
     currentStroke = null;
     

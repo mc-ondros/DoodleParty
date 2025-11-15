@@ -75,23 +75,10 @@ drawingCanvas.onInkChange = (inkAmount) => {
 drawingCanvas.onInkDepleted = () => drawingCanvas.lock();
 
 const ROUND_DURATION_SECONDS = 90;
-startRoundTimer(ROUND_DURATION_SECONDS);
-
-function startRoundTimer(totalSeconds) {
-    let remaining = totalSeconds;
-    drawerView.updateTimer(formatTime(remaining));
-
-    const timerId = setInterval(() => {
-        remaining -= 1;
-        drawerView.updateTimer(formatTime(Math.max(remaining, 0)));
-
-        if (remaining <= 0) {
-            clearInterval(timerId);
-            drawingCanvas.lock();
-            handleRoundEnd();
-        }
-    }, 1000);
-}
+let remainingTime = ROUND_DURATION_SECONDS;
+let roundTimerId = null;
+const debugDisableTimerToggle = document.getElementById('debugDisableTimer');
+let timerDisabled = debugDisableTimerToggle?.checked ?? false;
 
 function handleRoundEnd() {
     // Export drawing in Quick, Draw! format
@@ -105,6 +92,48 @@ function handleRoundEnd() {
     //     sendDrawingToServer(socket, strokes);
     // }
 }
+
+function stopRoundTimer() {
+    if (roundTimerId !== null) {
+        clearInterval(roundTimerId);
+        roundTimerId = null;
+    }
+}
+
+function startRoundTimer(totalSeconds) {
+    stopRoundTimer();
+    remainingTime = totalSeconds;
+
+    if (timerDisabled) {
+        drawerView.updateTimer('∞');
+        return;
+    }
+
+    drawerView.updateTimer(formatTime(remainingTime));
+
+    roundTimerId = setInterval(() => {
+        remainingTime -= 1;
+        drawerView.updateTimer(formatTime(Math.max(remainingTime, 0)));
+
+        if (remainingTime <= 0) {
+            stopRoundTimer();
+            drawingCanvas.lock();
+            handleRoundEnd();
+        }
+    }, 1000);
+}
+
+debugDisableTimerToggle?.addEventListener('change', (event) => {
+    timerDisabled = event.target.checked;
+    if (timerDisabled) {
+        stopRoundTimer();
+        drawerView.updateTimer('∞');
+    } else {
+        startRoundTimer(ROUND_DURATION_SECONDS);
+    }
+});
+
+startRoundTimer(ROUND_DURATION_SECONDS);
 
 function formatTime(totalSeconds) {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
