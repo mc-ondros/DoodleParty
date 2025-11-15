@@ -94,12 +94,13 @@ DoodleParty uses a modular architecture with three primary deployment targets:
 3. **Hybrid** - Local RPi4 with cloud backup and analytics
 
 **Key Design Decisions:**
-- Node.js + Express for real-time WebSocket server
-- React for responsive web/mobile UI
-- TensorFlow Lite for edge ML inference (RPi4)
-- Socket.io for real-time synchronization
-- Custom TFLite binary classifier for content moderation
-- DigitalOcean AI for LLM features (prompts, narration)
+- **Node.js + Express** for HTTP server and API endpoints
+- **Socket.io** for real-time WebSocket communication and canvas synchronization
+- **React + TypeScript** for responsive web/mobile UI with Tailwind CSS
+- **TensorFlow Lite** for edge ML inference (RPi4)
+- **Custom TFLite binary classifier** for content moderation
+- **React Context API** for local state synchronization (client-side)
+- **DigitalOcean AI** for LLM features (prompts, narration)
 
 *For installation steps, see the [Installation Guide](installation.md).*
 
@@ -109,10 +110,11 @@ DoodleParty uses a modular architecture with three primary deployment targets:
 
 | Component | Technology | Responsibility | Location | Deployment |
 |-----------|-----------|---------------------------|----------|-------------|
-| **Web Server** | Node.js + Express | HTTP routing, static assets, request handling | Port 3000 | RPi4 / Cloud |
+| **Express Server** | Node.js + Express | HTTP routing, static assets, API endpoints, session management | Port 3000 | RPi4 / Cloud |
 | **Real-Time Engine** | Socket.io | WebSocket connections, canvas sync, event broadcasting | Port 3000 | RPi4 / Cloud |
 | **ML Inference** | TensorFlow Lite | Content moderation, shape classification, confidence scoring | Port 5001 (RPi4) | RPi4 only |
-| **Frontend** | React + TypeScript | Drawing UI, game modes, real-time canvas rendering | Browser | All |
+| **Frontend** | React + TypeScript + Tailwind | Drawing UI, game modes, real-time canvas rendering, responsive mobile | Browser | All |
+| **State Management** | React Context API | SharedCanvas context for real-time client-side synchronization | Browser | All |
 | **LLM Integration** | DigitalOcean AI | Prompt generation, narration, creative content | API calls | Cloud only |
 
 ### Component Interactions
@@ -120,27 +122,35 @@ DoodleParty uses a modular architecture with three primary deployment targets:
 ```mermaid
 graph TD
     A["User Devices<br/>(Web/Mobile)"]
-    B["Node.js Server<br/>(Express + Socket.io)"]
-    C["Canvas State<br/>Management"]
-    D["Game Mode<br/>Logic"]
-    E["User<br/>Authentication"]
-    F["ML Inference<br/>Service"]
-    G["TensorFlow Lite<br/>Classifier"]
-    H["Moderation<br/>Decision"]
+    B["Express Server<br/>(HTTP + REST API)"]
+    C["Socket.io<br/>(WebSocket Engine)"]
+    D["SharedCanvas Context<br/>(React Context API)"]
+    E["Canvas State<br/>Management"]
+    F["Game Mode<br/>Logic"]
+    G["User<br/>Authentication"]
+    H["ML Inference<br/>Service"]
+    I["TensorFlow Lite<br/>Classifier"]
+    J["Moderation<br/>Decision"]
     
-    A -->|WebSocket: stroke| B
-    B --> C
-    B --> D
-    B --> E
-    B -->|REST API| F
-    F --> G
-    G -->|Confidence Score| H
-    H -->|WebSocket: canvas-update| A
+    A -->|HTTP Request| B
+    A -->|WebSocket: stroke| C
+    A -->|Local State| D
+    C --> E
+    C --> F
+    C --> G
+    B -->|REST API| H
+    H --> I
+    I -->|Confidence Score| J
+    J -->|WebSocket: canvas-update| C
+    C -->|Broadcast| A
+    D -->|Sync Drawing| A
     
     style A fill:#e1f5ff
     style B fill:#fff3e0
-    style F fill:#f3e5f5
-    style G fill:#f3e5f5
+    style C fill:#fff9c4
+    style D fill:#e8f5e9
+    style H fill:#f3e5f5
+    style I fill:#f3e5f5
 ```
 
 ## Deployment Architectures

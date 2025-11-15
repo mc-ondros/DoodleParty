@@ -22,6 +22,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ paths, color, strokeWeigh
   const currentPath = useRef<{ x: number; y: number }[]>([]);
   const scaleRef = useRef(1);
   const offsetRef = useRef({ x: 0, y: 0 });
+  const initializedRef = useRef(false);
 
   const resize = () => {
     const canvas = canvasRef.current;
@@ -34,6 +35,17 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ paths, color, strokeWeigh
     canvas.style.height = container.clientHeight + 'px';
     const ctx = canvas.getContext('2d');
     if (ctx) ctx.scale(dpr, dpr);
+    
+    // Initialize viewport to center on world origin (0, 0) on first load
+    if (!initializedRef.current) {
+      offsetRef.current = {
+        x: container.clientWidth / 2,
+        y: container.clientHeight / 2
+      };
+      scaleRef.current = 1;
+      initializedRef.current = true;
+    }
+    
     redraw();
   };
 

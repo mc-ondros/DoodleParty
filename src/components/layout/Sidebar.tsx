@@ -6,9 +6,10 @@ import { DoodlePartyLogo, CompassIcon, UsersIcon, TrophyIcon, NotificationsIcon 
 interface SidebarProps {
   currentPage: Page;
   setCurrentPage: (page: Page) => void;
+  isMobile?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isMobile = false }) => {
   const navItems: { icon: React.ElementType; label: string; page: Page }[] = [
     { icon: CompassIcon, label: 'Explore', page: 'explore' },
     { icon: UsersIcon, label: 'Community', page: 'community' },
@@ -22,6 +23,27 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     { avatar: 'https://picsum.photos/seed/user3/32/32' },
   ];
 
+  // Mobile horizontal layout
+  if (isMobile) {
+    return (
+      <div className="w-full bg-black flex items-center justify-around py-3 border-t border-zinc-800">
+        {navItems.map((item) => (
+          <button
+            key={item.label}
+            onClick={() => setCurrentPage(item.page)}
+            className={`flex flex-col items-center gap-1 p-2 transition-colors duration-200 ${
+              currentPage === item.page ? 'text-green-500' : 'text-zinc-400'
+            }`}
+          >
+            <item.icon className="h-6 w-6" />
+            <span className="text-xs">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop vertical layout
   return (
     <div className="w-20 bg-black flex flex-col items-center py-4 border-r border-zinc-800">
       <div className="p-2 mb-8">

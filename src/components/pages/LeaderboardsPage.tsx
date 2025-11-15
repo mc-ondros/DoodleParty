@@ -37,20 +37,20 @@ const LeaderboardsPage: React.FC = () => {
     <div className="bg-gradient-to-b from-black via-zinc-950 to-black text-white min-h-full">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="relative px-10 pt-12 pb-8">
+        <div className="relative px-4 md:px-10 pt-8 md:pt-12 pb-6 md:pb-8">
           <div className="max-w-7xl mx-auto text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <TrophyIcon className="w-12 h-12 text-yellow-400" />
-              <h1 className="text-5xl font-black bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 bg-clip-text text-transparent">
+            <div className="flex items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
+              <TrophyIcon className="w-8 h-8 md:w-12 md:h-12 text-yellow-400" />
+              <h1 className="text-3xl md:text-5xl font-black bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 bg-clip-text text-transparent">
                 LEADERBOARDS
               </h1>
-              <TrophyIcon className="w-12 h-12 text-yellow-400" />
+              <TrophyIcon className="w-8 h-8 md:w-12 md:h-12 text-yellow-400" />
             </div>
-            <p className="text-xl text-zinc-300 mb-2">
+            <p className="text-base md:text-xl text-zinc-300 mb-2 px-4">
               Celebrate the most talented creators in our community
             </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 border border-green-500/50 text-green-400 text-sm font-semibold">
-              <SparklesIcon className="w-4 h-4" />
+            <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-green-500/20 border border-green-500/50 text-green-400 text-xs md:text-sm font-semibold">
+              <SparklesIcon className="w-3 h-3 md:w-4 md:h-4" />
               Season 3 · Week 8
             </div>
           </div>
@@ -58,100 +58,100 @@ const LeaderboardsPage: React.FC = () => {
       </div>
 
       {/* Podium - Top 3 */}
-      <section className="px-10 pb-12">
+      <section className="px-4 md:px-10 pb-8 md:pb-12">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-center gap-6 mb-8">
+          <div className="flex flex-col md:flex-row items-center md:items-end justify-center gap-4 md:gap-6 mb-8">
             {/* 2nd Place */}
-            <div className="flex-1 max-w-xs">
-              <div className="bg-gradient-to-b from-zinc-900/80 to-zinc-900/40 border-2 border-gray-500/50 rounded-2xl p-6 text-center transform hover:scale-105 transition-transform">
-                <div className="relative inline-block mb-4">
+            <div className="w-full md:flex-1 md:max-w-xs order-2 md:order-1">
+              <div className="bg-gradient-to-b from-zinc-900/80 to-zinc-900/40 border-2 border-gray-500/50 rounded-2xl p-4 md:p-6 text-center transform hover:scale-105 transition-transform">
+                <div className="relative inline-block mb-3 md:mb-4">
                   <img 
                     src={topThree[1].avatar} 
                     alt={topThree[1].player} 
-                    className="w-20 h-20 rounded-full border-4 border-gray-400 mx-auto"
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-gray-400 mx-auto"
                   />
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center text-black font-bold text-sm">
+                  <div className="absolute -top-2 -right-2 w-7 h-7 md:w-8 md:h-8 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center text-black font-bold text-xs md:text-sm">
                     2
                   </div>
                 </div>
-                <h3 className="text-xl font-bold mb-1">{topThree[1].player}</h3>
-                <div className="flex justify-center gap-1 mb-3">
+                <h3 className="text-lg md:text-xl font-bold mb-1">{topThree[1].player}</h3>
+                <div className="flex justify-center gap-1 mb-2 md:mb-3">
                   {topThree[1].badges.map((badge, i) => (
-                    <span key={i} className="text-xl">{badge}</span>
+                    <span key={i} className="text-lg md:text-xl">{badge}</span>
                   ))}
                 </div>
-                <div className="text-3xl font-black text-gray-300 mb-2">
+                <div className="text-2xl md:text-3xl font-black text-gray-300 mb-2">
                   {topThree[1].score.toLocaleString()}
                 </div>
                 <div className="text-xs text-zinc-400 mb-1">🔥 {topThree[1].streak} day streak</div>
                 <div className="text-xs text-zinc-400">✨ {topThree[1].contributions} contributions</div>
               </div>
-              <div className="h-32 bg-gradient-to-b from-gray-500/30 to-gray-700/30 rounded-b-xl -mt-2 flex items-center justify-center">
-                <span className="text-4xl font-black text-gray-400">2nd</span>
+              <div className="h-24 md:h-32 bg-gradient-to-b from-gray-500/30 to-gray-700/30 rounded-b-xl -mt-2 flex items-center justify-center">
+                <span className="text-3xl md:text-4xl font-black text-gray-400">2nd</span>
               </div>
             </div>
 
             {/* 1st Place - Elevated */}
-            <div className="flex-1 max-w-xs">
-              <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-900/20 border-4 border-yellow-500/70 rounded-2xl p-8 text-center transform hover:scale-105 transition-transform shadow-2xl shadow-yellow-500/20">
-                <div className="relative inline-block mb-4">
+            <div className="w-full md:flex-1 md:max-w-xs order-1 md:order-2">
+              <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-900/20 border-4 border-yellow-500/70 rounded-2xl p-6 md:p-8 text-center transform hover:scale-105 transition-transform shadow-2xl shadow-yellow-500/20">
+                <div className="relative inline-block mb-3 md:mb-4">
                   <div className="absolute inset-0 bg-yellow-400/30 rounded-full blur-xl" />
                   <img 
                     src={topThree[0].avatar} 
                     alt={topThree[0].player} 
-                    className="relative w-24 h-24 rounded-full border-4 border-yellow-400 mx-auto"
+                    className="relative w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-yellow-400 mx-auto"
                   />
-                  <div className="absolute -top-3 -right-3 w-10 h-10 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-full flex items-center justify-center text-black font-black">
+                  <div className="absolute -top-2 md:-top-3 -right-2 md:-right-3 w-9 h-9 md:w-10 md:h-10 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-full flex items-center justify-center text-black font-black text-sm md:text-base">
                     1
                   </div>
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2">
-                    <TrophyIcon className="w-8 h-8 text-yellow-400" />
+                  <div className="absolute -top-5 md:-top-6 left-1/2 -translate-x-1/2">
+                    <TrophyIcon className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
                   </div>
                 </div>
-                <h3 className="text-2xl font-black mb-2 text-yellow-300">{topThree[0].player}</h3>
-                <div className="flex justify-center gap-1 mb-4">
+                <h3 className="text-xl md:text-2xl font-black mb-2 text-yellow-300">{topThree[0].player}</h3>
+                <div className="flex justify-center gap-1 mb-3 md:mb-4">
                   {topThree[0].badges.map((badge, i) => (
-                    <span key={i} className="text-2xl">{badge}</span>
+                    <span key={i} className="text-xl md:text-2xl">{badge}</span>
                   ))}
                 </div>
-                <div className="text-4xl font-black text-yellow-400 mb-3">
+                <div className="text-3xl md:text-4xl font-black text-yellow-400 mb-2 md:mb-3">
                   {topThree[0].score.toLocaleString()}
                 </div>
-                <div className="text-sm text-yellow-200 mb-1">🔥 {topThree[0].streak} day streak</div>
-                <div className="text-sm text-yellow-200">✨ {topThree[0].contributions} contributions</div>
+                <div className="text-xs md:text-sm text-yellow-200 mb-1">🔥 {topThree[0].streak} day streak</div>
+                <div className="text-xs md:text-sm text-yellow-200">✨ {topThree[0].contributions} contributions</div>
               </div>
-              <div className="h-40 bg-gradient-to-b from-yellow-500/40 to-yellow-700/40 rounded-b-xl -mt-2 flex items-center justify-center">
-                <span className="text-5xl font-black text-yellow-400">1st</span>
+              <div className="h-32 md:h-40 bg-gradient-to-b from-yellow-500/40 to-yellow-700/40 rounded-b-xl -mt-2 flex items-center justify-center">
+                <span className="text-4xl md:text-5xl font-black text-yellow-400">1st</span>
               </div>
             </div>
 
             {/* 3rd Place */}
-            <div className="flex-1 max-w-xs">
-              <div className="bg-gradient-to-b from-zinc-900/80 to-zinc-900/40 border-2 border-amber-700/50 rounded-2xl p-6 text-center transform hover:scale-105 transition-transform">
-                <div className="relative inline-block mb-4">
+            <div className="w-full md:flex-1 md:max-w-xs order-3">
+              <div className="bg-gradient-to-b from-zinc-900/80 to-zinc-900/40 border-2 border-amber-700/50 rounded-2xl p-4 md:p-6 text-center transform hover:scale-105 transition-transform">
+                <div className="relative inline-block mb-3 md:mb-4">
                   <img 
                     src={topThree[2].avatar} 
                     alt={topThree[2].player} 
-                    className="w-20 h-20 rounded-full border-4 border-amber-700 mx-auto"
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-amber-700 mx-auto"
                   />
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-600 to-amber-800 rounded-full flex items-center justify-center text-black font-bold text-sm">
+                  <div className="absolute -top-2 -right-2 w-7 h-7 md:w-8 md:h-8 bg-gradient-to-br from-amber-600 to-amber-800 rounded-full flex items-center justify-center text-black font-bold text-xs md:text-sm">
                     3
                   </div>
                 </div>
-                <h3 className="text-xl font-bold mb-1">{topThree[2].player}</h3>
-                <div className="flex justify-center gap-1 mb-3">
+                <h3 className="text-lg md:text-xl font-bold mb-1">{topThree[2].player}</h3>
+                <div className="flex justify-center gap-1 mb-2 md:mb-3">
                   {topThree[2].badges.map((badge, i) => (
-                    <span key={i} className="text-xl">{badge}</span>
+                    <span key={i} className="text-lg md:text-xl">{badge}</span>
                   ))}
                 </div>
-                <div className="text-3xl font-black text-amber-600 mb-2">
+                <div className="text-2xl md:text-3xl font-black text-amber-600 mb-2">
                   {topThree[2].score.toLocaleString()}
                 </div>
                 <div className="text-xs text-zinc-400 mb-1">🔥 {topThree[2].streak} day streak</div>
                 <div className="text-xs text-zinc-400">✨ {topThree[2].contributions} contributions</div>
               </div>
-              <div className="h-24 bg-gradient-to-b from-amber-700/30 to-amber-900/30 rounded-b-xl -mt-2 flex items-center justify-center">
-                <span className="text-4xl font-black text-amber-700">3rd</span>
+              <div className="h-20 md:h-24 bg-gradient-to-b from-amber-700/30 to-amber-900/30 rounded-b-xl -mt-2 flex items-center justify-center">
+                <span className="text-3xl md:text-4xl font-black text-amber-700">3rd</span>
               </div>
             </div>
           </div>
@@ -159,37 +159,37 @@ const LeaderboardsPage: React.FC = () => {
       </section>
 
       {/* Rest of Rankings */}
-      <section className="px-10 pb-12">
+      <section className="px-4 md:px-10 pb-8 md:pb-12">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <StarIcon className="w-6 h-6 text-green-400" />
+          <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center gap-2">
+            <StarIcon className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
             Top Creators
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3">
             {restOfLeaders.map((entry) => (
               <div
                 key={entry.rank}
-                className="group bg-zinc-900/60 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 transition-all duration-300 hover:bg-zinc-900/80"
+                className="group bg-zinc-900/60 border border-zinc-800 hover:border-green-500/50 rounded-xl p-3 md:p-5 transition-all duration-300 hover:bg-zinc-900/80"
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0 w-16 text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-zinc-800 text-zinc-400 font-bold text-lg group-hover:bg-green-500/20 group-hover:text-green-400 transition-colors">
+                <div className="flex items-center gap-2 md:gap-4">
+                  <div className="flex-shrink-0 w-10 md:w-16 text-center">
+                    <div className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-lg bg-zinc-800 text-zinc-400 font-bold text-sm md:text-lg group-hover:bg-green-500/20 group-hover:text-green-400 transition-colors">
                       #{entry.rank}
                     </div>
                   </div>
                   <img 
                     src={entry.avatar} 
                     alt={entry.player} 
-                    className="w-16 h-16 rounded-full border-2 border-zinc-700 group-hover:border-green-500 transition-colors"
+                    className="w-12 h-12 md:w-16 md:h-16 rounded-full border-2 border-zinc-700 group-hover:border-green-500 transition-colors flex-shrink-0"
                   />
-                  <div className="flex-grow">
-                    <h3 className="text-lg font-bold text-white mb-1">{entry.player}</h3>
-                    <div className="flex items-center gap-4 text-sm text-zinc-400">
-                      <span className="flex items-center gap-1">
-                        <FlameIcon className="w-4 h-4 text-orange-400" />
-                        {entry.streak} day streak
+                  <div className="flex-grow min-w-0">
+                    <h3 className="text-base md:text-lg font-bold text-white mb-0.5 md:mb-1 truncate">{entry.player}</h3>
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-zinc-400">
+                      <span className="flex items-center gap-1 flex-shrink-0">
+                        <FlameIcon className="w-3 h-3 md:w-4 md:h-4 text-orange-400" />
+                        {entry.streak}d
                       </span>
-                      <span>✨ {entry.contributions} contributions</span>
+                      <span className="hidden sm:inline">✨ {entry.contributions}</span>
                       {entry.badges.length > 0 && (
                         <span className="flex gap-1">
                           {entry.badges.map((badge, i) => (
@@ -200,10 +200,10 @@ const LeaderboardsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-2xl font-black text-green-400">
+                    <div className="text-lg md:text-2xl font-black text-green-400">
                       {entry.score.toLocaleString()}
                     </div>
-                    <div className="text-xs text-zinc-500 uppercase tracking-wider">Points</div>
+                    <div className="text-[10px] md:text-xs text-zinc-500 uppercase tracking-wider">Pts</div>
                   </div>
                 </div>
               </div>
@@ -213,30 +213,30 @@ const LeaderboardsPage: React.FC = () => {
       </section>
 
       {/* Trending Clubs */}
-      <section className="px-10 pb-16">
+      <section className="px-4 md:px-10 pb-12 md:pb-16">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold mb-8 text-center">🌟 Trending Communities</h2>
-          <div className="grid gap-6 md:grid-cols-3">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-center">🌟 Trending Communities</h2>
+          <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
             {trendingClubs.map((club) => (
               <div 
                 key={club.name} 
-                className={`relative overflow-hidden rounded-2xl border-2 ${club.color} p-6 hover:scale-105 transition-transform`}
+                className={`relative overflow-hidden rounded-2xl border-2 ${club.color} p-4 md:p-6 hover:scale-105 transition-transform`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${club.color} opacity-50`} />
                 <div className="relative">
-                  <div className="text-5xl mb-4 text-center">{club.icon}</div>
-                  <h3 className="text-xl font-bold text-white text-center mb-3">{club.name}</h3>
+                  <div className="text-4xl md:text-5xl mb-3 md:mb-4 text-center">{club.icon}</div>
+                  <h3 className="text-lg md:text-xl font-bold text-white text-center mb-2 md:mb-3">{club.name}</h3>
                   <div className="flex justify-between items-center">
                     <div className="text-center flex-1">
-                      <div className="text-2xl font-black text-white">{club.members}</div>
-                      <div className="text-xs text-zinc-400 uppercase">Members</div>
+                      <div className="text-xl md:text-2xl font-black text-white">{club.members}</div>
+                      <div className="text-[10px] md:text-xs text-zinc-400 uppercase">Members</div>
                     </div>
                     <div className="text-center flex-1">
-                      <div className="text-2xl font-black text-green-400">{club.growth}</div>
-                      <div className="text-xs text-zinc-400 uppercase">Growth</div>
+                      <div className="text-xl md:text-2xl font-black text-green-400">{club.growth}</div>
+                      <div className="text-[10px] md:text-xs text-zinc-400 uppercase">Growth</div>
                     </div>
                   </div>
-                  <button className="mt-4 w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg py-2 font-semibold transition-colors">
+                  <button className="mt-3 md:mt-4 w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg py-2 text-sm md:text-base font-semibold transition-colors">
                     JOIN CLUB
                   </button>
                 </div>

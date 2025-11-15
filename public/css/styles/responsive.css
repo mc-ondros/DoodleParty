@@ -1,0 +1,187 @@
+/* Mobile Responsive Styles */
+
+/* Base mobile-first adjustments */
+@media (max-width: 768px) {
+  /* Typography adjustments for mobile */
+  h1 { font-size: 28px !important; }
+  h2 { font-size: 22px !important; }
+  h3 { font-size: 18px !important; }
+  h4 { font-size: 16px !important; }
+  p { font-size: 14px; }
+  
+  /* Container adjustments */
+  .container {
+    padding: 12px;
+    max-width: 100%;
+  }
+
+  /* Dashboard adjustments */
+  .dashboard-container {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  /* Panel adjustments */
+  .card, .panel {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .panel-title {
+    font-size: 20px;
+  }
+
+  /* Timer display adjustments */
+  .timer-value {
+    font-size: 32px;
+  }
+
+  .timer-label {
+    font-size: 16px;
+  }
+
+  /* Button adjustments */
+  button, .btn {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  /* Form inputs */
+  input, select, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 10px;
+  }
+
+  /* Canvas adjustments */
+  canvas {
+    max-width: 100%;
+    height: auto !important;
+    touch-action: none; /* Improves drawing on touch devices */
+  }
+
+  /* Grid columns - stack on mobile */
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide desktop-only elements */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Show mobile-only elements */
+  .mobile-only {
+    display: block !important;
+  }
+
+  /* Spacing adjustments */
+  .p-6 { padding: var(--space-md); }
+  .p-8 { padding: var(--space-lg); }
+  .m-6 { margin: var(--space-md); }
+  .m-8 { margin: var(--space-lg); }
+  
+  .gap-6 { gap: var(--space-md); }
+  .gap-8 { gap: var(--space-lg); }
+}
+
+/* Small mobile devices (phones in portrait) */
+@media (max-width: 480px) {
+  h1 { font-size: 24px !important; }
+  h2 { font-size: 20px !important; }
+  h3 { font-size: 16px !important; }
+  
+  .container {
+    padding: 8px;
+  }
+
+  .dashboard-container {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .card, .panel {
+    padding: 12px;
+  }
+
+  /* Countdown bar - stack content */
+  .countdown-bar {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  /* Mode chips - smaller on mobile */
+  .mode-chip-group {
+    gap: 8px;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Intermediate sizing for tablets */
+  h1 { font-size: 36px !important; }
+  h2 { font-size: 26px !important; }
+  
+  .container {
+    padding: 16px;
+  }
+
+  /* Two column layout for tablets when appropriate */
+  .tablet-two-col {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger tap targets for touch */
+  button, a, .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Remove hover states on touch devices */
+  .hover\:bg-zinc-700:hover,
+  .hover\:bg-zinc-800:hover,
+  .group:hover {
+    /* Prevent hover effects on touch */
+  }
+
+  /* Better touch scrolling */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  /* Reduce header heights in landscape */
+  header {
+    min-height: 240px !important;
+  }
+
+  .min-h-\[320px\] {
+    min-height: 200px !important;
+  }
+
+  .min-h-\[420px\] {
+    min-height: 280px !important;
+  }
+}
+
+/* Safe area adjustments for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

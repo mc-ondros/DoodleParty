@@ -110,13 +110,13 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ setCurrentPage }) => {
       </header>
       
       {/* Countdown Bar */}
-      <div className="sticky top-0 z-20 bg-green-500 text-black p-4 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-green-500 text-black py-2 px-3 md:p-4 flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4">
         <CountdownTimer />
-        <div className="text-center">
-          <p className="font-bold">The drawing session ends soon</p>
-          <p className="text-sm">Hurry up to not miss your chance to contribute!</p>
+        <div className="text-center hidden sm:block">
+          <p className="font-bold text-sm md:text-base">The drawing session ends soon</p>
+          <p className="text-xs md:text-sm">Hurry up to not miss your chance to contribute!</p>
         </div>
-        <button className="bg-black text-white font-bold py-2 px-6 rounded-md text-sm hover:bg-zinc-800 transition-colors">
+        <button className="bg-black text-white font-bold py-1.5 px-4 md:py-2 md:px-6 rounded-md text-xs md:text-sm hover:bg-zinc-800 transition-colors whitespace-nowrap">
           START DRAWING
         </button>
       </div>

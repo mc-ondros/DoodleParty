@@ -7,11 +7,14 @@ import NavigatePage from './components/pages/NavigatePage';
 import GalleryPage from './components/pages/GalleryPage';
 import NotificationsPage from './components/pages/NotificationsPage';
 import ClassicCanvasPage from './components/pages/ClassicCanvasPage';
+import SettingsPage from './components/pages/SettingsPage';
+import { SharedCanvasProvider } from './context/SharedCanvasContext';
 
-export type Page = 'explore' | 'community' | 'leaderboards' | 'navigate' | 'gallery' | 'notifications' | 'classic-canvas';
+export type Page = 'explore' | 'community' | 'leaderboards' | 'navigate' | 'gallery' | 'notifications' | 'classic-canvas' | 'settings';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('explore');
+  const [settingsCategory, setSettingsCategory] = useState<string>('profile');
 
   const renderPage = () => {
     switch (currentPage) {
@@ -29,17 +32,21 @@ const App: React.FC = () => {
         return <NotificationsPage />;
       case 'classic-canvas':
         return <ClassicCanvasPage setCurrentPage={setCurrentPage} />;
+      case 'settings':
+        return <SettingsPage activeCategory={settingsCategory} setActiveCategory={setSettingsCategory} />;
       default:
         return <ExplorePage setCurrentPage={setCurrentPage} />;
     }
   };
 
   return (
-    <div className="bg-black min-h-screen text-white">
-      <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage}>
-        {renderPage()}
-      </MainLayout>
-    </div>
+    <SharedCanvasProvider>
+      <div className="bg-zinc-900 min-h-screen text-white">
+        <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} settingsCategory={settingsCategory} setSettingsCategory={setSettingsCategory}>
+          {renderPage()}
+        </MainLayout>
+      </div>
+    </SharedCanvasProvider>
   );
 };
 

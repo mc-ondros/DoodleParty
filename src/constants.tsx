@@ -21,6 +21,15 @@ import {
   Target,
   Swords,
   BookText,
+  User,
+  Palette,
+  Shield,
+  CreditCard,
+  Lock,
+  LockOpen,
+  Monitor,
+  Menu,
+  X,
 } from 'lucide-react';
 
 export const DoodlePartyLogo: React.FC<{ className?: string }> = ({ className }) => (
@@ -116,4 +125,40 @@ export const SwordsIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 export const BookTextIcon: React.FC<{ className?: string }> = ({ className }) => (
   <BookText className={className} />
+);
+
+export const UserIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <User className={className} />
+);
+
+export const PaletteIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <Palette className={className} />
+);
+
+export const ShieldIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <Shield className={className} />
+);
+
+export const CreditCardIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <CreditCard className={className} />
+);
+
+export const LockIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <Lock className={className} />
+);
+
+export const LockOpenIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <LockOpen className={className} />
+);
+
+export const MonitorIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <Monitor className={className} />
+);
+
+export const MenuIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <Menu className={className} />
+);
+
+export const XIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <X className={className} />
 );

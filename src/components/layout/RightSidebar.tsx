@@ -48,7 +48,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ currentPage }) => {
     if (!content) return null;
 
   return (
-    <div className="w-80 bg-black flex-shrink-0 p-6 border-l border-zinc-800 flex flex-col">
+    <div className="w-80 bg-black flex-shrink-0 p-6 border-l border-zinc-800 flex flex-col h-full">
        <div className="flex items-center text-sm font-semibold mb-6 h-5">
             { content &&
                 <>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Page } from '../../App';
-import { SearchIcon, CompassIcon, UsersIcon, TrophyIcon, SettingsIcon, LibraryIcon, StoreIcon, PlayIcon, ClockIcon } from '../../constants';
+import { SearchIcon, CompassIcon, UsersIcon, TrophyIcon, SettingsIcon, LibraryIcon, NotificationsIcon, StoreIcon, PlayIcon, ClockIcon, UserIcon, PaletteIcon, ShieldIcon, CreditCardIcon } from '../../constants';
 import ChatPanel from '../chat/ChatPanel';
 
 interface NavItemProps {
@@ -12,8 +12,8 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active = false, onClick }) => (
   <button onClick={onClick} className={`flex items-center w-full px-3 py-2 rounded-md text-left transition-colors duration-200 ${active ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:bg-zinc-700/50 hover:text-white'}`}>
-    <Icon className="w-5 h-5 mr-3" />
-    <span>{label}</span>
+    <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
+    <span className="text-sm md:text-base">{label}</span>
   </button>
 );
 
@@ -22,9 +22,12 @@ interface NavigationProps {
     setCurrentPage: (page: Page) => void;
     navWidth?: number;
     setNavWidth?: (n: number) => void;
+    settingsCategory?: string;
+    setSettingsCategory?: (cat: string) => void;
+    onNavigate?: () => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ currentPage, setCurrentPage, navWidth }) => {
+const Navigation: React.FC<NavigationProps> = ({ currentPage, setCurrentPage, navWidth, settingsCategory, setSettingsCategory, onNavigate }) => {
   const navItems: { icon: React.ElementType; label: string; page: Page }[] = [
     { icon: CompassIcon, label: 'Explore', page: 'explore' },
     { icon: UsersIcon, label: 'Community', page: 'community' },
@@ -82,14 +85,14 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, setCurrentPage, na
             <div>
               <h2 className="text-xs font-semibold text-zinc-500 uppercase px-3 mb-2">Navigate</h2>
               <div className="space-y-2">
-                <NavItem icon={CompassIcon} label="Explore" onClick={() => setCurrentPage('explore')} />
-                <NavItem icon={LibraryIcon} label="Gallery" onClick={() => setCurrentPage('gallery')} />
+                <NavItem icon={CompassIcon} label="Explore" onClick={() => { setCurrentPage('explore'); onNavigate?.(); }} />
+                <NavItem icon={LibraryIcon} label="Gallery" onClick={() => { setCurrentPage('gallery'); onNavigate?.(); }} />
               </div>
               <div className="mt-6">
                 <h2 className="text-xs font-semibold text-zinc-500 uppercase px-3 mb-2">Game Modes</h2>
                 <div className="space-y-2">
-                  <NavItem icon={PlayIcon} label="Classic Canvas" active onClick={() => { /* already here */ }} />
-                  <NavItem icon={ClockIcon} label="Speed Sketch" />
+                  <NavItem icon={PlayIcon} label="Classic Canvas" active onClick={() => { onNavigate?.(); }} />
+                  <NavItem icon={ClockIcon} label="Speed Sketch" onClick={() => { onNavigate?.(); }} />
                 </div>
               </div>
             </div>
@@ -97,6 +100,18 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, setCurrentPage, na
               <ChatPanel />
             </div>
           </div>
+        ) : currentPage === 'settings' ? (
+          <>
+            <h2 className="text-xs font-semibold text-zinc-500 uppercase px-3 mb-2">Settings</h2>
+            <div className="space-y-2">
+              <NavItem icon={UserIcon} label="Profile" active={settingsCategory === 'profile'} onClick={() => setSettingsCategory?.('profile')} />
+              <NavItem icon={NotificationsIcon} label="Notifications" active={settingsCategory === 'notifications'} onClick={() => setSettingsCategory?.('notifications')} />
+              <NavItem icon={PaletteIcon} label="Appearance" active={settingsCategory === 'appearance'} onClick={() => setSettingsCategory?.('appearance')} />
+              <NavItem icon={ShieldIcon} label="Privacy & Security" active={settingsCategory === 'privacy'} onClick={() => setSettingsCategory?.('privacy')} />
+              <NavItem icon={CreditCardIcon} label="Billing" active={settingsCategory === 'billing'} onClick={() => setSettingsCategory?.('billing')} />
+              <NavItem icon={ShieldIcon} label="Admin Dashboard" active={settingsCategory === 'admin'} onClick={() => setSettingsCategory?.('admin')} />
+            </div>
+          </>
         ) : (
           <>
             <h2 className="text-xs font-semibold text-zinc-500 uppercase px-3 mb-2">Navigate</h2>
@@ -139,7 +154,9 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, setCurrentPage, na
             <p className="font-semibold text-white">EnriqueP</p>
             <p className="text-xs text-green-400 bg-green-900/50 px-2 py-0.5 rounded-full inline-block">LEVEL 1</p>
           </div>
-          <SettingsIcon className="w-5 h-5 text-zinc-400" />
+          <button onClick={() => setCurrentPage('settings')} className="hover:text-white transition-colors">
+            <SettingsIcon className="w-5 h-5 text-zinc-400" />
+          </button>
         </div>
       </div>
     </div>

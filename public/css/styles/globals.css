@@ -84,3 +84,46 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 html {
   -ms-overflow-style: none;
 }
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  :root {
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 36px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+  }
+
+  body {
+    font-size: 14px;
+  }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; }
+  h3 { font-size: 20px; }
+  h4 { font-size: 18px; }
+  
+  label { font-size: 14px; }
+  small { font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --space-md: 10px;
+    --space-lg: 14px;
+    --space-xl: 20px;
+    --space-2xl: 32px;
+  }
+
+  body {
+    font-size: 13px;
+  }
+
+  h1 { font-size: 26px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 18px; }
+  h4 { font-size: 16px; }
+}
