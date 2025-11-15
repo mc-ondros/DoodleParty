@@ -1,7 +1,7 @@
 class InkMeter {
     constructor(inkLevelElement) {
         this.inkLevelElement = inkLevelElement;
-        this.currentInkLevel = 100; // Start with full ink
+        this.currentInkLevel = 200; // Start with full ink
         this.updateInkLevelDisplay();
     }
 
@@ -11,7 +11,7 @@ class InkMeter {
     }
 
     refillInk() {
-        this.currentInkLevel = 100; // Refill ink to full
+        this.currentInkLevel = 200; // Refill ink to full
         this.updateInkLevelDisplay();
     }
 

@@ -3,13 +3,20 @@ class DrawingCanvas {
         if (!canvas) throw new Error('Canvas element is required for DrawingCanvas.');
 
         this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
+        this.ctx = canvas.getContext('2d', { alpha: false });
         this.brushColor = initialColor;
         this.brushSize = initialBrushSize;
         this.inkPercent = initialInk;
         this.consumptionRate = consumptionRate;
         this.isDrawing = false;
         this.locked = false;
+        this.activePointerId = null;
+        this.pendingDraw = false;
+        this.cachedRect = null;
+
+        // Stroke tracking for Quick, Draw! format
+        this.currentStroke = [];
+        this.allStrokes = [];
 
         this.onInkChange = null;
         this.onInkDepleted = null;
@@ -29,33 +36,97 @@ class DrawingCanvas {
 
     handlePointerDown(event) {
         if (this.locked || this.inkPercent <= 0) return;
+        // Ignore if another pointer is already active
+        if (this.activePointerId !== null && this.activePointerId !== event.pointerId) {
+            event.preventDefault();
+            return;
+        }
+        this.activePointerId = event.pointerId;
         this.isDrawing = true;
+        
+        // Cache rect for performance
+        this.cachedRect = this.canvas.getBoundingClientRect();
         this.lastPoint = this.getCanvasCoords(event);
+        
+        // Start new stroke
+        this.currentStroke = [{
+            x: this.lastPoint.x,
+            y: this.lastPoint.y,
+            timestamp: Date.now()
+        }];
+        
         this.drawDot(this.lastPoint);
         this.canvas.setPointerCapture?.(event.pointerId);
     }
 
     handlePointerMove(event) {
+        // Ignore events from non-active pointers
+        if (event.pointerId !== this.activePointerId) return;
         if (!this.isDrawing || this.locked || this.inkPercent <= 0) return;
-        const currentPoint = this.getCanvasCoords(event);
-        this.drawStroke(this.lastPoint, currentPoint);
-        const distance = this.distanceBetween(this.lastPoint, currentPoint);
-        this.consumeInk(distance * this.consumptionRate);
-        this.lastPoint = currentPoint;
+        
+        event.preventDefault();
+        
+        // Get all events including predicted for lower latency
+        const coalescedEvents = event.getCoalescedEvents ? event.getCoalescedEvents() : [event];
+        const predictedEvents = event.getPredictedEvents ? event.getPredictedEvents() : [];
+        
+        // Process coalesced events for actual drawing
+        for (const evt of coalescedEvents) {
+            const currentPoint = this.getCanvasCoords(evt);
+            
+            // Add point to current stroke
+            this.currentStroke.push({
+                x: currentPoint.x,
+                y: currentPoint.y,
+                timestamp: Date.now()
+            });
+            
+            this.drawStroke(this.lastPoint, currentPoint);
+            const distance = this.distanceBetween(this.lastPoint, currentPoint);
+            this.consumeInk(distance * this.consumptionRate);
+            this.lastPoint = currentPoint;
+        }
+        
+        // Draw predicted path for lower perceived latency
+        if (predictedEvents.length > 0) {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            let prevPoint = this.lastPoint;
+            for (const evt of predictedEvents) {
+                const predictedPoint = this.getCanvasCoords(evt);
+                this.drawStroke(prevPoint, predictedPoint);
+                prevPoint = predictedPoint;
+            }
+            ctx.restore();
+        }
     }
 
     handlePointerUp(event) {
+        // Only handle up event for active pointer
+        if (event.pointerId !== this.activePointerId) return;
         if (this.isDrawing) {
             this.isDrawing = false;
+            this.activePointerId = null;
+            this.cachedRect = null;
+            
+            // Save completed stroke
+            if (this.currentStroke.length > 0) {
+                this.allStrokes.push({ points: this.currentStroke });
+                this.currentStroke = [];
+            }
+            
             this.canvas.releasePointerCapture?.(event.pointerId);
         }
     }
 
     getCanvasCoords(event) {
-        const rect = this.canvas.getBoundingClientRect();
+        const rect = this.cachedRect || this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         return {
-            x: event.clientX - rect.left,
-            y: event.clientY - rect.top
+            x: (event.clientX - rect.left) * scaleX,
+            y: (event.clientY - rect.top) * scaleY
         };
     }
 
@@ -109,6 +180,15 @@ class DrawingCanvas {
 
     lock() {
         this.locked = true;
+    }
+
+    getStrokes() {
+        return this.allStrokes;
+    }
+
+    clearStrokes() {
+        this.allStrokes = [];
+        this.currentStroke = [];
     }
 }
 
