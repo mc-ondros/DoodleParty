@@ -1,5 +1,5 @@
 import React from 'react'
-import { Palette, Users, Zap, Shield, Gamepad2, Clock, Check, Wifi, WifiOff, PlayCircle } from 'lucide-react'
+import { Palette, Users, Zap, Shield, Gamepad2, Clock, WifiOff } from 'lucide-react'
 
 export default function App() {
   const heroVideoUrl = 'https://www.pexels.com/download/video/27936889/'
