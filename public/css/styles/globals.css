@@ -70,7 +70,17 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 ::selection { background-color: var(--accent-primary); color: var(--text-inverse); }
 ::-moz-selection { background-color: var(--accent-primary); color: var(--text-inverse); }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--bg-tertiary); }
-::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+::-webkit-scrollbar { width: 0; height: 0; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; }
+::-webkit-scrollbar-thumb:hover { background: transparent; }
+
+/* Hide scrollbars for Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* Hide scrollbars for IE and Edge */
+html {
+  -ms-overflow-style: none;
+}
