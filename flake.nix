@@ -149,7 +149,7 @@
             echo ""
             
             # Set up Python path
-            export PYTHONPATH="${./}:$PYTHONPATH"
+            export PYTHONPATH="${./.}:$PYTHONPATH"
             
             # Install npm dependencies if needed
             if [ ! -d "node_modules" ]; then
