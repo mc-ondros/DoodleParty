@@ -18,6 +18,7 @@ const DEMO_MODE = process.env.DEMO_MODE === '1';
 const staticDir = path.join(__dirname, '..', 'public');
 const indexPath = path.join(staticDir, 'index.html');
 const senderPath = path.join(staticDir, 'drawing_sender.html');
+const doodlepartyPath = path.join(staticDir, 'doodleparty.html');
 
 app.use(express.static(staticDir, {
     maxAge: '1d',
@@ -32,6 +33,10 @@ app.get('/health', (req, res) => {
 
 app.get('/quickdraw-sender', (req, res) => {
     res.sendFile(senderPath);
+});
+
+app.get('/doodleparty', (req, res) => {
+    res.sendFile(doodlepartyPath);
 });
 
 const drawingSample = [
@@ -103,4 +108,50 @@ io.on('connection', (socket) => {
 server.listen(PORT, HOST, () => {
     const hostDisplay = HOST === '0.0.0.0' ? '0.0.0.0 (all interfaces)' : HOST;
     console.log(`Express QuickDraw server listening on http://${hostDisplay}:${PORT}`);
+    console.log('');
+    console.log('Access from WSL/localhost:');
+    console.log(`  http://localhost:${PORT}`);
+    console.log(`  http://localhost:${PORT}/doodleparty`);
+    console.log('');
+    
+    // Get local network IP addresses
+    const os = require('os');
+    const networkInterfaces = os.networkInterfaces();
+    const addresses = [];
+    const wslAddresses = [];
+    
+    Object.keys(networkInterfaces).forEach(interfaceName => {
+        networkInterfaces[interfaceName].forEach(iface => {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                addresses.push(iface.address);
+                // WSL2 typically uses eth0 interface
+                if (interfaceName.toLowerCase().includes('eth')) {
+                    wslAddresses.push(iface.address);
+                }
+            }
+        });
+    });
+    
+    if (wslAddresses.length > 0) {
+        console.log('Access from Windows host (WSL bridge):');
+        wslAddresses.forEach(addr => {
+            console.log(`  http://${addr}:${PORT}`);
+            console.log(`  http://${addr}:${PORT}/doodleparty`);
+        });
+        console.log('');
+    }
+    
+    if (addresses.length > 0) {
+        console.log('Access from mobile/other devices on same network:');
+        addresses.forEach(addr => {
+            console.log(`  http://${addr}:${PORT}`);
+            console.log(`  http://${addr}:${PORT}/doodleparty`);
+        });
+        console.log('');
+        console.log('Note: If running in WSL2, you may need to:');
+        console.log('1. Allow port through Windows Firewall');
+        console.log('2. Use Windows IP address (run "ipconfig" in Windows cmd)');
+        console.log('3. Or set up port forwarding: netsh interface portproxy add v4tov4 listenport=3000 listenaddress=0.0.0.0 connectport=3000 connectaddress=<WSL_IP>');
+        console.log('');
+    }
 });
