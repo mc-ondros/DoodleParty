@@ -12,10 +12,13 @@
     "noEmit": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "checkJs": false,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["*.ts", "vite.config.ts", "vitest.config.ts", "express_canvas/**/*.js"],
+  "exclude": ["node_modules", "dist"]
 }

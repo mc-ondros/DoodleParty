@@ -64,7 +64,7 @@ const drawerView = new DrawerView({
 });
 
 drawerView.updateBrushSize(drawingCanvas.brushSize);
-drawerView.updateInkLevel(100);
+drawerView.updateInkLevel(200);
 
 drawingCanvas.onInkChange = (inkAmount) => {
     // Convert 0-200 range to 0-100 percentage for display

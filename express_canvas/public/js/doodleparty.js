@@ -14,13 +14,15 @@ const timerDisplay = document.getElementById('timer');
 // Constants
 const CANVAS_BACKGROUND = '#ffffff';
 const ROUND_DURATION_SECONDS = 90;
-const INITIAL_INK = 200;
-const INK_CONSUMPTION_RATE = 0.04;
-const QT_SCALE = 255; // QuickDraw coordinate scale
+const INITIAL_INK = 100;
+const INK_CONSUMPTION_RATE = 1;
+const WORLD_WIDTH = 1920;
+const WORLD_HEIGHT = 1080;
+const QT_SCALE = Math.max(WORLD_WIDTH, WORLD_HEIGHT) - 1; // QuickDraw coordinate scale
 const DEBUG_MODE = false; // Set to true to show manual send buttons
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
-const INITIAL_ZOOM = 2; // Start zoomed in
+const INITIAL_ZOOM = 4; // Start closer to the canvas for detail work
 const SESSION_STORAGE_KEY = 'doodleparty_session';
 
 // Session Management
@@ -75,10 +77,20 @@ function restoreSessionState() {
             return false;
         }
         
+        // If prior session ended (timer depleted or locked), start fresh
+        const restoredTime = sessionState.remainingTime ?? ROUND_DURATION_SECONDS;
+        const restoredLocked = sessionState.isLocked || false;
+
+        if (restoredTime <= 0 || restoredLocked) {
+            console.log('Previous session ended, starting fresh');
+            clearSessionState();
+            return false;
+        }
+
         // Restore state (strokes will be restored from server)
         inkAmount = sessionState.inkAmount ?? INITIAL_INK;
-        remainingTime = sessionState.remainingTime ?? ROUND_DURATION_SECONDS;
-        isLocked = sessionState.isLocked || false;
+        remainingTime = restoredTime;
+        isLocked = restoredLocked;
         zoomLevel = sessionState.zoomLevel ?? INITIAL_ZOOM;
         offsetX = sessionState.offsetX ?? 0;
         offsetY = sessionState.offsetY ?? 0;
@@ -88,6 +100,8 @@ function restoreSessionState() {
             remainingTime,
             isLocked
         });
+
+        redrawCanvas();
         
         return true;
     } catch (e) {
@@ -125,6 +139,11 @@ const socket = io({ transports: ['websocket'] });
 socket.on('connect', () => {
     updateSocketStatus('connected');
     console.log('Socket connected');
+    // Request sync immediately on connection to ensure we get existing strokes
+    setTimeout(() => {
+        socket.emit('quickdraw.requestSync');
+        console.log('Requested stroke sync from server');
+    }, 100);
 });
 
 socket.on('disconnect', () => {
@@ -135,6 +154,96 @@ socket.on('disconnect', () => {
 socket.on('connect_error', () => {
     updateSocketStatus('connecting');
     console.log('Socket connection error');
+});
+
+socket.on('quickdraw.sync', (syncedStrokes) => {
+    console.log('Received sync with', syncedStrokes.length, 'strokes');
+    if (!Array.isArray(syncedStrokes)) {
+        console.log('Invalid sync data - not an array');
+        return;
+    }
+    
+    // Only clear if we're actually receiving strokes
+    if (syncedStrokes.length > 0) {
+        strokes = [];
+        
+        // Import synced strokes into local canvas
+        let imported = 0;
+        syncedStrokes.forEach(strokeData => {
+            const stroke = importStrokeFromQuickDraw(strokeData);
+            if (stroke && stroke.points.length > 1) {
+                strokes.push(stroke);
+                imported++;
+            } else {
+                console.log('Failed to import stroke:', strokeData);
+            }
+        });
+        
+        console.log('Successfully imported', imported, 'of', syncedStrokes.length, 'strokes');
+        
+        // Force a complete redraw
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        redrawCanvas();
+    } else {
+        console.log('No strokes to sync');
+    }
+});
+
+socket.on('quickdraw.stroke', (strokeData) => {
+    console.log('Received real-time stroke from another client:', strokeData);
+    
+    // Visual feedback - flash canvas border
+    canvas.style.border = '10px solid lime';
+    setTimeout(() => { canvas.style.border = 'none'; }, 500);
+    
+    const stroke = importStrokeFromQuickDraw(strokeData);
+    console.log('Imported stroke:', stroke);
+    if (stroke && stroke.points.length > 1) {
+        strokes.push(stroke);
+        console.log('Added stroke, total strokes:', strokes.length);
+        console.log('Calling redrawCanvas...');
+        redrawCanvas();
+        console.log('Canvas redrawn');
+    } else {
+        console.warn('Failed to import stroke or not enough points:', stroke);
+    }
+});
+
+socket.on('quickdraw.clear', () => {
+    console.log('Received clear event from server');
+    // Clear all drawing state completely
+    strokes = [];
+    currentStroke = null;
+    isDrawing = false;
+    
+    // Reset canvas state
+    inkAmount = INITIAL_INK;
+    updateInkMeter();
+    isLocked = false;
+    canvas.style.cursor = 'crosshair';
+    remainingTime = ROUND_DURATION_SECONDS;
+    
+    // Restart the timer
+    startTimer();
+    
+    // Clear session storage
+    clearSessionState();
+    
+    // Force complete canvas clear - multiple methods for mobile compatibility
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to identity
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = CANVAS_BACKGROUND;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    
+    // Redraw with clean state
+    redrawCanvas();
+    
+    console.log('Canvas fully reset from clear event');
 });
 
 function updateSocketStatus(status) {
@@ -152,35 +261,97 @@ function resizeCanvas() {
     
     // Only set internal resolution on first load
     if (!canvas.hasAttribute('data-initialized')) {
-        canvas.width = 1024;
-        canvas.height = 640;
+        canvas.width = WORLD_WIDTH;
+        canvas.height = WORLD_HEIGHT;
         canvas.setAttribute('data-initialized', 'true');
-        resetCanvas();
+        // Don't reset here - let initialization handle viewport
     }
+
+    redrawCanvas();
 }
 
-function resetCanvas() {
+function resetCanvas(options = {}) {
+    const { randomizeViewport = true } = options;
     ctx.fillStyle = CANVAS_BACKGROUND;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     strokes = [];
     currentStroke = null;
     
-    // Set random starting position when canvas is reset
-    setRandomPosition();
+    if (randomizeViewport) {
+        initializeRandomViewport();
+    }
+
     redrawCanvas();
 }
 
-function setRandomPosition() {
-    // Random position within canvas bounds considering zoom
-    const maxOffsetX = (canvas.width * zoomLevel - canvas.width) / 2;
-    const maxOffsetY = (canvas.height * zoomLevel - canvas.height) / 2;
+function initializeRandomViewport() {
+    zoomLevel = INITIAL_ZOOM;
+
+    const spawn = getSpawnPointAwayFromCenter();
+    centerViewportOn(spawn.x, spawn.y);
+    canvas.style.cursor = 'crosshair';
+}
+
+function getSpawnPointAwayFromCenter() {
+    const margin = WORLD_WIDTH * 0.08;
+    const radiusMin = (WORLD_WIDTH / 2) * 0.55;
+    const radiusMax = (WORLD_WIDTH / 2) - margin;
+    const angle = Math.random() * Math.PI * 2;
+    const bias = Math.pow(Math.random(), 0.4); // Bias radius toward the outer ring
+    const radius = radiusMin + (radiusMax - radiusMin) * bias;
+
+    const spawnX = WORLD_WIDTH / 2 + Math.cos(angle) * radius;
+    const spawnY = WORLD_HEIGHT / 2 + Math.sin(angle) * radius;
+
+    return {
+        x: Math.max(margin, Math.min(WORLD_WIDTH - margin, spawnX)),
+        y: Math.max(margin, Math.min(WORLD_HEIGHT - margin, spawnY))
+    };
+}
+
+function centerViewportOn(x, y) {
+    const clampedX = Math.max(0, Math.min(WORLD_WIDTH, x));
+    const clampedY = Math.max(0, Math.min(WORLD_HEIGHT, y));
+
+    offsetX = canvas.width / 2 - clampedX;
+    offsetY = canvas.height / 2 - clampedY;
+    clampViewportToWorld();
+}
+
+function getMinZoom() {
+    // Calculate minimum zoom so viewport can never be larger than world bounds
+    // This prevents seeing outside the 1920x1080 area
+    const minZoomX = canvas.width / WORLD_WIDTH;
+    const minZoomY = canvas.height / WORLD_HEIGHT;
+    return Math.max(minZoomX, minZoomY, MIN_ZOOM);
+}
+
+function clampViewportToWorld() {
+    // Enforce minimum zoom to prevent seeing outside world
+    const calculatedMinZoom = getMinZoom();
+    if (zoomLevel < calculatedMinZoom) {
+        zoomLevel = calculatedMinZoom;
+    }
     
-    offsetX = -maxOffsetX + Math.random() * maxOffsetX * 2;
-    offsetY = -maxOffsetY + Math.random() * maxOffsetY * 2;
-    
-    // Clamp to valid range
-    offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
-    offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
+    // Calculate visible area in world coordinates
+    const viewWidth = canvas.width / zoomLevel;
+    const viewHeight = canvas.height / zoomLevel;
+
+    // Get current center position
+    let centerX = canvas.width / 2 - offsetX;
+    let centerY = canvas.height / 2 - offsetY;
+
+    // Clamp center so viewport edges never go outside world bounds
+    const halfViewWidth = viewWidth / 2;
+    const halfViewHeight = viewHeight / 2;
+
+    // Don't allow panning beyond world edges
+    centerX = Math.max(halfViewWidth, Math.min(WORLD_WIDTH - halfViewWidth, centerX));
+    centerY = Math.max(halfViewHeight, Math.min(WORLD_HEIGHT - halfViewHeight, centerY));
+
+    // Convert back to offset
+    offsetX = canvas.width / 2 - centerX;
+    offsetY = canvas.height / 2 - centerY;
 }
 
 function redrawCanvas() {
@@ -200,7 +371,8 @@ function redrawCanvas() {
         if (stroke.points.length < 2) return;
         
         ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = brushSize / zoomLevel; // Adjust brush size for zoom
+        const strokeWidth = stroke.width ?? brushSize;
+        ctx.lineWidth = strokeWidth / zoomLevel; // Adjust brush size for zoom
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -248,7 +420,8 @@ function startStroke(x, y) {
     currentStroke = {
         points: [],
         startTime,
-        color: currentColor
+        color: currentColor,
+        width: brushSize
     };
     
     addPoint(transformedPos.x, transformedPos.y, 0);
@@ -262,7 +435,11 @@ function screenToCanvas(screenX, screenY) {
     const x = (screenX - centerX) / zoomLevel - offsetX + centerX;
     const y = (screenY - centerY) / zoomLevel - offsetY + centerY;
     
-    return { x, y };
+    // Clamp to world bounds so everything stays visible on quickdraw-canvas
+    const clampedX = Math.max(0, Math.min(WORLD_WIDTH, x));
+    const clampedY = Math.max(0, Math.min(WORLD_HEIGHT, y));
+    
+    return { x: clampedX, y: clampedY };
 }
 
 function addPoint(x, y, t) {
@@ -295,7 +472,8 @@ function drawStroke(x, y) {
         ctx.translate(-canvas.width / 2 + offsetX, -canvas.height / 2 + offsetY);
         
         ctx.strokeStyle = currentColor;
-        ctx.lineWidth = brushSize / zoomLevel;
+        const activeWidth = currentStroke.width ?? brushSize;
+        ctx.lineWidth = activeWidth / zoomLevel;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -310,12 +488,18 @@ function drawStroke(x, y) {
         ctx.restore();
     }
     
-    // Consume ink
-    inkAmount = Math.max(0, inkAmount - INK_CONSUMPTION_RATE);
+    // Consume ink - scale by zoom level and brush size
+    // Cubic scaling: at zoom 0.5 (zoomed out) = 8x consumption, at zoom 4 (zoomed in) = 0.016x consumption
+    // Brush size scaling: larger brushes consume more ink proportionally
+    const zoomMultiplier = Math.pow(1 / zoomLevel, 3);
+    const brushMultiplier = brushSize / 8; // Normalized to default brush size of 8
+    const consumption = INK_CONSUMPTION_RATE * zoomMultiplier * brushMultiplier;
+    inkAmount = Math.max(0, inkAmount - consumption);
     updateInkMeter();
     
     if (inkAmount <= 0) {
         lockCanvas();
+        endStroke(); // Force end stroke when ink depletes
     }
 
 }
@@ -425,10 +609,11 @@ canvas.addEventListener('touchmove', (e) => {
         );
         
         const scale = currentDistance / initialPinchDistance;
-        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, initialZoom * scale));
+        const newZoom = Math.max(getMinZoom(), Math.min(MAX_ZOOM, initialZoom * scale));
         
         if (newZoom !== zoomLevel) {
             zoomLevel = newZoom;
+            clampViewportToWorld();
             redrawCanvas();
         }
     } else if (e.touches.length === 1 && !isTwoFingerGesture) {
@@ -459,10 +644,11 @@ canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel * delta));
+    const newZoom = Math.max(getMinZoom(), Math.min(MAX_ZOOM, zoomLevel * delta));
     
     if (newZoom !== zoomLevel) {
         zoomLevel = newZoom;
+        clampViewportToWorld();
         redrawCanvas();
     }
 }, { passive: false });
@@ -489,6 +675,8 @@ canvas.addEventListener('mousemove', (e) => {
         
         offsetX += dx / zoomLevel;
         offsetY += dy / zoomLevel;
+
+        clampViewportToWorld();
         
         lastPanX = e.clientX;
         lastPanY = e.clientY;
@@ -522,6 +710,11 @@ canvas.addEventListener('touchstart', (e) => {
         
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
+        
+        // Initialize midpoint for panning
+        lastPanX = (touch1.clientX + touch2.clientX) / 2;
+        lastPanY = (touch1.clientY + touch2.clientY) / 2;
+        
         initialPinchDistance = Math.hypot(
             touch2.clientX - touch1.clientX,
             touch2.clientY - touch1.clientY
@@ -543,18 +736,65 @@ canvas.addEventListener('touchmove', (e) => {
         
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
+        
+        // Calculate midpoint (pinch center)
+        const midX = (touch1.clientX + touch2.clientX) / 2;
+        const midY = (touch1.clientY + touch2.clientY) / 2;
+        
+        // Calculate zoom
         const currentDistance = Math.hypot(
             touch2.clientX - touch1.clientX,
             touch2.clientY - touch1.clientY
         );
         
         const scale = currentDistance / initialPinchDistance;
-        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, initialZoom * scale));
+        const newZoom = Math.max(getMinZoom(), Math.min(MAX_ZOOM, initialZoom * scale));
         
+        // Zoom towards pinch center
         if (newZoom !== zoomLevel) {
+            // Get canvas rect for proper coordinate conversion
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            // Convert touch midpoint to canvas coordinates
+            const canvasX = (midX - rect.left) * scaleX;
+            const canvasY = (midY - rect.top) * scaleY;
+            
+            // Calculate world position at pinch point before zoom
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const worldX = (canvasX - centerX) / zoomLevel - offsetX + centerX;
+            const worldY = (canvasY - centerY) / zoomLevel - offsetY + centerY;
+            
+            // Apply new zoom
+            const oldZoom = zoomLevel;
             zoomLevel = newZoom;
-            redrawCanvas();
+            
+            // Adjust offset to keep the same world point under the pinch
+            const newWorldX = (canvasX - centerX) / zoomLevel - offsetX + centerX;
+            const newWorldY = (canvasY - centerY) / zoomLevel - offsetY + centerY;
+            
+            offsetX += (newWorldX - worldX);
+            offsetY += (newWorldY - worldY);
+            
+            clampViewportToWorld();
         }
+        
+        // Pan based on midpoint movement
+        if (lastPanX !== 0 && lastPanY !== 0) {
+            const dx = midX - lastPanX;
+            const dy = midY - lastPanY;
+            
+            offsetX += dx / zoomLevel;
+            offsetY += dy / zoomLevel;
+            clampViewportToWorld();
+        }
+        
+        lastPanX = midX;
+        lastPanY = midY;
+        
+        redrawCanvas();
     } else if (e.touches.length === 1 && !isTwoFingerGesture) {
         e.preventDefault();
         if (!isDrawing) return;
@@ -570,9 +810,9 @@ function exportStrokeToQuickDraw(stroke) {
     const ts = [];
     
     stroke.points.forEach(point => {
-        // Scale coordinates to QuickDraw format (0-255)
-        const scaledX = Math.round((point.x / canvas.width) * QT_SCALE);
-        const scaledY = Math.round((point.y / canvas.height) * QT_SCALE);
+        // Scale coordinates to QuickDraw format (0-1023)
+        const scaledX = Math.round((point.x / WORLD_WIDTH) * QT_SCALE);
+        const scaledY = Math.round((point.y / WORLD_HEIGHT) * QT_SCALE);
         
         xs.push(Math.max(0, Math.min(QT_SCALE, scaledX)));
         ys.push(Math.max(0, Math.min(QT_SCALE, scaledY)));
@@ -583,7 +823,61 @@ function exportStrokeToQuickDraw(stroke) {
     return {
         points: [xs, ys, ts],
         color: stroke.color,
-        width: brushSize
+        width: stroke.width ?? brushSize
+    };
+}
+
+function importStrokeFromQuickDraw(strokeData) {
+    if (!strokeData) return null;
+    
+    let xs = null;
+    let ys = null;
+    let ts = null;
+    
+    // Handle different formats
+    if (Array.isArray(strokeData)) {
+        // Legacy format [xs, ys, ts]
+        xs = strokeData[0];
+        ys = strokeData[1];
+        ts = strokeData[2] || [];
+    } else if (strokeData.points) {
+        // New format with points object
+        if (Array.isArray(strokeData.points)) {
+            xs = strokeData.points[0];
+            ys = strokeData.points[1];
+            ts = strokeData.points[2] || [];
+        } else if (strokeData.points.xs) {
+            xs = strokeData.points.xs;
+            ys = strokeData.points.ys;
+            ts = strokeData.points.ts || [];
+        }
+    }
+    
+    if (!xs || !ys || !Array.isArray(xs) || !Array.isArray(ys)) {
+        return null;
+    }
+    
+    const points = [];
+    const count = Math.min(xs.length, ys.length);
+    
+    for (let i = 0; i < count; i++) {
+        // Convert from QuickDraw format (0-1023) back to world coordinates
+        const worldX = (xs[i] / QT_SCALE) * WORLD_WIDTH;
+        const worldY = (ys[i] / QT_SCALE) * WORLD_HEIGHT;
+        const timestamp = ts[i] || (i * 10);
+        
+        points.push({
+            x: worldX,
+            y: worldY,
+            timestamp
+        });
+    }
+    
+    return {
+        points,
+        color: strokeData.color || '#3b82f6',
+        width: strokeData.width || 8,
+        startTime: performance.now()
     };
 }
 
@@ -616,6 +910,7 @@ function clearCanvas() {
     inkAmount = INITIAL_INK;
     updateInkMeter();
     isLocked = false;
+    canvas.style.cursor = 'crosshair';
     remainingTime = ROUND_DURATION_SECONDS;
     updateTimer();
     clearSessionState();
@@ -642,6 +937,7 @@ function lockCanvas() {
 
 // Timer
 let remainingTime = ROUND_DURATION_SECONDS;
+let activeTimerId = null;
 
 function updateTimer() {
     const minutes = String(Math.floor(remainingTime / 60)).padStart(2, '0');
@@ -650,14 +946,20 @@ function updateTimer() {
 }
 
 function startTimer() {
+    // Clear any existing timer first
+    if (activeTimerId) {
+        clearInterval(activeTimerId);
+    }
+    
     updateTimer();
     
-    const timerId = setInterval(() => {
+    activeTimerId = setInterval(() => {
         remainingTime -= 1;
         updateTimer();
         
         if (remainingTime <= 0) {
-            clearInterval(timerId);
+            clearInterval(activeTimerId);
+            activeTimerId = null;
             lockCanvas();
             handleRoundEnd();
         }
@@ -665,14 +967,9 @@ function startTimer() {
 }
 
 function handleRoundEnd() {
-    console.log('Round ended');
-    
-    // Send final drawing
-    if (strokes.length > 0) {
-        const batch = strokes.map(stroke => exportStrokeToQuickDraw(stroke));
-        socket.emit('quickdraw.drawing', batch);
-        console.log('Sent final drawing with', batch.length, 'strokes');
-    }
+    console.log('Round ended - canvas locked');
+    // Don't send strokes when timer depletes, just lock the canvas
+    // Strokes are already sent in real-time as they're drawn
 }
 
 // Initialize
@@ -690,6 +987,8 @@ if (sessionRestored) {
         canvas.style.cursor = 'not-allowed';
     }
 } else {
+    // Initialize random viewport for new session
+    initializeRandomViewport();
     updateInkMeter();
 }
 
