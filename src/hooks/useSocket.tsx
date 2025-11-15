@@ -1,3 +1,17 @@
+/**
+ * WebSocket Connection Hook
+ *
+ * Manages WebSocket connections with automatic cleanup.
+ * Provides functionality to emit and listen to events.
+ *
+ * Related:
+ * - src/services/socket-service.tsx (WebSocket implementation)
+ * - src/components/DrawingCanvas.tsx (real-time communication)
+ *
+ * Exports:
+ * - useSocket (hook)
+ */
+
 import { useEffect, useRef, useCallback } from 'react';
 
 export const useSocket = (url: string) => {

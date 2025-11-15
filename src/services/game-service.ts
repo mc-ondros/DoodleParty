@@ -1,7 +1,24 @@
+/**
+ * Game Service
+ *
+ * Manages game state, scoring, and timing functionality.
+ * Handles game mode selection, score tracking, and timer management.
+ *
+ * Related:
+ * - src/hooks/useGameMode.tsx (React hook for game modes)
+ * - src/components/GameModeSelector.tsx (UI for selecting game modes)
+ *
+ * Exports:
+ * - GameService (class), gameService (instance)
+ */
+
 class GameService {
   private currentMode: string | null = null;
   private score = 0;
   private timer: NodeJS.Timeout | null = null;
+
+  // Constants
+  private static readonly TIMER_INTERVAL_MS = 1000;
 
   startGame(mode: string) {
     this.currentMode = mode;
@@ -12,7 +29,7 @@ class GameService {
   private startTimer() {
     this.timer = setInterval(() => {
       // Timer logic
-    }, 1000);
+    }, GameService.TIMER_INTERVAL_MS);
   }
 
   stopGame() {

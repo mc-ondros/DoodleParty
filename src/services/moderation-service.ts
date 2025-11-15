@@ -1,3 +1,17 @@
+/**
+ * Content Moderation Service
+ *
+ * Handles communication with the ML backend for content moderation
+ * and drawing classification.
+ *
+ * Related:
+ * - src/components/ModerationShield.tsx (moderation UI)
+ * - src_py/web/app.py (backend API endpoints)
+ *
+ * Exports:
+ * - ModerationService (class), moderationService (instance)
+ */
+
 class ModerationService {
   private apiUrl: string;
 

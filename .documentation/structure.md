@@ -70,10 +70,10 @@ DoodleParty/
 │   │   ├── useGameMode.tsx    # Game mode logic
 │   │   └── useLeaderboard.tsx # Leaderboard state
 │   ├── services/              # Business logic
-│   │   ├── socketService.tsx  # WebSocket client
-│   │   ├── moderationService.ts # ML integration
-│   │   ├── gameService.ts     # Game mode logic
-│   │   └── analyticsService.ts # Event tracking
+│   │   ├── socket-service.tsx  # WebSocket client
+│   │   ├── moderation-service.ts # ML integration
+│   │   ├── game-service.ts     # Game mode logic
+│   │   └── analytics-service.ts # Event tracking
 │   ├── App.tsx                # Root component
 │   ├── index.tsx              # Entry point
 │   └── types.ts               # TypeScript types
@@ -184,10 +184,10 @@ DoodleParty/
 - `useSocket.tsx` - WebSocket connection management
 
 **Services (`src/services/`):**
-- `socketService.tsx` - Socket.io client wrapper
-- `moderationService.ts` - ML inference API calls
-- `gameService.ts` - Game mode logic
-- `analyticsService.ts` - Event tracking
+- `socket-service.tsx` - Socket.io client wrapper
+- `moderation-service.ts` - ML inference API calls
+- `game-service.ts` - Game mode logic
+- `analytics-service.ts` - Event tracking
 
 ### Backend (`src_py/`)
 
@@ -260,7 +260,7 @@ DoodleParty/
 ```typescript
 import { DrawingCanvas } from '@/components/DrawingCanvas';
 import { useDraggable } from '@/hooks/useDraggable';
-import { socketService } from '@/services/socketService';
+import { socketService } from '@/services/socket-service';
 ```
 
 **Python ML:**

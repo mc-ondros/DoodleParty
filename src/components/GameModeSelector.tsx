@@ -5,7 +5,7 @@
  * 
  * Related:
  * - src/hooks/useGameMode.tsx (game mode logic)
- * - src/services/gameService.ts (game logic)
+ * - src/services/game-service.ts (game logic)
  * 
  * Exports:
  * - GameModeSelector (functional component)
@@ -48,7 +48,5 @@ export const GameModeSelector: React.FC<GameModeSelectorProps> = ({ onModeSelect
         ))}
       </div>
     </div>
-  );
-};
   );
 };

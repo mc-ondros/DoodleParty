@@ -15,6 +15,11 @@ import base64
 import io
 from PIL import Image
 
+# Constants
+DEFAULT_THRESHOLD = 0.5
+DEFAULT_TILE_SIZE = 64
+DEFAULT_MIN_SHAPE_AREA = 100
+
 
 def create_routes(inference_engine, moderation_engine=None):
     """
@@ -151,8 +156,8 @@ def create_routes(inference_engine, moderation_engine=None):
             
             image = decode_base64_image(data['image'])
             stroke_history = data.get('stroke_history', [])
-            min_shape_area = data.get('min_shape_area', 100)
-            threshold = data.get('threshold', 0.5)
+            min_shape_area = data.get('min_shape_area', DEFAULT_MIN_SHAPE_AREA)
+            threshold = data.get('threshold', DEFAULT_THRESHOLD)
             
             # TODO: Implement shape-based detection
             # This would use stroke_history to cluster strokes into shapes
@@ -201,8 +206,8 @@ def create_routes(inference_engine, moderation_engine=None):
                 return jsonify({'error': 'Missing image in request'}), 400
             
             image = decode_base64_image(data['image'])
-            tile_size = data.get('tile_size', 64)
-            threshold = data.get('threshold', 0.5)
+            tile_size = data.get('tile_size', DEFAULT_TILE_SIZE)
+            threshold = data.get('threshold', DEFAULT_THRESHOLD)
             
             # TODO: Implement tile-based detection
             # This would divide the image into tiles and classify each
@@ -250,7 +255,7 @@ def create_routes(inference_engine, moderation_engine=None):
                 return jsonify({'error': 'Missing image in request'}), 400
             
             image = decode_base64_image(data['image'])
-            threshold = data.get('threshold', 0.5)
+            threshold = data.get('threshold', DEFAULT_THRESHOLD)
             
             # TODO: Implement contour-based detection
             # This would extract contours and classify each independently
@@ -303,7 +308,7 @@ def create_routes(inference_engine, moderation_engine=None):
             
             # For binary classification
             offensive_prob = list(predictions.values())[0] if predictions else 0.0
-            threshold = data.get('threshold', 0.5)
+            threshold = data.get('threshold', DEFAULT_THRESHOLD)
             
             return jsonify({
                 'success': True,

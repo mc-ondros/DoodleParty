@@ -7,7 +7,7 @@
  * Related:
  * - src/hooks/useDrawingCanvas.tsx (drawing logic)
  * - src/hooks/useDraggable.tsx (drawing interaction)
- * - src/services/gameService.ts (stroke processing)
+ * - src/services/game-service.ts (stroke processing)
  * 
  * Exports:
  * - DrawingCanvas (functional component)

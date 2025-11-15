@@ -1,5 +1,26 @@
-import { useEffect, useState } from 'react'
-import { Users, Clock, MoreVertical, Crown, Lock } from 'lucide-react'
+import React, { useEffect, useState } from 'react';
+
+import { Clock, Crown, Lock, MoreVertical, Users } from 'lucide-react';
+
+/**
+ * Admin Dashboard Component
+ *
+ * Administrative interface for managing game settings,
+ * player list, moderation, and session configuration.
+ *
+ * Related:
+ * - src/hooks/useDemoTimer.tsx (timer functionality)
+ * - public/css/styles/dashboard.css (dashboard styling)
+ *
+ * Exports:
+ * - AdminPanel (default export)
+ */
+
+// Constants
+const DEFAULT_GAME_DURATION = 300; // 5 minutes in seconds
+const DEFAULT_TIMER_PRESET = '300'; // 5 minutes
+const DEFAULT_CUSTOM_TIMER = 90; // 1.5 minutes in seconds
+const MILLISECONDS_PER_SECOND = 1000;
 
 function useDemoTimer(initialSeconds = 300) {
   const [seconds, setSeconds] = useState(initialSeconds)
@@ -14,7 +35,7 @@ function useDemoTimer(initialSeconds = 300) {
         }
         return s - 1
       })
-    }, 1000)
+    }, MILLISECONDS_PER_SECOND)
     return () => clearInterval(id)
   }, [state])
   const minutes = Math.floor(seconds / 60)
@@ -23,8 +44,8 @@ function useDemoTimer(initialSeconds = 300) {
 }
 
 export default function AdminPanel() {
-  const { minutes, rem, state, setState, reset } = useDemoTimer(300)
-  const [duration, setDuration] = useState(300)
+  const { minutes, rem, state, setState, reset } = useDemoTimer(DEFAULT_GAME_DURATION)
+  const [duration, setDuration] = useState(DEFAULT_GAME_DURATION)
 
   // configuration + moderation + prompts (demo state)
   const [config, setConfig] = useState({
@@ -51,8 +72,8 @@ export default function AdminPanel() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.roundTimer])
 
-  const [customTimer, setCustomTimer] = useState(90)
-  const [timerPreset, setTimerPreset] = useState<string>('300') // default 5:00
+  const [customTimer, setCustomTimer] = useState(DEFAULT_CUSTOM_TIMER)
+  const [timerPreset, setTimerPreset] = useState<string>(DEFAULT_TIMER_PRESET)
 
   // demo players
   type Player = { id: string; name: string; isHost?: boolean; status: 'online' | 'idle' }
