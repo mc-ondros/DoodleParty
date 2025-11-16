@@ -341,7 +341,7 @@
     function generateQRCode() {
         const qrCodeContainer = document.getElementById('qrcode');
         if (qrCodeContainer && typeof QRCode !== 'undefined') {
-            const currentUrl = 'https://10.204.84.255:3000/doodleparty';
+            const currentUrl = 'https://10.204.84.244:3000/doodleparty';
             new QRCode(qrCodeContainer, {
                 text: currentUrl,
                 width: 75,
