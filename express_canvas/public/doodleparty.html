@@ -12,6 +12,8 @@
     <main class="canvas-shell">
         <div id="promptOverlay" class="prompt-overlay"></div>
         <canvas id="drawingCanvas" width="1024" height="640"></canvas>
+        <!-- Hidden ML canvas for data collection -->
+        <canvas id="mlCanvas" width="1920" height="1080" style="display: none;"></canvas>
         
         <div class="toolbar">
             <div class="color-row" id="colorPresetRow">
@@ -55,12 +57,18 @@
                 <button class="pill-btn" id="clearBtn" title="Clear Canvas">
                     <span>🗑️</span> Clear
                 </button>
+                <button class="pill-btn" id="downloadMLBtn" title="Download ML Canvas">
+                    <span>💾</span> ML
+                </button>
+                <button class="pill-btn" id="detectObjectsBtn" title="Detect Objects and Send to ML">
+                    <span>🔍</span> Detect
+                </button>
             </div>
         </div>
     </main>
     <div id="lockOverlay" style="position:fixed;inset:0;display:none;background:rgba(0,0,0,0.55);color:#fff;font:600 2rem/1.2 Noto Sans, sans-serif;align-items:center;justify-content:center;z-index:50;">Locked</div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/doodleparty.js?v=4"></script>
+    <script type="module" src="js/doodleparty.js?v=6"></script>
 </body>
 </html>

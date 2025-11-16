@@ -483,6 +483,87 @@ io.on('connection', (socket) => {
         console.log(`Relayed quickdraw.clear from ${socket.id} to all clients, history cleared`);
     });
 
+    socket.on('ml.detectObjects', (payload) => {
+        console.log(`Received ML object detection from ${socket.id}:`, {
+            sessionId: payload.sessionId,
+            objectCount: payload.objects?.length || 0,
+            timestamp: payload.timestamp
+        });
+        
+        // Log object details
+        if (payload.objects && Array.isArray(payload.objects)) {
+            payload.objects.forEach((obj, idx) => {
+                console.log(`  Object ${idx}: bbox=(${obj.boundingBox.x1},${obj.boundingBox.y1}) to (${obj.boundingBox.x2},${obj.boundingBox.y2})`);
+            });
+        }
+        
+        // Save images to disk for training data
+        if (payload.objects && payload.objects.length > 0) {
+            const dataDir = path.join(__dirname, '..', '..', 'data', 'ml_detections');
+            const sessionDir = path.join(dataDir, payload.sessionId);
+            
+            // Create directories if they don't exist
+            fs.mkdirSync(sessionDir, { recursive: true });
+            
+            payload.objects.forEach((obj, idx) => {
+                const base64Data = obj.image.replace(/^data:image\/png;base64,/, '');
+                const filename = `object_${idx}_${payload.timestamp}.png`;
+                const filepath = path.join(sessionDir, filename);
+                
+                fs.writeFile(filepath, base64Data, 'base64', (err) => {
+                    if (err) {
+                        console.error(`Error saving object ${idx}:`, err);
+                    } else {
+                        console.log(`💾 Saved object ${idx} to ${filepath}`);
+                    }
+                });
+            });
+        }
+        
+        // Forward to ML server for inference
+        console.log('📤 Forwarding to ML server for inference...');
+        io.emit('ml.detectObjects', payload);
+        
+        // Send acknowledgment back to client
+        socket.emit('ml.detectObjectsAck', {
+            success: true,
+            objectCount: payload.objects?.length || 0,
+            sessionId: payload.sessionId,
+            message: 'Forwarded to ML server'
+        });
+    });
+    
+    // Relay ML results back to clients
+    socket.on('ml.detectionResults', (results) => {
+        console.log('🤖 Received ML results:', {
+            sessionId: results.sessionId,
+            success: results.success,
+            summary: results.summary
+        });
+        
+        // Broadcast results to all clients
+        io.emit('ml.detectionResults', results);
+    });
+    
+    // Handle region erasure (for inappropriate content removal)
+    socket.on('quickdraw.eraseRegion', (payload) => {
+        const { x1, y1, x2, y2, reason } = payload;
+        console.log('');
+        console.log('═'.repeat(70));
+        console.log('🚨 INAPPROPRIATE CONTENT REMOVAL');
+        console.log('═'.repeat(70));
+        console.log(`Source: ${socket.id}`);
+        console.log(`Region: (${x1}, ${y1}) → (${x2}, ${y2})`);
+        console.log(`Size: ${x2-x1}×${y2-y1} pixels`);
+        console.log(`Reason: ${reason || 'ML detection - inappropriate content'}`);
+        console.log(`Action: Broadcasting removal to all clients`);
+        console.log('═'.repeat(70));
+        console.log('');
+        
+        // Broadcast to all clients including sender for sync
+        io.emit('quickdraw.eraseRegion', payload);
+    });
+
     socket.on('disconnect', (reason) => {
         players.delete(socket.id);
         emitPlayersUpdate();

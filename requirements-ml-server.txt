@@ -1,0 +1,9 @@
+# DoodleParty ML Server Dependencies
+python-socketio>=5.11.0
+python-socketio[client]>=5.11.0
+websocket-client>=1.6.0
+eventlet>=0.33.3
+numpy>=1.24.0
+Pillow>=10.0.0
+matplotlib>=3.7.0
+tensorflow>=2.13.0
