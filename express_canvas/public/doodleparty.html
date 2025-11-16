@@ -11,6 +11,8 @@
 <body>
     <main class="canvas-shell">
         <canvas id="drawingCanvas" width="1024" height="640"></canvas>
+        <!-- Hidden ML canvas for data collection -->
+        <canvas id="mlCanvas" width="1920" height="1080" style="display: none;"></canvas>
         
         <div class="toolbar">
             <div class="color-row" id="colorPresetRow">
@@ -53,11 +55,17 @@
                 <button class="pill-btn" id="clearBtn" title="Clear Canvas">
                     <span>🗑️</span> Clear
                 </button>
+                <button class="pill-btn" id="downloadMLBtn" title="Download ML Canvas">
+                    <span>💾</span> ML
+                </button>
+                <button class="pill-btn" id="detectObjectsBtn" title="Detect Objects and Send to ML">
+                    <span>🔍</span> Detect
+                </button>
             </div>
         </div>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="js/doodleparty.js?v=2"></script>
+    <script type="module" src="js/doodleparty.js?v=6"></script>
 </body>
 </html>

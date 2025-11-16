@@ -11,6 +11,13 @@ const statusDot = document.getElementById('statusDot');
 const inkFill = document.getElementById('inkFill');
 const timerDisplay = document.getElementById('timer');
 
+// ML Canvas - Black background, white strokes, fixed 8px width
+const mlCanvas = document.getElementById('mlCanvas');
+const mlCtx = mlCanvas.getContext('2d');
+const ML_STROKE_WIDTH = 8;
+const ML_STROKE_COLOR = '#ffffff';
+const ML_BACKGROUND_COLOR = '#707070';
+
 // Constants
 const CANVAS_BACKGROUND = '#ffffff';
 const ROUND_DURATION_SECONDS = 90;
@@ -19,7 +26,7 @@ const INK_CONSUMPTION_RATE = 1;
 const WORLD_WIDTH = 1920;
 const WORLD_HEIGHT = 1080;
 const QT_SCALE = Math.max(WORLD_WIDTH, WORLD_HEIGHT) - 1; // QuickDraw coordinate scale
-const DEBUG_MODE = false; // Set to true to show manual send buttons
+const DEBUG_MODE = true; // Set to true to show manual send buttons
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
 const INITIAL_ZOOM = 4; // Start closer to the canvas for detail work
@@ -124,6 +131,8 @@ let strokes = [];
 let currentStroke = null;
 let inkAmount = INITIAL_INK;
 let isLocked = false;
+let myStrokesSinceLastDetection = 0; // Only count this user's strokes
+const AUTO_DETECT_INTERVAL = 3; // Run detection every N strokes from this user
 
 // Camera/Zoom state
 let zoomLevel = INITIAL_ZOOM;
@@ -166,6 +175,7 @@ socket.on('quickdraw.sync', (syncedStrokes) => {
     // Only clear if we're actually receiving strokes
     if (syncedStrokes.length > 0) {
         strokes = [];
+        clearMLCanvas(); // Clear ML canvas when syncing
         
         // Import synced strokes into local canvas
         let imported = 0;
@@ -173,6 +183,8 @@ socket.on('quickdraw.sync', (syncedStrokes) => {
             const stroke = importStrokeFromQuickDraw(strokeData);
             if (stroke && stroke.points.length > 1) {
                 strokes.push(stroke);
+                // Redraw stroke on ML canvas
+                redrawStrokeOnMLCanvas(stroke);
                 imported++;
             } else {
                 console.log('Failed to import stroke:', strokeData);
@@ -246,6 +258,174 @@ socket.on('quickdraw.clear', () => {
     console.log('Canvas fully reset from clear event');
 });
 
+socket.on('quickdraw.eraseRegion', (payload) => {
+    console.log('🗑️ Received erase region event:', payload);
+    // Apply the erasure without re-broadcasting
+    const { x1, y1, x2, y2 } = payload;
+    
+    // Remove strokes that intersect with the bounding box
+    const initialCount = strokes.length;
+    strokes = strokes.filter(stroke => {
+        const intersects = stroke.points.some(point => {
+            return point.x >= x1 && point.x <= x2 && point.y >= y1 && point.y <= y2;
+        });
+        return !intersects;
+    });
+    
+    console.log(`  Removed ${initialCount - strokes.length} stroke(s)`);
+    
+    // Clear and redraw ML canvas
+    mlCtx.fillStyle = ML_BACKGROUND_COLOR;
+    mlCtx.fillRect(x1, y1, x2 - x1, y2 - y1);
+    
+    // Redraw remaining strokes
+    redrawCanvas();
+    
+    // Redraw ML canvas strokes in affected region
+    strokes.forEach(stroke => {
+        if (stroke.points.length > 1) {
+            const hasPointsInRegion = stroke.points.some(point => {
+                return point.x >= x1 - 50 && point.x <= x2 + 50 && 
+                       point.y >= y1 - 50 && point.y <= y2 + 50;
+            });
+            
+            if (hasPointsInRegion) {
+                mlCtx.strokeStyle = ML_STROKE_COLOR;
+                mlCtx.lineWidth = ML_STROKE_WIDTH;
+                mlCtx.lineCap = 'round';
+                mlCtx.lineJoin = 'round';
+                mlCtx.beginPath();
+                mlCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                
+                for (let i = 1; i < stroke.points.length; i++) {
+                    mlCtx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                }
+                mlCtx.stroke();
+            }
+        }
+    });
+});
+
+socket.on('ml.detectionResults', (results) => {
+    console.log('🤖 ML Detection Results:', results);
+    
+    if (results.success && results.results) {
+        const summary = results.summary || {};
+        console.log(`📊 Summary: ${summary.total} objects detected`);
+        console.log(`  🔴 Positive: ${summary.positive}`);
+        console.log(`  🟢 Negative: ${summary.negative}`);
+        
+        // Log individual results
+        results.results.forEach((result, idx) => {
+            const icon = result.class === 'positive' ? '🔴' : '🟢';
+            console.log(`  ${icon} Object ${idx}: ${result.class} (${(result.confidence * 100).toFixed(1)}%)`);
+        });
+        
+        if (results.inputVisualization) {
+            console.log(`📥 Input visualization: ${results.inputVisualization}`);
+        }
+        if (results.resultsVisualization) {
+            console.log(`📊 Results visualization: ${results.resultsVisualization}`);
+        }
+        
+        // Handle inappropriate content detection
+        if (summary.positive > 0) {
+            console.warn(`⚠️ WARNING: ${summary.positive} inappropriate object(s) detected!`);
+            
+            // Get objects data from results
+            const objectsData = results.objectsData || [];
+            
+            // Remove inappropriate objects
+            removeInappropriateObjects(results.results, objectsData);
+        }
+    } else {
+        console.error('❌ ML detection failed:', results.error);
+    }
+});
+
+function removeInappropriateObjects(detectionResults, objectsData) {
+    if (!detectionResults || detectionResults.length === 0) return;
+    
+    let removedCount = 0;
+    
+    // Process each detection result
+    detectionResults.forEach((result, idx) => {
+        if (result.class === 'positive' && objectsData[idx]) {
+            const bbox = objectsData[idx].boundingBox;
+            if (bbox) {
+                // Erase the region on both canvases (without redrawing yet)
+                eraseRegion(bbox.x1, bbox.y1, bbox.x2, bbox.y2, false);
+                removedCount++;
+                console.log(`🗑️ Removed inappropriate object at (${bbox.x1}, ${bbox.y1}) - (${bbox.x2}, ${bbox.y2})`);
+            }
+        }
+    });
+    
+    if (removedCount > 0) {
+        console.log(`✓ Cleaned ${removedCount} inappropriate object(s) from canvas`);
+        // Force redraw once after all removals
+        redrawCanvas();
+    }
+}
+
+function eraseRegion(x1, y1, x2, y2, shouldRedraw = true) {
+    // Add padding to ensure complete removal
+    const padding = 10;
+    x1 = Math.max(0, x1 - padding);
+    y1 = Math.max(0, y1 - padding);
+    x2 = Math.min(WORLD_WIDTH, x2 + padding);
+    y2 = Math.min(WORLD_HEIGHT, y2 + padding);
+    
+    // Remove strokes that intersect with the bounding box
+    const initialStrokeCount = strokes.length;
+    strokes = strokes.filter(stroke => {
+        // Check if any point in the stroke is within the bounding box
+        const intersects = stroke.points.some(point => {
+            return point.x >= x1 && point.x <= x2 && point.y >= y1 && point.y <= y2;
+        });
+        return !intersects; // Keep strokes that don't intersect
+    });
+    
+    const removedStrokes = initialStrokeCount - strokes.length;
+    if (removedStrokes > 0) {
+        console.log(`  Removed ${removedStrokes} stroke(s) intersecting with region`);
+    }
+    
+    // Redraw main canvas to reflect removed strokes (if requested)
+    if (shouldRedraw) {
+        redrawCanvas();
+    }
+    
+    // Clear the region on ML canvas
+    mlCtx.fillStyle = ML_BACKGROUND_COLOR;
+    mlCtx.fillRect(x1, y1, x2 - x1, y2 - y1);
+    
+    // Redraw remaining strokes on ML canvas in the affected region
+    strokes.forEach(stroke => {
+        const hasPointsInRegion = stroke.points.some(point => {
+            return point.x >= x1 - 50 && point.x <= x2 + 50 && 
+                   point.y >= y1 - 50 && point.y <= y2 + 50;
+        });
+        
+        if (hasPointsInRegion && stroke.points.length > 1) {
+            mlCtx.strokeStyle = ML_STROKE_COLOR;
+            mlCtx.lineWidth = ML_STROKE_WIDTH;
+            mlCtx.lineCap = 'round';
+            mlCtx.lineJoin = 'round';
+            mlCtx.beginPath();
+            mlCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
+            
+            for (let i = 1; i < stroke.points.length; i++) {
+                mlCtx.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            mlCtx.stroke();
+        }
+    });
+    
+    // Broadcast removal to other clients
+    socket.emit('quickdraw.eraseRegion', { x1, y1, x2, y2 });
+}
+
 function updateSocketStatus(status) {
     socketStatus.textContent = status;
     statusDot.className = 'status-dot ' + status;
@@ -276,6 +456,9 @@ function resetCanvas(options = {}) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     strokes = [];
     currentStroke = null;
+    
+    // Clear ML canvas
+    clearMLCanvas();
     
     if (randomizeViewport) {
         initializeRandomViewport();
@@ -354,6 +537,395 @@ function clampViewportToWorld() {
     offsetY = canvas.height / 2 - centerY;
 }
 
+// ML Canvas Functions
+function initializeMLCanvas() {
+    mlCtx.fillStyle = ML_BACKGROUND_COLOR;
+    mlCtx.fillRect(0, 0, mlCanvas.width, mlCanvas.height);
+    console.log('ML Canvas initialized:', mlCanvas.width, 'x', mlCanvas.height);
+}
+
+function clearMLCanvas() {
+    mlCtx.fillStyle = ML_BACKGROUND_COLOR;
+    mlCtx.fillRect(0, 0, mlCanvas.width, mlCanvas.height);
+}
+
+function drawToMLCanvas(lastPoint, newPoint) {
+    // Draw stroke segment on ML canvas with fixed width and white color
+    mlCtx.strokeStyle = ML_STROKE_COLOR;
+    mlCtx.lineWidth = ML_STROKE_WIDTH;
+    mlCtx.lineCap = 'round';
+    mlCtx.lineJoin = 'round';
+    mlCtx.beginPath();
+    mlCtx.moveTo(lastPoint.x, lastPoint.y);
+    mlCtx.lineTo(newPoint.x, newPoint.y);
+    mlCtx.stroke();
+}
+
+function redrawStrokeOnMLCanvas(stroke) {
+    // Redraw an entire stroke on ML canvas (used when syncing)
+    if (!stroke || !stroke.points || stroke.points.length < 2) return;
+    
+    mlCtx.strokeStyle = ML_STROKE_COLOR;
+    mlCtx.lineWidth = ML_STROKE_WIDTH;
+    mlCtx.lineCap = 'round';
+    mlCtx.lineJoin = 'round';
+    mlCtx.beginPath();
+    mlCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
+    
+    for (let i = 1; i < stroke.points.length; i++) {
+        mlCtx.lineTo(stroke.points[i].x, stroke.points[i].y);
+    }
+    mlCtx.stroke();
+}
+
+function saveMLCanvas() {
+    // Convert ML canvas to data URL for saving/downloading
+    return mlCanvas.toDataURL('image/png');
+}
+
+function downloadMLCanvas(filename = 'ml_drawing.png') {
+    const dataURL = saveMLCanvas();
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = dataURL;
+    link.click();
+}
+
+// Canny Edge Detection and Object Extraction
+function detectObjectsInMLCanvas() {
+    const imageData = mlCtx.getImageData(0, 0, mlCanvas.width, mlCanvas.height);
+    const data = imageData.data;
+    const width = mlCanvas.width;
+    const height = mlCanvas.height;
+    
+    // Convert to grayscale
+    const gray = new Uint8Array(width * height);
+    for (let i = 0; i < data.length; i += 4) {
+        const idx = i / 4;
+        gray[idx] = data[i]; // Since we have white on black, just use R channel
+    }
+    
+    // Apply Gaussian blur to reduce noise
+    const blurred = gaussianBlur(gray, width, height, 1.4);
+    
+    // Calculate gradients using Sobel operator
+    const { magnitude, direction } = sobelOperator(blurred, width, height);
+    
+    // Non-maximum suppression
+    const suppressed = nonMaximumSuppression(magnitude, direction, width, height);
+    
+    // Double threshold and edge tracking by hysteresis
+    const edges = hysteresisThreshold(suppressed, width, height, 30, 60);
+    
+    // Find connected components (objects)
+    const objects = findConnectedComponents(edges, width, height);
+    
+    console.log('Detected', objects.length, 'objects in ML canvas');
+    return objects;
+}
+
+function gaussianBlur(data, width, height, sigma) {
+    const result = new Float32Array(width * height);
+    const kernel = createGaussianKernel(sigma);
+    const kernelSize = kernel.length;
+    const radius = Math.floor(kernelSize / 2);
+    
+    // Horizontal pass
+    const temp = new Float32Array(width * height);
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let sum = 0;
+            let weightSum = 0;
+            for (let i = -radius; i <= radius; i++) {
+                const xi = Math.max(0, Math.min(width - 1, x + i));
+                sum += data[y * width + xi] * kernel[i + radius];
+                weightSum += kernel[i + radius];
+            }
+            temp[y * width + x] = sum / weightSum;
+        }
+    }
+    
+    // Vertical pass
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let sum = 0;
+            let weightSum = 0;
+            for (let i = -radius; i <= radius; i++) {
+                const yi = Math.max(0, Math.min(height - 1, y + i));
+                sum += temp[yi * width + x] * kernel[i + radius];
+                weightSum += kernel[i + radius];
+            }
+            result[y * width + x] = sum / weightSum;
+        }
+    }
+    
+    return result;
+}
+
+function createGaussianKernel(sigma) {
+    const size = Math.ceil(sigma * 3) * 2 + 1;
+    const kernel = new Float32Array(size);
+    const center = Math.floor(size / 2);
+    const twoSigmaSquared = 2 * sigma * sigma;
+    
+    for (let i = 0; i < size; i++) {
+        const x = i - center;
+        kernel[i] = Math.exp(-(x * x) / twoSigmaSquared);
+    }
+    
+    return kernel;
+}
+
+function sobelOperator(data, width, height) {
+    const magnitude = new Float32Array(width * height);
+    const direction = new Float32Array(width * height);
+    
+    const sobelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+    const sobelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
+    
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            let gx = 0;
+            let gy = 0;
+            
+            for (let ky = -1; ky <= 1; ky++) {
+                for (let kx = -1; kx <= 1; kx++) {
+                    const idx = (y + ky) * width + (x + kx);
+                    const kernelIdx = (ky + 1) * 3 + (kx + 1);
+                    gx += data[idx] * sobelX[kernelIdx];
+                    gy += data[idx] * sobelY[kernelIdx];
+                }
+            }
+            
+            const idx = y * width + x;
+            magnitude[idx] = Math.sqrt(gx * gx + gy * gy);
+            direction[idx] = Math.atan2(gy, gx);
+        }
+    }
+    
+    return { magnitude, direction };
+}
+
+function nonMaximumSuppression(magnitude, direction, width, height) {
+    const result = new Float32Array(width * height);
+    
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            const idx = y * width + x;
+            const angle = direction[idx] * 180 / Math.PI;
+            let q = 255;
+            let r = 255;
+            
+            // Angle quantization
+            if ((angle >= -22.5 && angle < 22.5) || (angle >= 157.5 || angle < -157.5)) {
+                q = magnitude[idx + 1];
+                r = magnitude[idx - 1];
+            } else if ((angle >= 22.5 && angle < 67.5) || (angle >= -157.5 && angle < -112.5)) {
+                q = magnitude[(y + 1) * width + (x + 1)];
+                r = magnitude[(y - 1) * width + (x - 1)];
+            } else if ((angle >= 67.5 && angle < 112.5) || (angle >= -112.5 && angle < -67.5)) {
+                q = magnitude[(y + 1) * width + x];
+                r = magnitude[(y - 1) * width + x];
+            } else {
+                q = magnitude[(y + 1) * width + (x - 1)];
+                r = magnitude[(y - 1) * width + (x + 1)];
+            }
+            
+            if (magnitude[idx] >= q && magnitude[idx] >= r) {
+                result[idx] = magnitude[idx];
+            }
+        }
+    }
+    
+    return result;
+}
+
+function hysteresisThreshold(data, width, height, lowThreshold, highThreshold) {
+    const result = new Uint8Array(width * height);
+    const strong = 255;
+    const weak = 75;
+    
+    // Apply double threshold
+    for (let i = 0; i < data.length; i++) {
+        if (data[i] >= highThreshold) {
+            result[i] = strong;
+        } else if (data[i] >= lowThreshold) {
+            result[i] = weak;
+        }
+    }
+    
+    // Edge tracking by hysteresis
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            const idx = y * width + x;
+            if (result[idx] === weak) {
+                // Check if connected to strong edge
+                let hasStrongNeighbor = false;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const nIdx = (y + dy) * width + (x + dx);
+                        if (result[nIdx] === strong) {
+                            hasStrongNeighbor = true;
+                            break;
+                        }
+                    }
+                    if (hasStrongNeighbor) break;
+                }
+                result[idx] = hasStrongNeighbor ? strong : 0;
+            }
+        }
+    }
+    
+    return result;
+}
+
+function findConnectedComponents(edges, width, height) {
+    const visited = new Uint8Array(width * height);
+    const objects = [];
+    const minSize = 100; // Minimum pixels to consider as object
+    
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            if (edges[idx] > 0 && !visited[idx]) {
+                const component = floodFill(edges, visited, x, y, width, height);
+                if (component.pixels.length >= minSize) {
+                    objects.push(component);
+                }
+            }
+        }
+    }
+    
+    return objects;
+}
+
+function floodFill(edges, visited, startX, startY, width, height) {
+    const stack = [[startX, startY]];
+    const pixels = [];
+    let minX = startX, maxX = startX;
+    let minY = startY, maxY = startY;
+    
+    while (stack.length > 0) {
+        const [x, y] = stack.pop();
+        const idx = y * width + x;
+        
+        if (x < 0 || x >= width || y < 0 || y >= height) continue;
+        if (visited[idx] || edges[idx] === 0) continue;
+        
+        visited[idx] = 1;
+        pixels.push([x, y]);
+        
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        
+        // 8-connectivity
+        stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+        stack.push([x + 1, y + 1], [x - 1, y - 1], [x + 1, y - 1], [x - 1, y + 1]);
+    }
+    
+    return { pixels, minX, maxX, minY, maxY };
+}
+
+function extractObjectsForML(padding = 20) {
+    const objects = detectObjectsInMLCanvas();
+    const extractedObjects = [];
+    
+    for (const obj of objects) {
+        const width = obj.maxX - obj.minX + 1;
+        const height = obj.maxY - obj.minY + 1;
+        
+        // Calculate square bounding box with padding
+        const size = Math.max(width, height) + padding * 2;
+        const centerX = (obj.minX + obj.maxX) / 2;
+        const centerY = (obj.minY + obj.maxY) / 2;
+        
+        const x1 = Math.max(0, Math.floor(centerX - size / 2));
+        const y1 = Math.max(0, Math.floor(centerY - size / 2));
+        const x2 = Math.min(mlCanvas.width, x1 + size);
+        const y2 = Math.min(mlCanvas.height, y1 + size);
+        
+        // Extract the region
+        const extractedWidth = x2 - x1;
+        const extractedHeight = y2 - y1;
+        
+        // Create 128x128 canvas with proper padding
+        const targetSize = 128;
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = targetSize;
+        tempCanvas.height = targetSize;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // Fill with black background
+        tempCtx.fillStyle = 'ML_BACKGROUND_COLOR';
+        tempCtx.fillRect(0, 0, targetSize, targetSize);
+        
+        // Calculate scaling to fit in 128x128 without distortion
+        const scale = Math.min(targetSize / extractedWidth, targetSize / extractedHeight);
+        const scaledWidth = extractedWidth * scale;
+        const scaledHeight = extractedHeight * scale;
+        
+        // Center the scaled image
+        const offsetX = (targetSize - scaledWidth) / 2;
+        const offsetY = (targetSize - scaledHeight) / 2;
+        
+        // Draw the extracted region
+        tempCtx.drawImage(
+            mlCanvas,
+            x1, y1, extractedWidth, extractedHeight,
+            offsetX, offsetY, scaledWidth, scaledHeight
+        );
+        
+        extractedObjects.push({
+            canvas: tempCanvas,
+            imageData: tempCtx.getImageData(0, 0, targetSize, targetSize),
+            boundingBox: { x1, y1, x2, y2, centerX, centerY },
+            originalSize: { width: extractedWidth, height: extractedHeight }
+        });
+    }
+    
+    console.log('Extracted', extractedObjects.length, 'objects for ML processing');
+    return extractedObjects;
+}
+
+function sendObjectsToML() {
+    const objects = extractObjectsForML(20);
+    
+    if (objects.length === 0) {
+        console.log('No objects found to send to ML');
+        return;
+    }
+    
+    // Convert each object to base64 and send to server
+    const mlData = objects.map((obj, idx) => ({
+        image: obj.canvas.toDataURL('image/png'),
+        boundingBox: obj.boundingBox,
+        index: idx
+    }));
+    
+    // Emit to server for ML processing
+    socket.emit('ml.detectObjects', {
+        sessionId: getOrCreateSessionId(),
+        objects: mlData,
+        timestamp: Date.now()
+    });
+    
+    console.log('Sent', mlData.length, 'objects to ML server');
+    
+    // Optionally download for debugging
+    objects.forEach((obj, idx) => {
+        const link = document.createElement('a');
+        link.download = `ml_object_${idx}_128x128.png`;
+        link.href = obj.canvas.toDataURL('image/png');
+        // Uncomment to auto-download each object:
+        // link.click();
+    });
+    
+    return objects;
+}
+
 function redrawCanvas() {
     ctx.save();
     
@@ -387,7 +959,10 @@ function redrawCanvas() {
     ctx.restore();
 }
 
+// Initialize canvases
 resizeCanvas();
+initializeMLCanvas();
+
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => {
     setTimeout(resizeCanvas, 100);
@@ -486,6 +1061,9 @@ function drawStroke(x, y) {
         ctx.stroke();
 
         ctx.restore();
+        
+        // Draw to ML canvas (black background, white strokes, fixed 12px width)
+        drawToMLCanvas(lastPoint, newPoint);
     }
     
     // Consume ink - scale by zoom level and brush size
@@ -516,6 +1094,22 @@ function endStroke() {
         const quickDrawFormat = exportStrokeToQuickDraw(currentStroke);
         socket.emit('quickdraw.stroke', quickDrawFormat);
         console.log('Auto-sent stroke:', quickDrawFormat);
+        
+        // Increment MY stroke counter and check for auto-detection (per-user)
+        myStrokesSinceLastDetection++;
+        console.log(`📝 My stroke count: ${myStrokesSinceLastDetection}/${AUTO_DETECT_INTERVAL}`);
+        
+        if (myStrokesSinceLastDetection >= AUTO_DETECT_INTERVAL) {
+            console.log(`🔍 Auto-detecting after ${myStrokesSinceLastDetection} of my strokes...`);
+            myStrokesSinceLastDetection = 0;
+            // Run detection after a short delay to ensure stroke is rendered
+            setTimeout(() => {
+                const objects = sendObjectsToML();
+                if (objects && objects.length > 0) {
+                    console.log(`✓ Auto-detected ${objects.length} object(s)`);
+                }
+            }, 100);
+        }
         
         // Save session state after each completed stroke
         saveSessionState();
@@ -914,6 +1508,7 @@ function clearCanvas() {
     remainingTime = ROUND_DURATION_SECONDS;
     updateTimer();
     clearSessionState();
+    strokesSinceLastDetection = 0; // Reset auto-detection counter
     socket.emit('quickdraw.clear');
     console.log('Canvas cleared and session reset');
 }
@@ -922,6 +1517,29 @@ function clearCanvas() {
 clearBtn.addEventListener('click', clearCanvas);
 sendStrokeBtn.addEventListener('click', sendLastStroke);
 sendBatchBtn.addEventListener('click', sendBatch);
+
+const downloadMLBtn = document.getElementById('downloadMLBtn');
+if (downloadMLBtn) {
+    downloadMLBtn.addEventListener('click', () => {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const sessionId = getOrCreateSessionId();
+        downloadMLCanvas(`ml_${sessionId}_${timestamp}.png`);
+        console.log('ML canvas downloaded');
+    });
+}
+
+const detectObjectsBtn = document.getElementById('detectObjectsBtn');
+if (detectObjectsBtn) {
+    detectObjectsBtn.addEventListener('click', () => {
+        console.log('Running object detection...');
+        const objects = sendObjectsToML();
+        if (objects && objects.length > 0) {
+            alert(`Detected ${objects.length} object(s) and sent to ML server`);
+        } else {
+            alert('No objects detected on canvas');
+        }
+    });
+}
 
 // Ink meter
 function updateInkMeter() {
