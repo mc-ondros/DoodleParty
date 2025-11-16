@@ -3,7 +3,7 @@
   "TimerPreset": "300",
   "Game Mode": "Classic",
   "Max Players": 8,
-  "Ink Limit": "Medium",
+  "Ink Limit": "Unlimited",
   "Teams": "disabled",
   "Visibility": "Public",
   "Custom Prompt": "ondros",

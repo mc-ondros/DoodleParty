@@ -54,6 +54,7 @@ export default function AdminPanel() {
   const { minutes, rem, state, setState, reset, setSeconds } = useDemoTimer(300)
   const [duration, setDuration] = useState<number>(300)
   const [sessionId, setSessionId] = useState<string>('')
+  const socketRef = useRef<any>(null)
 
   const [config, setConfig] = useState<Config>({
     gameMode: 'Speed Sketch',
@@ -209,10 +210,11 @@ export default function AdminPanel() {
     const onReady = () => {
       const io = (window as any).io
       if (!io) return
-      socket = io('/admin', { transports: ['websocket'] })
+      socket = io({ transports: ['websocket'] })
+      socketRef.current = socket
 
       socket.on('connect', () => {
-        // no-op; state:init will arrive after connect from server
+        console.log('Admin panel connected to socket:', socket.id)
       })
 
       socket.on('state:init', async (payload: any) => {
@@ -476,6 +478,23 @@ export default function AdminPanel() {
               stop
             </button>
           </div>
+        </div>
+
+        <div className="glass-panel p-4 uniform-panel">
+          <h2 className="panel-title">Canvas Actions</h2>
+          <button
+            className="btn btn-danger btn-block"
+            onClick={() => {
+              if (socketRef.current && socketRef.current.connected) {
+                socketRef.current.emit('quickdraw.clear')
+                console.log('Admin: Emitted quickdraw.clear event')
+              } else {
+                console.warn('Admin: Socket not connected, cannot clear canvas')
+              }
+            }}
+          >
+            Clear Canvas
+          </button>
         </div>
 
         <div className="glass-panel p-4 uniform-panel">

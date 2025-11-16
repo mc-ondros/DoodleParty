@@ -334,16 +334,28 @@
         });
     }
 
-    clearCanvasBtn.addEventListener('click', () => {
-        resetCanvas();
-        if (socket && socket.connected) {
-            socket.emit('quickdraw.clear');
-            console.log('Emitted quickdraw.clear event');
-        }
-    });
-
     resizeCanvas();
     initializeSocket();
+    
+    // Generate QR code with current page URL
+    function generateQRCode() {
+        const qrCodeContainer = document.getElementById('qrcode');
+        if (qrCodeContainer && typeof QRCode !== 'undefined') {
+            const currentUrl = 'https://10.204.84.255:3000/doodleparty';
+            new QRCode(qrCodeContainer, {
+                text: currentUrl,
+                width: 75,
+                height: 75,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            console.log('QR Code generated for URL:', currentUrl);
+        }
+    }
+    
+    // Generate QR code on page load (with delay to ensure library is loaded)
+    setTimeout(generateQRCode, 100);
 
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('orientationchange', () => {

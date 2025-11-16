@@ -17,9 +17,6 @@
                 <h1>QuickDraw Socket Viewer</h1>
                 <p class="lede">Render QuickDraw strokes streamed over <code>socket.io</code>. Optimized for low-power boards by batching paint calls and avoiding layout churn.</p>
             </div>
-            <div class="hero-actions">
-                <button id="clearCanvasBtn" class="ghost-btn" type="button">Clear canvas</button>
-            </div>
         </header>
 
         <main class="layout">
@@ -29,9 +26,6 @@
                     <div class="overlay-controls">
                         <span id="connectionStatus" class="status-chip neutral">Connecting…</span>
                         <span id="lastEvent" class="status-chip neutral">Waiting for strokes</span>
-                        <button id="overlayClearBtn" class="overlay-btn" type="button" aria-label="Clear canvas">
-                            Clear
-                        </button>
                     </div>
                 </div>
             </section>
