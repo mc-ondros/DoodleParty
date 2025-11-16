@@ -1,6 +1,11 @@
 // DoodleParty Socket Sender - Combines user/index.html drawing interface with socket.io
 
+console.log('🎨 [STARTUP] doodleparty.js script loading...');
+console.log('🎨 [STARTUP] Document ready state:', document.readyState);
+console.log('🎨 [STARTUP] Window.io available:', typeof io !== 'undefined');
+
 const canvas = document.getElementById('drawingCanvas');
+console.log('🎨 [STARTUP] Canvas element found:', canvas !== null);
 const ctx = canvas.getContext('2d');
 const brushSizeInput = document.getElementById('brushSize');
 const clearBtn = document.getElementById('clearBtn');
@@ -169,39 +174,86 @@ if (typeof io === 'undefined') {
     console.error('Socket.IO not loaded! Check that /socket.io/socket.io.js is loaded before doodleparty.js');
 }
 
-const socket = io({
+console.log('🔌 [INIT] Initializing Socket.IO connection to /canvas namespace...');
+console.log('🔌 [INIT] Socket.IO library available:', typeof io !== 'undefined');
+console.log('🔌 [INIT] Current URL:', window.location.href);
+
+const socket = io('/canvas', {
     transports: ['websocket', 'polling'],
     timeout: 8000,
     reconnectionAttempts: 10,
 });
 
+console.log('🔌 [INIT] Socket instance created:', socket);
+console.log('🔌 [INIT] Socket connecting state:', socket.connected);
+
 // Enhanced connection diagnostics
+socket.io.on('reconnect_attempt', (attempt) => {
+    console.log(`🔄 [RECONNECT] Attempt ${attempt}...`);
+});
+
+socket.io.on('reconnect', (attempt) => {
+    console.log(`✅ [RECONNECT] Reconnected after ${attempt} attempts`);
+});
+
+socket.io.on('reconnect_error', (err) => {
+    console.error('❌ [RECONNECT] Reconnection error:', err);
+});
+
+socket.io.on('reconnect_failed', () => {
+    console.error('❌ [RECONNECT] All reconnection attempts failed');
+});
+
+socket.io.on('ping', () => {
+    console.log('🏓 [PING] Ping sent to server');
+});
+
+socket.io.on('open', () => {
+    console.log('🚪 [ENGINE.IO] Connection opened');
+});
+
+socket.io.on('close', (reason) => {
+    console.log('🚪 [ENGINE.IO] Connection closed:', reason);
+});
+
 socket.on('reconnect_attempt', (attempt) => {
     if (isKicked) {
-        console.warn('[socket] reconnect blocked (kicked)');
+        console.warn('🚫 [SOCKET] Reconnect blocked (kicked)');
         updateSocketStatus('kicked');
         return;
     }
-    console.warn('[socket] reconnect attempt', attempt);
+    console.warn(`🔄 [SOCKET] Reconnect attempt ${attempt}`);
     updateSocketStatus('connecting');
 });
+
 socket.on('reconnect_failed', () => {
-    console.error('[socket] reconnect failed');
+    console.error('❌ [SOCKET] Reconnect failed');
     updateSocketStatus('error');
 });
+
 socket.on('error', (err) => {
-    console.error('[socket] generic error', err);
+    console.error('❌ [SOCKET] Socket error:', err);
     updateSocketStatus('error');
 });
+
 socket.io.on('error', (err) => {
-    console.error('[engine.io] error', err);
+    console.error('❌ [ENGINE.IO] Engine error:', err);
+});
+
+socket.on('connect_error', (err) => {
+    console.error('❌ [CONNECT] Connection error:', err);
+    console.error('❌ [CONNECT] Error message:', err.message);
+    console.error('❌ [CONNECT] Error type:', err.type);
+    console.error('❌ [CONNECT] Error description:', err.description);
+    updateSocketStatus('error');
 });
 
 socket.on('connect', () => {
-    console.log('[socket] CONNECTED - id:', socket.id);
-    console.log('[socket] Updating status to "connected"');
-    console.log('[socket] socketStatus element:', socketStatus);
-    console.log('[socket] statusDot element:', statusDot);
+    console.log('✅ [CONNECT] CONNECTED successfully!');
+    console.log('✅ [CONNECT] Socket ID:', socket.id);
+    console.log('✅ [CONNECT] Namespace:', socket.nsp);
+    console.log('✅ [CONNECT] Transport:', socket.io.engine.transport.name);
+    console.log('✅ [CONNECT] Connected:', socket.connected);
     updateSocketStatus('connected');
     // Request sync immediately on connection to ensure we get existing strokes
     setTimeout(() => {
@@ -210,9 +262,11 @@ socket.on('connect', () => {
     }, 100);
 });
 
-socket.on('disconnect', () => {
+socket.on('disconnect', (reason) => {
+    console.log('🔌 [DISCONNECT] Socket disconnected');
+    console.log('🔌 [DISCONNECT] Reason:', reason);
+    console.log('🔌 [DISCONNECT] Will reconnect:', socket.io.reconnection());
     updateSocketStatus('disconnected');
-    console.log('Socket disconnected');
 });
 
 // Kicked by admin
@@ -1621,13 +1675,6 @@ if (detectObjectsBtn) {
             alert('No objects detected on canvas');
         }
     });
-}
-
-// Ink meter
-function updateInkMeter() {
-    const percentage = (inkAmount / INITIAL_INK) * 100;
-    inkFill.style.width = Math.max(0, percentage) + '%';
-    updateInkCircle();
 }
 
 function lockCanvas(reason) {

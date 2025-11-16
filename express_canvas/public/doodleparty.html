@@ -68,7 +68,38 @@
     </main>
     <div id="lockOverlay" style="position:fixed;inset:0;display:none;background:rgba(0,0,0,0.55);color:#fff;font:600 2rem/1.2 Noto Sans, sans-serif;align-items:center;justify-content:center;z-index:50;">Locked</div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="js/doodleparty.js?v=6"></script>
+    <script>
+        console.log('🔥 [HTML] Inline script executing - page loaded');
+        console.log('🔥 [HTML] Document ready state:', document.readyState);
+        console.log('🔥 [HTML] Current URL:', window.location.href);
+        console.log('🔥 [HTML] Socket.IO loaded (before script):', typeof io !== 'undefined');
+    </script>
+    <script src="js/socket.io.min.js" onerror="console.error('❌ [HTML] FAILED to load socket.io.min.js')" onload="console.log('✅ [HTML] socket.io.min.js loaded successfully')"></script>
+    <script>
+        console.log('🔥 [HTML] After socket.io script tag');
+        console.log('🔥 [HTML] io available:', typeof io !== 'undefined');
+        if (typeof io !== 'undefined') {
+            console.log('🔥 [HTML] io function type:', typeof io);
+            console.log('🔥 [HTML] io.Manager available:', typeof io.Manager);
+            console.log('🔥 [HTML] Attempting to create test socket...');
+            try {
+                const testSocket = io('/canvas');
+                console.log('✅ [HTML] Test socket created:', testSocket);
+                console.log('✅ [HTML] Test socket.io available:', testSocket.io);
+                console.log('✅ [HTML] Test socket namespace:', testSocket.nsp);
+                testSocket.on('connect', () => {
+                    console.log('✅ [HTML] Test socket CONNECTED!', testSocket.id);
+                });
+                testSocket.on('connect_error', (err) => {
+                    console.error('❌ [HTML] Test socket connect error:', err);
+                });
+            } catch (e) {
+                console.error('❌ [HTML] Error creating test socket:', e);
+            }
+        } else {
+            console.error('❌ [HTML] io is still undefined after loading script!');
+        }
+    </script>
+    <script type="module" src="js/doodleparty.js?v=14"></script>
 </body>
 </html>

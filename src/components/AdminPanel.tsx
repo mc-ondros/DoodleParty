@@ -209,7 +209,7 @@ export default function AdminPanel() {
     const onReady = () => {
       const io = (window as any).io
       if (!io) return
-      socket = io('/', { transports: ['websocket'] })
+      socket = io('/admin', { transports: ['websocket'] })
 
       socket.on('connect', () => {
         // no-op; state:init will arrive after connect from server

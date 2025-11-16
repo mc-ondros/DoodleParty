@@ -14,6 +14,10 @@ const io = new Server(server, {
     }
 });
 
+// Create separate namespaces for canvas and admin
+const canvasNamespace = io.of('/canvas');
+const adminNamespace = io.of('/admin');
+
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const DEMO_MODE = process.env.DEMO_MODE === '1';
@@ -392,7 +396,8 @@ const heartbeatStroke = [
 const strokeHistory = [];
 const MAX_HISTORY = 5000; // Limit history to prevent memory issues
 
-io.on('connection', (socket) => {
+// Canvas namespace - handles drawing strokes
+canvasNamespace.on('connection', (socket) => {
     console.log(`socket.io - client connected (${socket.id})`);
     const address = (socket.handshake && socket.handshake.address) || 'unknown';
     players.set(socket.id, { id: socket.id, address });
@@ -476,11 +481,11 @@ io.on('connection', (socket) => {
     });
 
     socket.on('quickdraw.clear', (payload) => {
-        // Broadcast to ALL clients including sender
-        io.emit('quickdraw.clear', payload);
+        // Broadcast to ALL canvas clients including sender
+        canvasNamespace.emit('quickdraw.clear', payload);
         // Clear history when canvas is cleared
         strokeHistory.length = 0;
-        console.log(`Relayed quickdraw.clear from ${socket.id} to all clients, history cleared`);
+        console.log(`Relayed quickdraw.clear from ${socket.id} to all canvas clients, history cleared`);
     });
 
     socket.on('ml.detectObjects', (payload) => {
@@ -541,8 +546,8 @@ io.on('connection', (socket) => {
             summary: results.summary
         });
         
-        // Broadcast results to all clients
-        io.emit('ml.detectionResults', results);
+        // Broadcast results to all canvas clients
+        canvasNamespace.emit('ml.detectionResults', results);
     });
     
     // Handle region erasure (for inappropriate content removal)
@@ -560,8 +565,8 @@ io.on('connection', (socket) => {
         console.log('═'.repeat(70));
         console.log('');
         
-        // Broadcast to all clients including sender for sync
-        io.emit('quickdraw.eraseRegion', payload);
+        // Broadcast to all canvas clients including sender for sync
+        canvasNamespace.emit('quickdraw.eraseRegion', payload);
     });
 
     socket.on('disconnect', (reason) => {
@@ -570,7 +575,35 @@ io.on('connection', (socket) => {
         if (heartbeatId) {
             clearInterval(heartbeatId);
         }
-        console.log(`socket.io - client disconnected (${socket.id}): ${reason}`);
+        console.log(`socket.io - canvas client disconnected (${socket.id}), reason: ${reason}`);
+    });
+});
+
+// Admin namespace - handles admin panel connections
+adminNamespace.on('connection', (socket) => {
+    console.log(`socket.io - admin client connected (${socket.id})`);
+    const address = (socket.handshake && socket.handshake.address) || 'unknown';
+    players.set(socket.id, { id: socket.id, address });
+    emitPlayersUpdate();
+    
+    // Send initial state snapshot to admin
+    readAdminConfig()
+        .then((cfg) => {
+            socket.emit('state:init', {
+                sessionId: SESSION_ID,
+                config: cfg,
+                timer: getTimerSnapshot(),
+                players: { count: players.size },
+            });
+        })
+        .catch((err) => {
+            console.error('admin state:init readAdminConfig failed:', err.message);
+        });
+    
+    socket.on('disconnect', (reason) => {
+        players.delete(socket.id);
+        emitPlayersUpdate();
+        console.log(`socket.io - admin client disconnected (${socket.id}), reason: ${reason}`);
     });
 });
 
