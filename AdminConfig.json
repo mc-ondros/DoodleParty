@@ -3,10 +3,10 @@
   "TimerPreset": "600",
   "Game Mode": "Classic",
   "Max Players": 8,
-  "Ink Limit": "High",
+  "Ink Limit": "Medium",
   "Teams": "disabled",
   "Visibility": "Public",
-  "Custom Prompt": "dani suge",
+  "Custom Prompt": "ondros",
   "Content Mode": "NSFW",
   "Session": "Open",
   "Password": ""

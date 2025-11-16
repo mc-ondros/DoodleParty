@@ -9,7 +9,6 @@ const sendBatchBtn = document.getElementById('sendBatchBtn');
 const socketStatus = document.getElementById('socketStatus');
 const statusDot = document.getElementById('statusDot');
 const inkFill = document.getElementById('inkFill');
-const timerDisplay = document.getElementById('timer');
 const timerCircle = document.getElementById('timerCircle');
 const timerCircleText = document.getElementById('timerCircleText');
 const inkCircle = document.getElementById('inkCircle');
@@ -20,7 +19,6 @@ console.log('[init] DOM elements check:');
 console.log('  canvas:', !!canvas);
 console.log('  socketStatus:', !!socketStatus, socketStatus);
 console.log('  statusDot:', !!statusDot, statusDot);
-console.log('  timerDisplay:', !!timerDisplay);
 
 // Constants
 const CANVAS_BACKGROUND = '#ffffff';
@@ -146,8 +144,6 @@ let remainingTime = 300; // seconds left
 
 // DOM references (needed early for event handlers)
 const lockOverlay = document.getElementById('lockOverlay');
-const gameModeDisplay = document.getElementById('gameModeDisplay');
-const promptDisplay = document.getElementById('promptDisplay');
 const promptOverlay = document.getElementById('promptOverlay');
 
 // Camera/Zoom state
@@ -1044,9 +1040,6 @@ function unlockCanvas() {
 // Authoritative timer (server-driven) - state defined at top
 
 function updateTimer() {
-    const minutes = String(Math.floor(remainingTime / 60)).padStart(2, '0');
-    const seconds = String(Math.max(0, remainingTime % 60)).padStart(2, '0');
-    timerDisplay.textContent = `${minutes}:${seconds}`;
     updateTimerCircle();
 }
 
@@ -1092,12 +1085,18 @@ function applyInkLimit(raw) {
     } else if (Number.isFinite(raw)) {
         capacity = Math.max(1, raw);
     }
+    
+    const oldCapacity = inkCapacity;
     inkCapacity = capacity;
+    
     // For unlimited, set ink to a large value
     if (capacity === Infinity) {
         inkAmount = 999999;
+    } else if (capacity > oldCapacity) {
+        // If capacity increased, refill to new capacity
+        inkAmount = capacity;
     } else if (inkAmount > inkCapacity) {
-        // Clamp current ink but preserve proportion when shrinking
+        // If capacity decreased, clamp current ink
         inkAmount = inkCapacity;
     }
     updateInkMeter();
@@ -1110,9 +1109,13 @@ function updateInkMeter() {
 }
 
 function updateInkCircle() {
-    if (!inkCircle) return;
+    if (!inkCircle) {
+        console.warn('[updateInkCircle] inkCircle element not found');
+        return;
+    }
     const pct = (inkCapacity === Infinity || inkCapacity <= 0) ? 1 : (inkAmount / inkCapacity);
     const deg = Math.max(0, Math.min(1, pct)) * 360;
+    console.log(`[updateInkCircle] inkAmount=${inkAmount}, capacity=${inkCapacity}, pct=${pct}, deg=${deg}`);
     inkCircle.style.background = `conic-gradient(var(--selected-color) 0deg, var(--selected-color) ${deg}deg, #e2e8f0 ${deg}deg 360deg)`;
     if (inkCircleText) {
         inkCircleText.textContent = inkCapacity === Infinity ? '∞' : `${Math.round(pct * 100)}%`;
@@ -1126,10 +1129,14 @@ function minutesAndSeconds(sec) {
 }
 
 function updateTimerCircle() {
-    if (!timerCircle) return;
+    if (!timerCircle) {
+        console.warn('[updateTimerCircle] timerCircle element not found');
+        return;
+    }
     const total = timerDuration > 0 ? timerDuration : remainingTime;
     const pct = total > 0 ? (remainingTime / total) : 0;
     const deg = Math.max(0, Math.min(1, pct)) * 360;
+    console.log(`[updateTimerCircle] remaining=${remainingTime}, duration=${timerDuration}, total=${total}, pct=${pct}, deg=${deg}`);
     timerCircle.style.background = `conic-gradient(var(--selected-color) 0deg, var(--selected-color) ${deg}deg, #e2e8f0 ${deg}deg 360deg)`;
     if (timerCircleText) {
         timerCircleText.textContent = minutesAndSeconds(remainingTime);
@@ -1138,10 +1145,7 @@ function updateTimerCircle() {
 
 function applyConfig(cfg) {
     if (!cfg || typeof cfg !== 'object') return;
-    // Game Mode
-    if (gameModeDisplay) {
-        gameModeDisplay.textContent = cfg['Game Mode'] || '';
-    }
+    
     // Prompt - show at top of canvas
     const prompt = cfg['Custom Prompt'] || '';
     if (promptOverlay) {
@@ -1152,10 +1156,7 @@ function applyConfig(cfg) {
             promptOverlay.style.display = 'none';
         }
     }
-    // Also keep old prompt display for toolbar (optional)
-    if (promptDisplay) {
-        promptDisplay.textContent = prompt.length ? `Prompt: ${prompt}` : '';
-    }
+    
     // Content Mode (could influence palette someday)
     const contentMode = cfg['Content Mode'];
     if (contentMode === 'NSFW') {
@@ -1178,10 +1179,12 @@ function applyConfig(cfg) {
 
 function applyTimer(snapshot) {
     if (!snapshot) return;
+    console.log('[applyTimer] received snapshot:', snapshot);
     const previousState = timerState;
     timerState = snapshot.state;
     remainingTime = snapshot.remaining;
     timerDuration = snapshot.duration || timerDuration || remainingTime;
+    console.log(`[applyTimer] updated: state=${timerState}, remaining=${remainingTime}, duration=${timerDuration}`);
     updateTimer();
     
     // Handle state transitions
