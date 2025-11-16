@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Sync Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        button { margin: 5px; padding: 8px 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Admin → Canvas Sync Test</h1>
+    <p>This page tests the admin config sync to canvas clients.</p>
+    
+    <div>
+        <h2>Actions</h2>
+        <button onclick="testConfigChange()">1. Change Ink Limit to "High"</button>
+        <button onclick="testPromptChange()">2. Set Custom Prompt</button>
+        <button onclick="testTimerStart()">3. Start Timer</button>
+        <button onclick="testTimerPause()">4. Pause Timer</button>
+        <button onclick="testSessionLock()">5. Lock Session</button>
+    </div>
+    
+    <div>
+        <h2>Socket Events Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const logDiv = document.getElementById('log');
+        
+        function addLog(message, className = '') {
+            const div = document.createElement('div');
+            div.className = 'log ' + className;
+            div.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            logDiv.insertBefore(div, logDiv.firstChild);
+        }
+
+        // Connect socket
+        const socket = io({ transports: ['websocket', 'polling'] });
+        
+        socket.on('connect', () => {
+            addLog('✅ Socket connected: ' + socket.id, 'success');
+        });
+
+        socket.on('state:init', (payload) => {
+            addLog('📦 state:init received: ' + JSON.stringify(payload, null, 2));
+        });
+
+        socket.on('config:update', (cfg) => {
+            addLog('⚙️ config:update: ' + JSON.stringify(cfg, null, 2), 'success');
+        });
+
+        socket.on('admin-config:update', (cfg) => {
+            addLog('🔧 admin-config:update: ' + JSON.stringify(cfg, null, 2), 'success');
+        });
+
+        socket.on('timer:update', (snapshot) => {
+            addLog('⏱️ timer:update: state=' + snapshot.state + ', remaining=' + snapshot.remaining);
+        });
+
+        socket.on('disconnect', () => {
+            addLog('❌ Socket disconnected', 'error');
+        });
+
+        // Test functions
+        async function testConfigChange() {
+            try {
+                const res = await fetch('/api/admin-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 'Ink Limit': 'High' })
+                });
+                const data = await res.json();
+                addLog('POST /api/admin-config (Ink Limit=High): ' + JSON.stringify(data), res.ok ? 'success' : 'error');
+            } catch (err) {
+                addLog('❌ Error: ' + err.message, 'error');
+            }
+        }
+
+        async function testPromptChange() {
+            try {
+                const res = await fetch('/api/admin-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 'Custom Prompt': 'Draw a happy cat!' })
+                });
+                const data = await res.json();
+                addLog('POST /api/admin-config (Custom Prompt): ' + JSON.stringify(data), res.ok ? 'success' : 'error');
+            } catch (err) {
+                addLog('❌ Error: ' + err.message, 'error');
+            }
+        }
+
+        async function testTimerStart() {
+            try {
+                const res = await fetch('/api/timer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'start' })
+                });
+                const data = await res.json();
+                addLog('POST /api/timer (start): ' + JSON.stringify(data), res.ok ? 'success' : 'error');
+            } catch (err) {
+                addLog('❌ Error: ' + err.message, 'error');
+            }
+        }
+
+        async function testTimerPause() {
+            try {
+                const res = await fetch('/api/timer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'pause' })
+                });
+                const data = await res.json();
+                addLog('POST /api/timer (pause): ' + JSON.stringify(data), res.ok ? 'success' : 'error');
+            } catch (err) {
+                addLog('❌ Error: ' + err.message, 'error');
+            }
+        }
+
+        async function testSessionLock() {
+            try {
+                const res = await fetch('/api/admin-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 'Session': 'Locked' })
+                });
+                const data = await res.json();
+                addLog('POST /api/admin-config (Session=Locked): ' + JSON.stringify(data), res.ok ? 'success' : 'error');
+            } catch (err) {
+                addLog('❌ Error: ' + err.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

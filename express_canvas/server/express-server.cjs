@@ -236,6 +236,18 @@ app.post('/api/admin-config', async (req, res) => {
         }
 
     await writeAdminConfig(next);
+    
+    // Sync timer duration if Timer changed
+    const newTimerValue = Number(next['Timer']);
+    if (Number.isFinite(newTimerValue) && newTimerValue > 0 && newTimerValue !== timer.duration) {
+        timer.duration = newTimerValue;
+        // If timer is paused or expired, also update remaining
+        if (timer.state !== 'running') {
+            timer.remaining = newTimerValue;
+        }
+        console.log(`Timer duration synced to ${newTimerValue}s from admin config`);
+    }
+    
     io.emit('admin-config:update', next);
     io.emit('config:update', next); // alias event for UIs
         res.json({ ok: true });

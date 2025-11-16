@@ -9,12 +9,22 @@ const sendBatchBtn = document.getElementById('sendBatchBtn');
 const socketStatus = document.getElementById('socketStatus');
 const statusDot = document.getElementById('statusDot');
 const inkFill = document.getElementById('inkFill');
-const timerDisplay = document.getElementById('timer');
+const timerCircle = document.getElementById('timerCircle');
+const timerCircleText = document.getElementById('timerCircleText');
+const inkCircle = document.getElementById('inkCircle');
+const inkCircleText = document.getElementById('inkCircleText');
+
+// Diagnostic: verify critical elements exist
+console.log('[init] DOM elements check:');
+console.log('  canvas:', !!canvas);
+console.log('  socketStatus:', !!socketStatus, socketStatus);
+console.log('  statusDot:', !!statusDot, statusDot);
 
 // Constants
 const CANVAS_BACKGROUND = '#ffffff';
-const ROUND_DURATION_SECONDS = 90;
-const INITIAL_INK = 100;
+// Local defaults (will be overridden by admin config once received)
+const ROUND_DURATION_SECONDS = 90; // fallback only (server sends authoritative timer)
+const INITIAL_INK = 100; // base ink capacity for Medium
 const INK_CONSUMPTION_RATE = 1;
 const WORLD_WIDTH = 1920;
 const WORLD_HEIGHT = 1080;
@@ -122,8 +132,19 @@ let currentColor = '#3b82f6';
 let brushSize = 8;
 let strokes = [];
 let currentStroke = null;
+let inkCapacity = INITIAL_INK; // dynamic capacity based on admin Ink Limit
 let inkAmount = INITIAL_INK;
 let isLocked = false;
+let isKicked = false; // becomes true after admin removes this player
+
+// Timer state (server-driven)
+let timerState = 'paused'; // 'running' | 'paused' | 'expired'
+let timerDuration = 300; // total duration in seconds
+let remainingTime = 300; // seconds left
+
+// DOM references (needed early for event handlers)
+const lockOverlay = document.getElementById('lockOverlay');
+const promptOverlay = document.getElementById('promptOverlay');
 
 // Camera/Zoom state
 let zoomLevel = INITIAL_ZOOM;
@@ -133,12 +154,46 @@ let isPanning = false;
 let lastPanX = 0;
 let lastPanY = 0;
 
-// Socket setup
-const socket = io({ transports: ['websocket'] });
+// Socket setup (allow fallback to polling in environments where WebSocket upgrade fails)
+// Check if io is available (loaded from global script)
+if (typeof io === 'undefined') {
+    console.error('Socket.IO not loaded! Check that /socket.io/socket.io.js is loaded before doodleparty.js');
+}
+
+const socket = io({
+    transports: ['websocket', 'polling'],
+    timeout: 8000,
+    reconnectionAttempts: 10,
+});
+
+// Enhanced connection diagnostics
+socket.on('reconnect_attempt', (attempt) => {
+    if (isKicked) {
+        console.warn('[socket] reconnect blocked (kicked)');
+        updateSocketStatus('kicked');
+        return;
+    }
+    console.warn('[socket] reconnect attempt', attempt);
+    updateSocketStatus('connecting');
+});
+socket.on('reconnect_failed', () => {
+    console.error('[socket] reconnect failed');
+    updateSocketStatus('error');
+});
+socket.on('error', (err) => {
+    console.error('[socket] generic error', err);
+    updateSocketStatus('error');
+});
+socket.io.on('error', (err) => {
+    console.error('[engine.io] error', err);
+});
 
 socket.on('connect', () => {
+    console.log('[socket] CONNECTED - id:', socket.id);
+    console.log('[socket] Updating status to "connected"');
+    console.log('[socket] socketStatus element:', socketStatus);
+    console.log('[socket] statusDot element:', statusDot);
     updateSocketStatus('connected');
-    console.log('Socket connected');
     // Request sync immediately on connection to ensure we get existing strokes
     setTimeout(() => {
         socket.emit('quickdraw.requestSync');
@@ -149,6 +204,18 @@ socket.on('connect', () => {
 socket.on('disconnect', () => {
     updateSocketStatus('disconnected');
     console.log('Socket disconnected');
+});
+
+// Kicked by admin
+socket.on('kicked', (payload) => {
+    console.warn('[socket] kicked by admin', payload);
+    isKicked = true;
+    // Prevent further reconnections
+    if (socket.io && socket.io.opts) socket.io.opts.reconnection = false;
+    // Lock canvas and show overlay message
+    lockCanvas('kicked');
+    updateSocketStatus('kicked');
+    try { socket.disconnect(); } catch (_) {}
 });
 
 socket.on('connect_error', () => {
@@ -218,20 +285,19 @@ socket.on('quickdraw.clear', () => {
     strokes = [];
     currentStroke = null;
     isDrawing = false;
-    
-    // Reset canvas state
-    inkAmount = INITIAL_INK;
+
+    // Reset canvas state (ink resets to current capacity determined by admin config)
+    inkAmount = inkCapacity || INITIAL_INK;
     updateInkMeter();
-    isLocked = false;
-    canvas.style.cursor = 'crosshair';
-    remainingTime = ROUND_DURATION_SECONDS;
-    
-    // Restart the timer
-    startTimer();
-    
-    // Clear session storage
+
+    // Unlock if session is open and timer not expired
+    if (timerState !== 'expired' && lockOverlay?.style.display === 'flex') {
+        unlockCanvas();
+    }
+
+    // Clear session storage (local persistence only)
     clearSessionState();
-    
+
     // Force complete canvas clear - multiple methods for mobile compatibility
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to identity
@@ -239,16 +305,29 @@ socket.on('quickdraw.clear', () => {
     ctx.fillStyle = CANVAS_BACKGROUND;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
-    
+
     // Redraw with clean state
     redrawCanvas();
-    
-    console.log('Canvas fully reset from clear event');
+
+    console.log('Canvas fully reset from clear event (authoritative server timer retained)');
 });
 
 function updateSocketStatus(status) {
-    socketStatus.textContent = status;
-    statusDot.className = 'status-dot ' + status;
+    console.log('[updateSocketStatus] called with:', status);
+    console.log('[updateSocketStatus] socketStatus element:', socketStatus);
+    console.log('[updateSocketStatus] statusDot element:', statusDot);
+    if (socketStatus) {
+        socketStatus.textContent = status;
+        console.log('[updateSocketStatus] Set text to:', status);
+    } else {
+        console.error('[updateSocketStatus] socketStatus element is null!');
+    }
+    if (statusDot) {
+        statusDot.className = 'status-dot ' + status;
+        console.log('[updateSocketStatus] Set className to:', 'status-dot ' + status);
+    } else {
+        console.error('[updateSocketStatus] statusDot element is null!');
+    }
 }
 
 // Initialize canvas
@@ -410,7 +489,8 @@ brushSizeInput.addEventListener('input', (e) => {
 
 // Drawing functions
 function startStroke(x, y) {
-    if (isLocked || inkAmount <= 0) return;
+    // Prevent drawing if locked, kicked, or out of ink (unless unlimited)
+    if (isLocked || isKicked || (inkCapacity !== Infinity && inkAmount <= 0)) return;
     
     // Transform coordinates based on zoom and pan
     const transformedPos = screenToCanvas(x, y);
@@ -488,18 +568,20 @@ function drawStroke(x, y) {
         ctx.restore();
     }
     
-    // Consume ink - scale by zoom level and brush size
-    // Cubic scaling: at zoom 0.5 (zoomed out) = 8x consumption, at zoom 4 (zoomed in) = 0.016x consumption
-    // Brush size scaling: larger brushes consume more ink proportionally
-    const zoomMultiplier = Math.pow(1 / zoomLevel, 3);
-    const brushMultiplier = brushSize / 8; // Normalized to default brush size of 8
-    const consumption = INK_CONSUMPTION_RATE * zoomMultiplier * brushMultiplier;
-    inkAmount = Math.max(0, inkAmount - consumption);
-    updateInkMeter();
-    
-    if (inkAmount <= 0) {
-        lockCanvas();
-        endStroke(); // Force end stroke when ink depletes
+    // Consume ink - scale by zoom level and brush size (skip if Unlimited)
+    if (inkCapacity !== Infinity) {
+        // Cubic scaling: at zoom 0.5 (zoomed out) = 8x consumption, at zoom 4 (zoomed in) = 0.016x consumption
+        // Brush size scaling: larger brushes consume more ink proportionally
+        const zoomMultiplier = Math.pow(1 / zoomLevel, 3);
+        const brushMultiplier = brushSize / 8; // Normalized to default brush size of 8
+        const consumption = INK_CONSUMPTION_RATE * zoomMultiplier * brushMultiplier;
+        inkAmount = Math.max(0, inkAmount - consumption);
+        updateInkMeter();
+        
+        if (inkAmount <= 0) {
+            lockCanvas('ink-depleted');
+            endStroke(); // Force end stroke when ink depletes
+        }
     }
 
 }
@@ -927,71 +1009,47 @@ sendBatchBtn.addEventListener('click', sendBatch);
 function updateInkMeter() {
     const percentage = (inkAmount / INITIAL_INK) * 100;
     inkFill.style.width = Math.max(0, percentage) + '%';
+    updateInkCircle();
 }
 
-function lockCanvas() {
+function lockCanvas(reason) {
     isLocked = true;
     canvas.style.cursor = 'not-allowed';
-    console.log('Canvas locked - ink depleted');
+    if (lockOverlay) {
+        lockOverlay.style.display = 'flex';
+        if (reason === 'kicked') {
+            lockOverlay.textContent = 'Removed by Admin';
+        } else if (reason === 'locked') {
+            lockOverlay.textContent = 'Session Locked';
+        } else if (reason === 'expired') {
+            lockOverlay.textContent = 'Time Expired';
+        } else {
+            lockOverlay.textContent = 'Locked';
+        }
+    }
+    console.log('Canvas locked - reason:', reason);
 }
 
-// Timer
-let remainingTime = ROUND_DURATION_SECONDS;
-let activeTimerId = null;
+function unlockCanvas() {
+    isLocked = false;
+    canvas.style.cursor = 'crosshair';
+    if (lockOverlay) lockOverlay.style.display = 'none';
+    console.log('Canvas unlocked');
+}
+
+// Authoritative timer (server-driven) - state defined at top
 
 function updateTimer() {
-    const minutes = String(Math.floor(remainingTime / 60)).padStart(2, '0');
-    const seconds = String(remainingTime % 60).padStart(2, '0');
-    timerDisplay.textContent = `${minutes}:${seconds}`;
+    updateTimerCircle();
 }
 
-function startTimer() {
-    // Clear any existing timer first
-    if (activeTimerId) {
-        clearInterval(activeTimerId);
-    }
-    
-    updateTimer();
-    
-    activeTimerId = setInterval(() => {
-        remainingTime -= 1;
-        updateTimer();
-        
-        if (remainingTime <= 0) {
-            clearInterval(activeTimerId);
-            activeTimerId = null;
-            lockCanvas();
-            handleRoundEnd();
-        }
-    }, 1000);
-}
-
-function handleRoundEnd() {
-    console.log('Round ended - canvas locked');
-    // Don't send strokes when timer depletes, just lock the canvas
-    // Strokes are already sent in real-time as they're drawn
-}
-
-// Initialize
+// Initialize (client session only for local persistence; gameplay state from server)
 const sessionId = getOrCreateSessionId();
 console.log('Session ID:', sessionId);
 
-// Try to restore previous session state
-const sessionRestored = restoreSessionState();
-
-if (sessionRestored) {
-    // Update UI with restored state (strokes will come from server)
-    updateInkMeter();
-    updateTimer();
-    if (isLocked) {
-        canvas.style.cursor = 'not-allowed';
-    }
-} else {
-    // Initialize random viewport for new session
-    initializeRandomViewport();
-    updateInkMeter();
-}
-startTimer();
+initializeRandomViewport();
+updateInkMeter();
+updateTimer();
 updateSocketStatus('connecting');
 
 // Save session state periodically (every 5 seconds)
@@ -1010,4 +1068,189 @@ if (!DEBUG_MODE) {
     }
 }
 
-// No admin hooks; local UI remains independent of admin settings
+// -------------------- Admin / Server Authoritative Hooks --------------------
+
+function applyInkLimit(raw) {
+    if (!raw) return;
+    const map = {
+        Low: 60,
+        Medium: 100,
+        High: 160,
+        Unlimited: Infinity // Unlimited = never run out
+    };
+    let capacity = map[raw] || INITIAL_INK;
+    if (typeof raw === 'string' && raw.endsWith('%')) {
+        const pct = parseFloat(raw.replace('%',''));
+        if (!isNaN(pct) && pct > 0) capacity = Math.round(INITIAL_INK * (pct/100));
+    } else if (Number.isFinite(raw)) {
+        capacity = Math.max(1, raw);
+    }
+    
+    const oldCapacity = inkCapacity;
+    inkCapacity = capacity;
+    
+    // For unlimited, set ink to a large value
+    if (capacity === Infinity) {
+        inkAmount = 999999;
+    } else if (capacity > oldCapacity) {
+        // If capacity increased, refill to new capacity
+        inkAmount = capacity;
+    } else if (inkAmount > inkCapacity) {
+        // If capacity decreased, clamp current ink
+        inkAmount = inkCapacity;
+    }
+    updateInkMeter();
+}
+
+function updateInkMeter() {
+    const percentage = (inkAmount / inkCapacity) * 100;
+    inkFill.style.width = Math.max(0, Math.min(100, percentage)) + '%';
+    updateInkCircle();
+}
+
+function updateInkCircle() {
+    if (!inkCircle) {
+        console.warn('[updateInkCircle] inkCircle element not found');
+        return;
+    }
+    const pct = (inkCapacity === Infinity || inkCapacity <= 0) ? 1 : (inkAmount / inkCapacity);
+    const deg = Math.max(0, Math.min(1, pct)) * 360;
+    console.log(`[updateInkCircle] inkAmount=${inkAmount}, capacity=${inkCapacity}, pct=${pct}, deg=${deg}`);
+    inkCircle.style.background = `conic-gradient(var(--selected-color) 0deg, var(--selected-color) ${deg}deg, #e2e8f0 ${deg}deg 360deg)`;
+    if (inkCircleText) {
+        inkCircleText.textContent = inkCapacity === Infinity ? '∞' : `${Math.round(pct * 100)}%`;
+    }
+}
+
+function minutesAndSeconds(sec) {
+    const m = String(Math.floor(sec / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+function updateTimerCircle() {
+    if (!timerCircle) {
+        console.warn('[updateTimerCircle] timerCircle element not found');
+        return;
+    }
+    const total = timerDuration > 0 ? timerDuration : remainingTime;
+    const pct = total > 0 ? (remainingTime / total) : 0;
+    const deg = Math.max(0, Math.min(1, pct)) * 360;
+    console.log(`[updateTimerCircle] remaining=${remainingTime}, duration=${timerDuration}, total=${total}, pct=${pct}, deg=${deg}`);
+    timerCircle.style.background = `conic-gradient(var(--selected-color) 0deg, var(--selected-color) ${deg}deg, #e2e8f0 ${deg}deg 360deg)`;
+    if (timerCircleText) {
+        timerCircleText.textContent = minutesAndSeconds(remainingTime);
+    }
+}
+
+function applyConfig(cfg) {
+    if (!cfg || typeof cfg !== 'object') return;
+    
+    // Prompt - show at top of canvas
+    const prompt = cfg['Custom Prompt'] || '';
+    if (promptOverlay) {
+        if (prompt.length > 0) {
+            promptOverlay.textContent = prompt;
+            promptOverlay.style.display = 'block';
+        } else {
+            promptOverlay.style.display = 'none';
+        }
+    }
+    
+    // Content Mode (could influence palette someday)
+    const contentMode = cfg['Content Mode'];
+    if (contentMode === 'NSFW') {
+        document.documentElement.setAttribute('data-content-mode', 'nsfw');
+    } else {
+        document.documentElement.removeAttribute('data-content-mode');
+    }
+    // Ink Limit
+    applyInkLimit(cfg['Ink Limit']);
+    // Session lock state (Session: 'Locked' | 'Open')
+    if (cfg['Session'] === 'Locked') {
+        lockCanvas('locked');
+    } else if (!isLocked || lockOverlay?.style.display === 'flex') {
+        // Only unlock if we were locked due to session (not due to expiration)
+        if (timerState !== 'expired') {
+            unlockCanvas();
+        }
+    }
+}
+
+function applyTimer(snapshot) {
+    if (!snapshot) return;
+    console.log('[applyTimer] received snapshot:', snapshot);
+    const previousState = timerState;
+    timerState = snapshot.state;
+    remainingTime = snapshot.remaining;
+    timerDuration = snapshot.duration || timerDuration || remainingTime;
+    console.log(`[applyTimer] updated: state=${timerState}, remaining=${remainingTime}, duration=${timerDuration}`);
+    updateTimer();
+    
+    // Handle state transitions
+    if (timerState === 'expired') {
+        lockCanvas('expired');
+    } else if (timerState === 'running' || timerState === 'paused') {
+        // If transitioning from expired to running/paused, unlock (unless session is locked)
+        if (previousState === 'expired' && isLocked) {
+            // Check if we should unlock (not locked for other reasons)
+            const sessionLocked = lockOverlay && lockOverlay.textContent === 'Session Locked';
+            const kicked = isKicked;
+            if (!sessionLocked && !kicked) {
+                unlockCanvas();
+            }
+        }
+    }
+}
+
+function applyStateInit(payload) {
+    if (!payload) return;
+    if (payload.config) applyConfig(payload.config);
+    if (payload.timer) applyTimer(payload.timer);
+}
+
+// Socket listeners for authoritative state
+socket.on('state:init', (payload) => {
+    console.log('[state:init] snapshot received');
+    applyStateInit(payload);
+});
+
+socket.on('config:update', (cfg) => {
+    console.log('[config:update] received');
+    applyConfig(cfg);
+});
+
+socket.on('admin-config:update', (cfg) => {
+    console.log('[admin-config:update] received');
+    applyConfig(cfg);
+});
+
+socket.on('timer:update', (snapshot) => {
+    applyTimer(snapshot);
+});
+
+// Fallback: if state:init not received within 1500ms after connect, fetch /api/state
+let stateInitReceived = false;
+socket.once('state:init', () => { stateInitReceived = true; });
+setTimeout(() => {
+    if (!stateInitReceived) {
+        fetch('/api/state')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data) applyStateInit(data); })
+            .catch(err => console.warn('Fallback /api/state failed', err));
+    }
+}, 1500);
+
+// Adjust clear behavior: do NOT modify timer; rely on server state
+socket.on('quickdraw.clear', () => {
+    console.log('Authoritative clear received');
+    // Existing logic already clears strokes & ink; ensure ink reset respects capacity
+    inkAmount = inkCapacity;
+    updateInkMeter();
+    // If session is open and timer not expired, allow drawing again
+    if (timerState !== 'expired' && (lockOverlay?.style.display === 'flex')) {
+        unlockCanvas();
+    }
+});
+
+console.log('Authoritative admin hooks initialized');
