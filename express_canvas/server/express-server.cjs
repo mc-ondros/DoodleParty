@@ -480,7 +480,7 @@ io.on('connection', (socket) => {
         io.emit('quickdraw.clear', payload);
         // Clear history when canvas is cleared
         strokeHistory.length = 0;
-        console.log(`Relayed quickdraw.clear from ${socket.id} to all clients, history cleared`);
+        console.log(`Relayed quickdraw.clear from ${socket.id} to all canvas clients, history cleared`);
     });
 
     socket.on('ml.detectObjects', (payload) => {
@@ -570,7 +570,7 @@ io.on('connection', (socket) => {
         if (heartbeatId) {
             clearInterval(heartbeatId);
         }
-        console.log(`socket.io - client disconnected (${socket.id}): ${reason}`);
+        console.log(`socket.io - client disconnected (${socket.id}), reason: ${reason}`);
     });
 });
 

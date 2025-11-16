@@ -1,6 +1,6 @@
 {
-  "Timer": 600,
-  "TimerPreset": "600",
+  "Timer": 300,
+  "TimerPreset": "300",
   "Game Mode": "Classic",
   "Max Players": 8,
   "Ink Limit": "Medium",

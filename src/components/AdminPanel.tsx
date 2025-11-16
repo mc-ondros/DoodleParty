@@ -209,7 +209,7 @@ export default function AdminPanel() {
     const onReady = () => {
       const io = (window as any).io
       if (!io) return
-      socket = io('/', { transports: ['websocket'] })
+      socket = io('/admin', { transports: ['websocket'] })
 
       socket.on('connect', () => {
         // no-op; state:init will arrive after connect from server
@@ -456,11 +456,15 @@ export default function AdminPanel() {
             <button
               className="btn btn-secondary"
               onClick={async () => {
+                setState('running')
                 reset(duration)
-                try { await fetch('/api/timer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset', seconds: duration }) }) } catch {}
+                try { 
+                  await fetch('/api/timer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset', seconds: duration }) })
+                  await fetch('/api/timer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start' }) })
+                } catch {}
               }}
             >
-              reset
+              reset & start
             </button>
             <button
               className="btn btn-danger"
