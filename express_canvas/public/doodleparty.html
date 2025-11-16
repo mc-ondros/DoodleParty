@@ -10,6 +10,7 @@
 </head>
 <body>
     <main class="canvas-shell">
+        <div id="promptOverlay" class="prompt-overlay"></div>
         <canvas id="drawingCanvas" width="1024" height="640"></canvas>
         <!-- Hidden ML canvas for data collection -->
         <canvas id="mlCanvas" width="1920" height="1080" style="display: none;"></canvas>
@@ -43,7 +44,8 @@
                 <div class="ink-fill" id="inkFill"></div>
             </div>
             
-            <div class="timer" id="timer">01:30</div>
+            <div class="hud-circle timer-circle" id="timerCircle"><span id="timerCircleText">00:00</span></div>
+            <div class="hud-circle ink-circle" id="inkCircle"><span id="inkCircleText">100%</span></div>
             
             <div class="control-buttons">
                 <button class="pill-btn" id="sendStrokeBtn" title="Send Last Stroke">
@@ -64,6 +66,7 @@
             </div>
         </div>
     </main>
+    <div id="lockOverlay" style="position:fixed;inset:0;display:none;background:rgba(0,0,0,0.55);color:#fff;font:600 2rem/1.2 Noto Sans, sans-serif;align-items:center;justify-content:center;z-index:50;">Locked</div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="js/doodleparty.js?v=6"></script>
