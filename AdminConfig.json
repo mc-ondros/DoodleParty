@@ -1,12 +1,13 @@
 {
-  "Timer": 300,
-  "TimerPreset": "300",
+  "Timer": 600,
+  "TimerPreset": "600",
   "Game Mode": "Classic",
   "Max Players": 8,
-  "Ink Limit": "Medium",
+  "Ink Limit": "High",
   "Teams": "disabled",
   "Visibility": "Public",
-  "Custom Prompt": "",
-  "Content Mode": "SFW",
-  "Session": "Open"
+  "Custom Prompt": "dani suge",
+  "Content Mode": "NSFW",
+  "Session": "Open",
+  "Password": ""
 }

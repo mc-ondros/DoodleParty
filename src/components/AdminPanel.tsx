@@ -28,7 +28,11 @@ function useDemoTimer(initialSeconds = 300) {
     setState('running')
   }
 
-  return { minutes, rem, state, setState, reset }
+  const setTime = (s: number) => {
+    setSeconds(s)
+  }
+
+  return { minutes, rem, state, setState, reset, setTime, setSeconds }
 }
 
 type Config = {
@@ -47,7 +51,7 @@ type Config = {
 type Player = { id: string; name: string; status: 'online' | 'idle' }
 
 export default function AdminPanel() {
-  const { minutes, rem, state, setState, reset } = useDemoTimer(300)
+  const { minutes, rem, state, setState, reset, setSeconds } = useDemoTimer(300)
   const [duration, setDuration] = useState<number>(300)
   const [sessionId, setSessionId] = useState<string>('')
 
@@ -261,7 +265,18 @@ export default function AdminPanel() {
         setConnectedCount(Number(p?.count) || 0)
         await refreshPlayers()
       })
-      // socket.on('timer:update', (t: any) => {})
+      socket.on('timer:update', (snapshot: any) => {
+        if (!snapshot) return
+        const { state: timerState, remaining, duration: dur } = snapshot
+        // Sync admin timer display with server
+        if (Number.isFinite(remaining)) {
+          setSeconds(remaining)
+          if (Number.isFinite(dur) && dur > 0) setDuration(dur)
+        }
+        if (timerState === 'running') setState('running')
+        else if (timerState === 'paused') setState('paused')
+        else if (timerState === 'expired') setState('expired')
+      })
     }
 
     // Load the socket.io client from the server to avoid module/type issues
