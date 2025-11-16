@@ -8,9 +8,6 @@ const canvas = document.getElementById('drawingCanvas');
 console.log('🎨 [STARTUP] Canvas element found:', canvas !== null);
 const ctx = canvas.getContext('2d');
 const brushSizeInput = document.getElementById('brushSize');
-const clearBtn = document.getElementById('clearBtn');
-const sendStrokeBtn = document.getElementById('sendStrokeBtn');
-const sendBatchBtn = document.getElementById('sendBatchBtn');
 const socketStatus = document.getElementById('socketStatus');
 const statusDot = document.getElementById('statusDot');
 const inkFill = document.getElementById('inkFill');
@@ -178,7 +175,7 @@ console.log('🔌 [INIT] Initializing Socket.IO connection to /canvas namespace.
 console.log('🔌 [INIT] Socket.IO library available:', typeof io !== 'undefined');
 console.log('🔌 [INIT] Current URL:', window.location.href);
 
-const socket = io('/canvas', {
+const socket = io({
     transports: ['websocket', 'polling'],
     timeout: 8000,
     reconnectionAttempts: 10,
@@ -1649,34 +1646,6 @@ function clearCanvas() {
     console.log('Canvas cleared and session reset');
 }
 
-// Button event listeners
-clearBtn.addEventListener('click', clearCanvas);
-sendStrokeBtn.addEventListener('click', sendLastStroke);
-sendBatchBtn.addEventListener('click', sendBatch);
-
-const downloadMLBtn = document.getElementById('downloadMLBtn');
-if (downloadMLBtn) {
-    downloadMLBtn.addEventListener('click', () => {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        const sessionId = getOrCreateSessionId();
-        downloadMLCanvas(`ml_${sessionId}_${timestamp}.png`);
-        console.log('ML canvas downloaded');
-    });
-}
-
-const detectObjectsBtn = document.getElementById('detectObjectsBtn');
-if (detectObjectsBtn) {
-    detectObjectsBtn.addEventListener('click', () => {
-        console.log('Running object detection...');
-        const objects = sendObjectsToML();
-        if (objects && objects.length > 0) {
-            alert(`Detected ${objects.length} object(s) and sent to ML server`);
-        } else {
-            alert('No objects detected on canvas');
-        }
-    });
-}
-
 function lockCanvas(reason) {
     isLocked = true;
     canvas.style.cursor = 'not-allowed';
@@ -1794,6 +1763,12 @@ function minutesAndSeconds(sec) {
 }
 
 function updateTimerCircle() {
+    console.log('[updateTimerCircle] called');
+    console.log('[updateTimerCircle] timerCircle element:', timerCircle);
+    console.log('[updateTimerCircle] timerCircleText element:', timerCircleText);
+    console.log('[updateTimerCircle] remainingTime:', remainingTime);
+    console.log('[updateTimerCircle] timerDuration:', timerDuration);
+    
     if (!timerCircle) {
         console.warn('[updateTimerCircle] timerCircle element not found');
         return;
@@ -1801,10 +1776,14 @@ function updateTimerCircle() {
     const total = timerDuration > 0 ? timerDuration : remainingTime;
     const pct = total > 0 ? (remainingTime / total) : 0;
     const deg = Math.max(0, Math.min(1, pct)) * 360;
-    console.log(`[updateTimerCircle] remaining=${remainingTime}, duration=${timerDuration}, total=${total}, pct=${pct}, deg=${deg}`);
+    console.log(`[updateTimerCircle] total=${total}, pct=${pct}, deg=${deg}`);
     timerCircle.style.background = `conic-gradient(var(--selected-color) 0deg, var(--selected-color) ${deg}deg, #e2e8f0 ${deg}deg 360deg)`;
     if (timerCircleText) {
-        timerCircleText.textContent = minutesAndSeconds(remainingTime);
+        const timeText = minutesAndSeconds(remainingTime);
+        console.log('[updateTimerCircle] setting text to:', timeText);
+        timerCircleText.textContent = timeText;
+    } else {
+        console.warn('[updateTimerCircle] timerCircleText element not found!');
     }
 }
 
@@ -1876,7 +1855,9 @@ function applyStateInit(payload) {
 
 // Socket listeners for authoritative state
 socket.on('state:init', (payload) => {
-    console.log('[state:init] snapshot received');
+    console.log('[state:init] snapshot received:', payload);
+    console.log('[state:init] payload.timer:', payload?.timer);
+    console.log('[state:init] payload.config:', payload?.config);
     applyStateInit(payload);
 });
 

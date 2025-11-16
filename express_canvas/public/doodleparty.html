@@ -46,24 +46,6 @@
             
             <div class="hud-circle timer-circle" id="timerCircle"><span id="timerCircleText">00:00</span></div>
             <div class="hud-circle ink-circle" id="inkCircle"><span id="inkCircleText">100%</span></div>
-            
-            <div class="control-buttons">
-                <button class="pill-btn" id="sendStrokeBtn" title="Send Last Stroke">
-                    <span>📤</span> Last
-                </button>
-                <button class="pill-btn" id="sendBatchBtn" title="Send All Strokes">
-                    <span>📦</span> Batch
-                </button>
-                <button class="pill-btn" id="clearBtn" title="Clear Canvas">
-                    <span>🗑️</span> Clear
-                </button>
-                <button class="pill-btn" id="downloadMLBtn" title="Download ML Canvas">
-                    <span>💾</span> ML
-                </button>
-                <button class="pill-btn" id="detectObjectsBtn" title="Detect Objects and Send to ML">
-                    <span>🔍</span> Detect
-                </button>
-            </div>
         </div>
     </main>
     <div id="lockOverlay" style="position:fixed;inset:0;display:none;background:rgba(0,0,0,0.55);color:#fff;font:600 2rem/1.2 Noto Sans, sans-serif;align-items:center;justify-content:center;z-index:50;">Locked</div>
@@ -83,7 +65,7 @@
             console.log('🔥 [HTML] io.Manager available:', typeof io.Manager);
             console.log('🔥 [HTML] Attempting to create test socket...');
             try {
-                const testSocket = io('/canvas');
+                const testSocket = io();
                 console.log('✅ [HTML] Test socket created:', testSocket);
                 console.log('✅ [HTML] Test socket.io available:', testSocket.io);
                 console.log('✅ [HTML] Test socket namespace:', testSocket.nsp);
@@ -100,6 +82,6 @@
             console.error('❌ [HTML] io is still undefined after loading script!');
         }
     </script>
-    <script type="module" src="js/doodleparty.js?v=14"></script>
+    <script type="module" src="js/doodleparty.js?v=18"></script>
 </body>
 </html>
