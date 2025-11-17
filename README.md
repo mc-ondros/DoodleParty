@@ -4,6 +4,9 @@
 
 Transform passive audiences into active participants through collaborative art. DoodleParty brings communities together at events, concerts, festivals, and public gatherings—creating shared cultural moments through creative expression.
 
+> [!NOTE]
+> 🏆 **<span style="color: #FFD700;">2nd Place Winner - European UniHack 2025, Culture & Entertainment Track</span>**
+
 **Status: Experimental** - This project is under active development. Documentation may not always match code.
 
 [![Node.js](https://img.shields.io/badge/node.js-18%2B-green.svg)](https://nodejs.org/)
