@@ -1,6 +1,6 @@
 # DoodleParty
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 [![Status](https://img.shields.io/badge/Status-Beta-orange.svg)]()
 
 **Real-time collaborative drawing canvas with ML-powered content moderation.**
@@ -33,8 +33,6 @@ It is designed for "party" or "installation" settings where users join via mobil
     Unit (Vitest) and Integration (Pytest) testing workflows.
 * **[Design System](.documentation/design.md)**
     UI/UX guidelines and asset management.
-* **[Roadmap](.documentation/roadmap.md)**
-    Future plans and technical debt.
 
 ## Quick References
 
@@ -45,4 +43,4 @@ It is designed for "party" or "installation" settings where users join via mobil
 
 ## License
 
-MIT License - see [LICENSE](./LICENSE).
+GNU General Public License v3 - see [LICENSE](./LICENSE).
