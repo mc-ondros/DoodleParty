@@ -12,8 +12,8 @@ from PIL import Image
 
 sys.path.insert(0, '.')
 
-from src.core.shape_detection import ShapeDetector
-from src.web.app import tflite_interpreter, is_tflite, model
+from ml.legacy_flask.core.shape_detection import ShapeDetector
+from ml.legacy_flask.web.app import tflite_interpreter, is_tflite, model
 
 def create_test_drawing():
     """Create a simple test drawing (white strokes on black background)."""

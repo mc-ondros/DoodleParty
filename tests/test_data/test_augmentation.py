@@ -5,7 +5,7 @@ import numpy as np
 from collections.abc import Iterator
 from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
-from src.data.augmentation import (
+from ml.legacy_flask.data.augmentation import (
     normalize_image,
     normalize_batch,
     get_augmentation_generator,

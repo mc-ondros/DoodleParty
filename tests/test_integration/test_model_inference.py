@@ -12,9 +12,9 @@ try:
 except ImportError:
     from tensorflow import keras
 
-from src.core.models import build_custom_cnn
-from src.core.inference import predict_image, evaluate_model, predict_batch
-from src.data.augmentation import normalize_batch
+from ml.legacy_flask.core.models import build_custom_cnn
+from ml.legacy_flask.core.inference import predict_image, evaluate_model, predict_batch
+from ml.legacy_flask.data.augmentation import normalize_batch
 
 
 class TestInferenceWithRealModel:

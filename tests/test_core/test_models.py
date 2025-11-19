@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from keras import Model, layers
 
-from src.core.models import (
+from ml.legacy_flask.core.models import (
     build_custom_cnn,
     build_transfer_learning_resnet50,
     build_transfer_learning_mobilenetv3,

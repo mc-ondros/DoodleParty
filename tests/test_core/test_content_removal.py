@@ -6,7 +6,7 @@ Verifies localization, removal strategies, and undo functionality.
 
 import pytest
 import numpy as np
-from src.core.content_removal import (
+from ml.legacy_flask.core.content_removal import (
     ContentRemover,
     RemovalStrategy,
     FlaggedRegion,
@@ -291,7 +291,7 @@ class TestContentRemover:
         remover = ContentRemover()
         
         # Mock tile result
-        from src.core.tile_detection import TileDetectionResult, TileInfo, TileCoordinate
+        from ml.legacy_flask.core.tile_detection import TileDetectionResult, TileInfo, TileCoordinate
         
         tile_predictions = [
             TileInfo(

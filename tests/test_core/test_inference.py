@@ -34,7 +34,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from PIL import Image
 
-from src.core.inference import (
+from ml.legacy_flask.core.inference import (
     load_model_and_mapping,
     predict_image,
     evaluate_model,

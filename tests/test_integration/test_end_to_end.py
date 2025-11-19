@@ -9,9 +9,9 @@ from unittest.mock import Mock, patch
 import tensorflow as tf
 from tensorflow import keras
 
-from src.data.loaders import QuickDrawDataset
-from src.data.augmentation import normalize_batch, get_augmentation_generator
-from src.core.models import build_custom_cnn
+from ml.legacy_flask.data.loaders import QuickDrawDataset
+from ml.legacy_flask.data.augmentation import normalize_batch, get_augmentation_generator
+from ml.legacy_flask.core.models import build_custom_cnn
 
 
 class TestDataPipelineIntegration:

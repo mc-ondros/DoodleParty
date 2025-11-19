@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 from typing import List, Tuple
 
-from src.core.tile_detection import (
+from ml.legacy_flask.core.tile_detection import (
     TileDetector,
     TileGrid,
     TileCoordinate,

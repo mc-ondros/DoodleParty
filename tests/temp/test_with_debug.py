@@ -9,9 +9,9 @@ from pathlib import Path
 
 sys.path.insert(0, '.')
 
-from src.core.shape_detection import ShapeDetector
-from src.core.shape_normalization import preprocess_for_model
-from src.web.app import tflite_interpreter, is_tflite, model
+from ml.legacy_flask.core.shape_detection import ShapeDetector
+from ml.legacy_flask.core.shape_normalization import preprocess_for_model
+from ml.legacy_flask.web.app import tflite_interpreter, is_tflite, model
 
 def test_with_debug(image_path):
     """Test with full debugging."""

@@ -18,8 +18,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.core.shape_detection import ShapeDetector
-from src.web.app import preprocess_image, load_model_and_mapping
+from ml.legacy_flask.core.shape_detection import ShapeDetector
+from ml.legacy_flask.web.app import preprocess_image, load_model_and_mapping
 
 def create_test_image(size=512, pattern='circle'):
     """Create a simple test image with a specific pattern."""

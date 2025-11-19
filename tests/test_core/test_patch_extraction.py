@@ -13,7 +13,7 @@ import pytest
 import numpy as np
 from unittest.mock import Mock, MagicMock
 
-from src.core.patch_extraction import (
+from ml.legacy_flask.core.patch_extraction import (
     extract_patches,
     normalize_patch,
     select_adaptive_patches,

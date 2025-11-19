@@ -7,9 +7,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from PIL import Image
 
-from src.data.loaders import QuickDrawDataset
-from src.core.models import build_custom_cnn, get_model
-from src.data.augmentation import normalize_image, normalize_batch
+from ml.legacy_flask.data.loaders import QuickDrawDataset
+from ml.legacy_flask.core.models import build_custom_cnn, get_model
+from ml.legacy_flask.data.augmentation import normalize_image, normalize_batch
 
 
 class TestDataLoadingErrors:
@@ -169,7 +169,7 @@ class TestWebAppErrors:
     @pytest.fixture
     def client(self):
         """Create Flask test client."""
-        from src.web.app import app
+        from ml.legacy_flask.web.app import app
         app.config['TESTING'] = True
         with app.test_client() as client:
             yield client
@@ -309,7 +309,7 @@ class TestRecoveryMechanisms:
     @patch('src.web.app.model', None)
     def test_app_without_model(self):
         """Test that app can run without model loaded."""
-        from src.web.app import app
+        from ml.legacy_flask.web.app import app
         
         # App should start even without model
         assert app is not None

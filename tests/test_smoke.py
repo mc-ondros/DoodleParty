@@ -21,9 +21,10 @@ def test_imports():
         root = Path(__file__).parent.parent
         sys.path.insert(0, str(root))
 
-        # Test importing core modules
-        from src_py.core import models  # noqa: F401
-        from src_py.data import loaders  # noqa: F401
+        # Test importing core modules from new ml/service location
+        sys.path.insert(0, str(root / 'ml' / 'service'))
+        from core import models  # noqa: F401
+        from data import loaders  # noqa: F401
 
         assert True
     except ImportError:

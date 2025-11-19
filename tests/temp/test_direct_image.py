@@ -9,8 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, '.')
 
-from src.core.shape_detection import ShapeDetector
-from src.web.app import tflite_interpreter, is_tflite, model
+from ml.legacy_flask.core.shape_detection import ShapeDetector
+from ml.legacy_flask.web.app import tflite_interpreter, is_tflite, model
 
 def load_and_test_image(image_path):
     """Load the provided image and test it."""

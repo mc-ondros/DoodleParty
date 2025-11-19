@@ -8,8 +8,8 @@ import sys
 
 sys.path.insert(0, '.')
 
-from src.core.shape_normalization import normalize_shape, preprocess_for_model
-from src.web.app import tflite_interpreter
+from ml.legacy_flask.core.shape_normalization import normalize_shape, preprocess_for_model
+from ml.legacy_flask.web.app import tflite_interpreter
 
 def test_image(path, name):
     print(f"\n{'='*70}")

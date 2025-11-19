@@ -23,7 +23,7 @@ class TestHierarchicalAPI(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         # Import Flask app
-        from src.web.app import app
+        from ml.legacy_flask.web.app import app
         self.app = app
         self.client = self.app.test_client()
 

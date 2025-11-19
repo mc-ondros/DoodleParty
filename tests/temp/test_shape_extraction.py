@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, '.')
 
-from src.core.shape_extraction import propose_shapes
+from ml.legacy_flask.core.shape_extraction import propose_shapes
 
 def test_shape_extraction(image_path):
     """Test shape extraction."""

@@ -9,8 +9,8 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, '.')
-from src.core.shape_normalization import preprocess_for_model
-from src.web.app import tflite_interpreter
+from ml.legacy_flask.core.shape_normalization import preprocess_for_model
+from ml.legacy_flask.web.app import tflite_interpreter
 
 
 def ensure_inverted(gray: np.ndarray) -> np.ndarray:

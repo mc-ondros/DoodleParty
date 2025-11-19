@@ -11,8 +11,8 @@ from PIL import Image
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.web.app import app
-from src.core.models import build_custom_cnn
+from ml.legacy_flask.web.app import app
+from ml.legacy_flask.core.models import build_custom_cnn
 
 
 @pytest.fixture

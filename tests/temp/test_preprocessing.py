@@ -8,7 +8,7 @@ from PIL import Image
 import sys
 sys.path.insert(0, '.')
 
-from src.web.app import tflite_interpreter, is_tflite
+from ml.legacy_flask.web.app import tflite_interpreter, is_tflite
 
 def test_model_with_simple_shapes():
     """Test the model with simple test images."""

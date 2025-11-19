@@ -21,7 +21,7 @@ import numpy as np
 import cv2
 from typing import Tuple
 
-from src.core.contour_detection import (
+from ml.legacy_flask.core.contour_detection import (
     ContourDetector,
     ContourRetrievalMode,
     detect_contours,

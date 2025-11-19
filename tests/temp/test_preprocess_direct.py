@@ -8,8 +8,8 @@ import sys
 
 sys.path.insert(0, '.')
 
-from src.core.shape_normalization import preprocess_for_model
-from src.web.app import tflite_interpreter
+from ml.legacy_flask.core.shape_normalization import preprocess_for_model
+from ml.legacy_flask.web.app import tflite_interpreter
 
 # Load the ROI
 img = cv2.imread('/tmp/test_shape_0_roi.png', cv2.IMREAD_GRAYSCALE)

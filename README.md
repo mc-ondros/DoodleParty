@@ -1,147 +1,48 @@
 # DoodleParty
 
-**Real-time collaborative drawing platform with AI-powered content moderation**
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Status](https://img.shields.io/badge/Status-Beta-orange.svg)]()
 
-Transform passive audiences into active participants through collaborative art. DoodleParty brings communities together at events, concerts, festivals, and public gatherings—creating shared cultural moments through creative expression.
+**Real-time collaborative drawing canvas with ML-powered content moderation.**
+
+DoodleParty is a system for shared drawing experiences where multiple users can draw on a canvas simultaneously. It features a dedicated Machine Learning service that monitors the canvas in real-time to detect and censor inappropriate content (NSFW).
+
+It is designed for "party" or "installation" settings where users join via mobile devices ("Senders") and their drawings appear on a main display ("Viewer"). There is no waiting room; users join and draw immediately.
 
 > [!NOTE]
 > 🏆 **<span style="color: #FFD700;">2nd Place Winner - European UniHack 2025, Culture & Entertainment Track</span>**
 
-**Status: Experimental** - This project is under active development. Documentation may not always match code.
+## Documentation Index
 
-[![Node.js](https://img.shields.io/badge/node.js-18%2B-green.svg)](https://nodejs.org/)
-[![TensorFlow](https://img.shields.io/badge/tensorflow-2.13%2B-orange.svg)](https://www.tensorflow.org/)
-[![License](https://img.shields.io/badge/license-GPL-blue.svg)](./LICENSE)
+### Operations & Deployment
+* **[Installation Guide](.documentation/installation.md)**
+    Prerequisites (Node.js, Python, Nix), local environment setup, and startup instructions.
+* **[Configuration Reference](.documentation/configuration.md)**
+    `AdminConfig.json` settings, environment variables, and game modes.
 
-## Core Technologies
+### System Internals
+* **[Architecture Overview](.documentation/architecture.md)**
+    High-level design, data flow between Node.js server and ML Python service.
+* **[Project Structure](.documentation/structure.md)**
+    Directory map and component organization.
+* **[API Reference](.documentation/api.md)**
+    REST endpoints and Socket.io event protocols.
 
-DoodleParty uses a modern tech stack optimized for real-time collaboration and lightweight RPi4 deployment:
+### Development Standards
+* **[Testing Strategy](.documentation/testing.md)**
+    Unit (Vitest) and Integration (Pytest) testing workflows.
+* **[Design System](.documentation/design.md)**
+    UI/UX guidelines and asset management.
+* **[Roadmap](.documentation/roadmap.md)**
+    Future plans and technical debt.
 
-- **Backend:** Node.js + Express + Socket.io (real-time communication)
-- **Frontend:** React with real-time canvas engine (optimized for low-end devices)
-- **ML:** TensorFlow Lite INT8 binary classifier (5MB, <50ms inference on RPi4)
-- **LLM:** DigitalOcean AI integration for prompts and narration
-- **Deployment:** Raspberry Pi 4 (4GB RAM, CPU-only) or DigitalOcean Kubernetes
+## Quick References
 
-*See [Architecture Overview](.documentation/architecture.md) for complete system design, deployment architectures, and performance targets.*
-
-## Features
-
-- **Real-time Collaborative Drawing** - 100+ concurrent users with <50ms ML inference
-- **Multiple Game Modes** - Classic Canvas, Speed Sketch, Guess The Doodle, Battle Royale, Story Canvas
-- **AI-Powered Moderation** - Custom TFLite binary classifier with shape-based, tile-based, and region-based detection
-- **LLM Integration** - Dynamic prompt generation and real-time story narration via DigitalOcean AI
-- **Cross-Platform** - Native mobile apps, web browser, and projector display
-- **Offline Capable** - Raspberry Pi 4 deployment for events with no internet required
-- **Gamification** - Achievement system, progression levels, crew teams, and leaderboards
-
-## Documentation
-
-### Getting Started
-- [Installation & Setup](.documentation/installation.md) - Complete setup instructions
-- [Nix Usage Guide](.documentation/nix-usage.md) - Nix-specific deployment
-
-### Understanding the System
-- [Architecture Overview](.documentation/architecture.md) - System design and components
-- [Project Structure](.documentation/structure.md) - Code organization and file layout
-- [ML Pipeline](.documentation/ml-pipeline.md) - Content moderation implementation
-
-### Development & APIs
-- [API Reference](.documentation/api.md) - WebSocket and REST API documentation
-- [Code Style Guide](./STYLE_GUIDE.md) - Development standards and conventions
-- [Testing Strategy](.documentation/testing.md) - Testing approach and implementation
-- [Development Roadmap](.documentation/roadmap.md) - Future plans and features
-
-## AdminConfig.json
-
-Admin Panel selections are mirrored to a simple, human-readable JSON file that can be locked down at the OS level.
-
-- Path: `./AdminConfig.json`
-- Purpose: store current admin selections (timer, mode, limits, visibility, prompt, moderation)
-- Format: flat key/value pairs using the visible control names for easy reading
-
-Example:
-
-```
-{
-  "Timer": 300,
-  "TimerPreset": "300",
-  "Game Mode": "Speed",
-  "Max Players": 8,
-  "Ink Limit": "Medium",
-  "Teams": "disabled",
-  "Visibility": "Public",
-  "Password": "",
-  "Custom Prompt": "",
-  "Content Mode": "SFW",
-  "Session": "Open"
-}
-```
-
-Protecting the file (requires sudo):
-
-1. Make the helper script executable (one-time):
-  - `chmod +x scripts/protect_admin_config.sh`
-2. Run the script with sudo to set root ownership and 640 permissions:
-  - `sudo ./scripts/protect_admin_config.sh`
-
-Notes:
-- The file may contain a password if a private session is configured. Keep ownership root:root and permissions 640 (rw-r-----) so only root can modify it.
-- If you need a non-root process to read the file, add that process user to the `root` group or adjust the group/ACLs accordingly.
-
-## Deployment Options
-
-**Raspberry Pi 4 (On-Premises)**
-- Self-contained hardware for events
-- Supports 100 concurrent users
-- Works offline with complete data privacy
-- Perfect for festivals, conferences, and community events
-
-**Cloud Hosting (Managed SaaS)**
-- Fully managed, no setup required
-- Scales from 100 to 2,000+ concurrent users
-- Full AI features and game modes
-- Tiered pricing based on usage
-
-**System Requirements:** See [Installation Guide](.documentation/installation.md#prerequisites)
-
-**Core Technologies:** See [Architecture Overview](.documentation/architecture.md#core-technologies)
-
-## Table of Contents
-
-### Overview
-- [Features](#features)
-- [Core Technologies](#core-technologies)
-- [Cultural Impact](#cultural-impact)
-
-### Getting Started
-- [Quick Start](#quick-start)
-  - [With Nix](#with-nix)
-  - [Without Nix](#without-nix)
-- [System Requirements](#system-requirements)
-  - [Raspberry Pi 4 Deployment](#raspberry-pi-4-deployment)
-  - [Development Environment](#development-environment)
-
-### Deployment Options
-- [Raspberry Pi 4 (On-Premises)](#raspberry-pi-4-on-premises)
-- [Cloud Hosting (Managed SaaS)](#cloud-hosting-managed-saas)
-
-### Resources
-- [Documentation](#documentation)
-  - [Getting Started](#getting-started)
-  - [Understanding the System](#understanding-the-system)
-  - [Development & APIs](#development--apis)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Cultural Impact
-
-DoodleParty democratizes creativity, preserves event memories, bridges generations, celebrates diversity, and encourages playfulness. It becomes a digital campfire where communities create, laugh, and connect—leaving behind a visual record of their shared experience.
-
-## Contributing
-
-We welcome contributions! See [STYLE_GUIDE.md](./STYLE_GUIDE.md) for code standards, [Development Roadmap](.documentation/roadmap.md) for planned features, and [Testing Strategy](.documentation/testing.md) for our comprehensive testing approach.
+* **Server Entry Point:** `frontend/server/express-server.cjs`
+* **ML Entry Point:** `ml/socket_client/ml_server.py`
+* **Config:** `AdminConfig.json`
+* **Run Server:** `npm run serve` (in `frontend/server`)
 
 ## License
 
-GNU General Public License - see [LICENSE](./LICENSE) for details.
+MIT License - see [LICENSE](./LICENSE).

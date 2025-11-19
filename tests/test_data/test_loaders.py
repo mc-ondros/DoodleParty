@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch, MagicMock
 import tempfile
 import shutil
 
-from src.data.loaders import QuickDrawDataset
+from ml.legacy_flask.data.loaders import QuickDrawDataset
 
 
 class TestQuickDrawDataset:
